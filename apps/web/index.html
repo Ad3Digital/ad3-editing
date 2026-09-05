@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/mark.svg" />
+    <script>
+      (function () {
+        try {
+          var apply = function (mode) {
+            var resolved =
+              mode === "system"
+                ? window.matchMedia("(prefers-color-scheme: dark)").matches
+                  ? "dark"
+                  : "light"
+                : mode;
+            var root = document.documentElement;
+            root.style.colorScheme = resolved;
+            root.dataset.kbTheme = resolved;
+            return mode;
+          };
+          var stored = localStorage.getItem("kb-color-mode");
+          if (stored) apply(stored);
+          else localStorage.setItem("kb-color-mode", apply("dark"));
+        } catch (e) {}
+
+        if (window.desktop) {
+          document.documentElement.dataset.platform = window.desktop.platform;
+          if (window.desktop.platform === "darwin") {
+            document.documentElement.dataset.boot = "1";
+          }
+        }
+      })();
+    </script>
+    <style>
+      #boot-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+      }
+
+      html[data-boot="1"] #boot-splash {
+        display: flex;
+      }
+
+      #boot-splash svg {
+        width: 48px;
+        height: 48px;
+      }
+    </style>
+    <link href="/src/index.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AD3 Editing</title>
+    <meta name="description" content="AD3 Editing is a local video editor built on an infinite canvas. Create and edit videos with design-tool freedom, a multi-track timeline, and full creative control." />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="AD3 Editing — local video editing with creative control." />
+    <meta property="og:description" content="A local video editor built on an infinite canvas with a multi-track timeline and design-tool freedom." />
+    <meta property="og:image" content="/og-default.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AD3 Editing — local video editing with creative control." />
+    <meta name="twitter:description" content="A local video editor built on an infinite canvas with a multi-track timeline and design-tool freedom." />
+    <meta name="twitter:image" content="/og-default.png" />
+  </head>
+  <body>
+    <div id="boot-splash" aria-hidden="true">
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M7 56 27.5 8a3.2 3.2 0 0 1 5.9 0l8.3 19.5v10.2h-4.2L30.45 21 22.7 39.2h12.55v5.8H20.2L15.9 56H7Z" fill="#82A2FF"/>
+        <path d="M40.4 13h3.5c6.9 0 11.5 4.1 11.5 9.8 0 3.4-1.8 6.2-4.7 7.8 3.7 1.5 6.1 5 6.1 9.2 0 7.3-5.3 12.4-12.6 12.4h-4v-6.1h3.7c3.3 0 5.5-2.1 5.5-5.1 0-3-2.2-5-5.5-5h-3v-5.9h2.9c2.8 0 4.7-1.8 4.7-4.4 0-2.6-1.9-3.4-4.8-3.4h-3.3V13Z" fill="#67D7C5"/>
+        <path d="M21 51h23" stroke="#EEF3FF" stroke-width="3.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>

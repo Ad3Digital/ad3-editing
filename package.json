@@ -1,0 +1,40 @@
+{
+  "name": "@diffusionstudio/editor",
+  "version": "0.202.0-windows.2",
+  "private": true,
+  "license": "MPL-2.0",
+  "description": "AD3 Editing — agentic video editing for AI agents and human editors.",
+  "homepage": "https://github.com/Ad3Digital/ad3-editing",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ad3Digital/ad3-editing.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Ad3Digital/ad3-editing/issues"
+  },
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev:desktop",
+    "dev:web_v1": "npm run dev --workspace=@diffusionstudio/web",
+    "dev:desktop": "node scripts/dev-desktop.mjs",
+    "build": "npm run build --workspace=@diffusionstudio/web",
+    "build:web_v1": "npm run build --workspace=@diffusionstudio/web",
+    "build:desktop": "npm run build --workspace=@diffusionstudio/desktop",
+    "make": "npm run make --workspace=@diffusionstudio/desktop",
+    "release": "node scripts/release.mjs",
+    "postinstall": "patch-package",
+    "lint": "npm run lint --workspaces --if-present",
+    "check": "npm run check --workspaces --if-present && tsc -p examples --noEmit"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "@types/three": "0.185.4",
+    "electron-winstaller": "^5.4.4",
+    "patch-package": "^8.0.1",
+    "three": "0.185.1"
+  }
+}

@@ -1,0 +1,28 @@
+# Examples
+
+Self-contained compositions demonstrating the JSX API (see [reference/jsx](../reference/jsx/README.md)).
+Each one is a whole project entry file: it default-exports a component rendering a
+`<stage>` with one `<scene>` in it. To run one, copy it into a project folder as the
+entry and open that folder:
+
+```sh
+cp examples/01-basics.tsx ~/Projects/basics/index.tsx
+dapi open ~/Projects/basics
+```
+
+| Example | Shows |
+| --- | --- |
+| [01-basics.tsx](01-basics.tsx) | `<stage>` / `<scene>`, `<sequence>` with a dissolve, `<video>`, `<audio>`, `<image>`, `<text>` titles from data via `<For>`, `<animation>` children |
+| [02-genai.tsx](02-genai.tsx) | multi-stage generation: `generate.image` refs feeding `generate.video`, TTS voiceover, generated ambience, `<captions>` |
+| [03-ticker.tsx](03-ticker.tsx) | declarative animation: `useTicker` + `createMemo` derived values driving props |
+| [04-html-in-canvas.tsx](04-html-in-canvas.tsx) | `<htmlPaint>`: an AI prompt box as real DOM, typed out from the playhead |
+| [05-anime-timeline.tsx](05-anime-timeline.tsx) | anime.js timeline seeked from `useTicker`, driving an ECS node and `<html>` content in lockstep |
+| [06-three.tsx](06-three.tsx) | three.js WebGL renderer owning a `<surface>`, glTF model loaded over the network |
+| [07-webgpu.tsx](07-webgpu.tsx) | raw WebGPU on a `<surface>`: a triangle whose colors cycle with composition time |
+| [08-shader-paint.tsx](08-shader-paint.tsx) | `<shaderPaint>` post-processing a `<video>`: WGSL chromatic aberration + vignette, uniforms patchable live |
+
+Requirements: `02-genai.tsx` consumes generation credits (results are cached per session);
+`01-basics.tsx`, `06-three.tsx`, and `08-shader-paint.tsx` fetch remote media.
+
+Typecheck with `tsc -p examples --noEmit` (part of `npm run check`). `06-three.tsx`
+needs `three` installed to typecheck; it is not a dependency of this repo.

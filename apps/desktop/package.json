@@ -1,0 +1,47 @@
+{
+  "name": "@diffusionstudio/desktop",
+  "private": true,
+  "version": "0.202.0-windows.2",
+  "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ad3Digital/ad3-editing.git"
+  },
+  "main": "dist/main.js",
+  "scripts": {
+    "build:preload": "esbuild src/preload.ts --bundle --platform=node --format=cjs --external:electron --outfile=dist/preload.js",
+    "build:main": "esbuild src/main.ts --bundle --platform=node --format=cjs --external:electron --external:esbuild --external:@babel/core --external:@babel/preset-typescript --external:babel-preset-solid --outfile=dist/main.js",
+    "build:native": "node scripts/build-native.mjs",
+    "build": "npm run check && npm run build:main && npm run build:preload && npm run build:native",
+    "build:web": "npm --prefix ../web run build:desktop",
+    "stage:cli": "npm --prefix ../cli run build && node scripts/stage-cli.mjs",
+    "stage:docs": "node scripts/stage-docs.mjs",
+    "check": "tsc --noEmit",
+    "dev": "npm run build && electron-forge start",
+    "package": "npm run build && npm run build:web && npm run stage:cli && npm run stage:docs && node scripts/dist.mjs package",
+    "make": "npm run build && npm run build:web && npm run stage:cli && npm run stage:docs && node scripts/dist.mjs make",
+    "make:icns": "sh scripts/make-icns.sh"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.11.1",
+    "@electron-forge/maker-dmg": "^7.11.1",
+    "@electron-forge/maker-zip": "^7.11.1",
+    "@types/babel__core": "^7.20.5",
+    "@types/electron-squirrel-startup": "^1.0.2",
+    "@types/node": "^24.10.1",
+    "electron": "^43.1.1",
+    "typescript": "~5.9.3"
+  },
+  "dependencies": {
+    "@babel/core": "^7.29.7",
+    "@babel/preset-typescript": "^7.27.1",
+    "@diffusionstudio/cli": "*",
+    "@diffusionstudio/jsx": "*",
+    "babel-preset-solid": "^1.9.12",
+    "electron-squirrel-startup": "^1.0.1",
+    "esbuild": "^0.28.1",
+    "nanoid": "^6.0.1",
+    "ts-morph": "^28.0.0",
+    "yaml": "^2.9.0"
+  }
+}

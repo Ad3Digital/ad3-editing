@@ -1,0 +1,35 @@
+{
+  "name": "@diffusionstudio/cli",
+  "private": true,
+  "version": "0.202.0-windows.2",
+  "license": "MPL-2.0",
+  "bin": {
+    "dapi": "./dist/index.js"
+  },
+  "exports": {
+    "./protocol": "./src/protocol.ts",
+    "./channels": "./src/cli-channels.ts"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "tsc --noEmit",
+    "symlink:remove": "rm -f /opt/homebrew/bin/dapi",
+    "symlink:create": "npm run build && ln -sf \"$PWD/dist/index.js\" /opt/homebrew/bin/dapi"
+  },
+  "dependencies": {
+    "@babel/core": "^7.29.7",
+    "@trpc/client": "^11.18.0",
+    "@trpc/server": "^11.18.0",
+    "@babel/preset-typescript": "^7.27.1",
+    "babel-preset-solid": "^1.9.12",
+    "commander": "^14.0.3",
+    "esbuild": "^0.28.1",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/babel__core": "^7.20.5",
+    "@types/node": "^24.10.1",
+    "@types/ws": "^8.18.1",
+    "typescript": "~5.9.3"
+  }
+}
