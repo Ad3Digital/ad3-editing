@@ -214,11 +214,13 @@ try {
   const manifestPath = join(dir, "assets.yml");
   const linkedRecord = async () => parseYaml(await readFile(manifestPath, "utf8"))?.assets?.find((asset) => asset.generation?.key === "hyperframes" && asset.generation?.id === composition.id);
   const originalRecord = await until(linkedRecord, "Rendered composition was not registered as generated media");
+  // Insertion is optimistic until the source write replaces its pending handle
+  // with a file address. Compare persisted identities across the re-render.
   const linkedBefore = await until(async () => {
     const context = await cli("context");
     assert.equal(resolve(context.projectDir), resolve(dir));
-    return context.generations.some((row) => row.asset === originalRecord.path && row.state === "done") ? context.generations : null;
-  }, "Inserted clip did not resolve to the generated media");
+    return context.generations.some((row) => row.asset === originalRecord.path && row.state === "done" && row.element.includes(":")) ? context.generations : null;
+  }, "Inserted clip did not persist its source address and generated media link");
   assert.equal(linkedBefore.length, 1);
   proof.checks.push("Panel inserted the rendered composition as a linked timeline asset");
   assert.equal((await cli("check", "hf-smoke-scene")).stats.duration, settings.duration);
