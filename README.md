@@ -77,7 +77,7 @@ or edit the composition's HTML directly.
 
 Opaque compositions produce MP4. **Transparent PNG sequence** preserves alpha for
 overlays. HTML, settings, and revisions live in the project's `hyperframes/`
-directory; immutable rendered outputs live in `assets/`. Keep the whole project
+directory; immutable rendered outputs live in `hyperframes-renders/`. Keep the whole project
 folder when moving or backing up an edit.
 
 `@ad3/hyperframes-engine` is independent of the editor interface. Electron exposes
@@ -182,6 +182,11 @@ creating the installers. This build step requires network access; running built-
 compositions in the installed application does not. Release jobs launch each
 packaged app and exercise preview, MP4 and alpha rendering, timeline insertion,
 linked-asset updates, cancellation, and project isolation.
+
+Pushing a `v*` tag publishes only after all three native jobs pass. For a manual
+**Release** workflow run, supply the version tag and the full commit SHA in `ref`.
+Leave `publish` unchecked for build-only validation; enable it to publish the
+verified installers. The tag and package manifest versions must match.
 
 For development, run `npm run dev`. `npm run check` checks all workspaces and the
 examples. `npm run lint` runs the repository's linters.

@@ -42,9 +42,17 @@ function relativeProject(project: string, path: string): string {
 }
 async function present(path: string): Promise<boolean> { try { await access(path); return true; } catch { return false; } }
 async function writeAtomic(path: string, content: string): Promise<void> {
-  const temporary = `${path}.${randomUUID()}.tmp`;
-  await writeFile(temporary, content, "utf8");
-  await rename(temporary, path);
+  // The engine-owned revision area is excluded from source fingerprints and snapshots.
+  const directory = join(dirname(path), ".revisions");
+  await mkdir(directory, { recursive: true });
+  if ((await lstat(directory)).isSymbolicLink() || !(await stat(directory)).isDirectory()) throw new Error("Unsafe composition write directory.");
+  const temporary = join(directory, `${randomUUID()}.tmp`);
+  try {
+    await writeFile(temporary, content, { encoding: "utf8", flag: "wx" });
+    await rename(temporary, path);
+  } finally {
+    await rm(temporary, { force: true });
+  }
 }
 async function loopbackPort(): Promise<number> {
   const server = createServer();
@@ -189,7 +197,8 @@ export class HyperframesEngine {
     try {
       const composition = await this.#composition(project, job.compositionId); this.#running(job);
       const snapshot = await this.#snapshot(project, composition); this.#running(job);
-      const outputDir = await this.#directory(project, join("assets", "hyperframes", composition.id, "renders", composition.revision, job.id), true); this.#running(job);
+      // Keep incomplete and superseded outputs outside the library's automatic assets scan.
+      const outputDir = await this.#directory(project, join("hyperframes-renders", composition.id, composition.revision, job.id), true); this.#running(job);
       partial = join(outputDir, composition.settings.transparent ? "partial-frames" : "partial.mp4");
       await rm(partial, { recursive: true, force: true }); this.#running(job);
       const args = ["render", snapshot.dir, "--composition", "index.html", "--output", partial, "--fps", String(composition.settings.fps), "--quality", "standard", "--quiet", "--json", ...(composition.settings.transparent ? ["--format", "png-sequence"] : ["--format", "mp4"])];

@@ -62,6 +62,8 @@ export interface ImportOptions {
 	/** Library name; the source's file name by default. */
 	name?: string;
 	generation?: AssetGeneration;
+	/** Playback rate for image sequences; files retain their probed rate. */
+	frameRate?: number;
 }
 
 export class AssetLibrary {
@@ -217,7 +219,7 @@ export class AssetLibrary {
 			const frames = sortFrames(await this.fs.list(record.source)).filter((entry) => entry.kind === 'file');
 			const id = await hashSequence(frames);
 			if (id === record.id) return this.attach(record);
-			return this.describeSequence(record.source, frames, { path: record.path, createdAt: record.createdAt });
+			return this.describeSequence(record.source, frames, { path: record.path, createdAt: record.createdAt, generation: record.generation, frameRate: record.frameRate });
 		}
 
 		const stat = await this.fs.stat(record.source);
@@ -380,7 +382,7 @@ export class AssetLibrary {
 		return this.once(`link:${source}`, async () => {
 			const name = options.name ?? basename(source);
 			const path = this.uniquePath(joinPath(options.folder ?? '', name));
-			const asset = await this.describeSource(source, { path, generation: options.generation });
+			const asset = await this.describeSource(source, { path, generation: options.generation, frameRate: options.frameRate });
 			return this.add(asset);
 		});
 	}
@@ -438,11 +440,12 @@ export class AssetLibrary {
 	 * untouched), new source, new content id. Whatever is bound to the old id
 	 * is the host's to move over (`onRelink`).
 	 */
-	public async relink(asset: Asset, source: string): Promise<Asset> {
+	public async relink(asset: Asset, source: string, options: Pick<ImportOptions, 'frameRate'> = {}): Promise<Asset> {
 		const next = await this.describeSource(source, {
 			path: asset.path,
 			createdAt: asset.createdAt,
 			generation: asset.generation,
+			frameRate: options.frameRate ?? (asset.type === 'SEQUENCE' ? asset.frameRate : undefined),
 		});
 		const from = asset.id;
 		if (next.id === from) {
@@ -673,6 +676,8 @@ export class AssetLibrary {
 
 	private async describeSequence(source: string, frames: FsEntry[], meta: DescribeMeta): Promise<SequenceAsset> {
 		if (!frames.length) throw new Error(`Empty sequence: ${basename(source)}`);
+		const frameRate = meta.frameRate ?? DEFAULT_SEQUENCE_FPS;
+		if (!Number.isFinite(frameRate) || frameRate <= 0) throw new Error('Image sequence frame rate must be greater than zero.');
 		const first = frames[0]!;
 		const handle = this.fileHandle(joinPath(source, first.name));
 		const file = await handle.getFile();
@@ -688,10 +693,11 @@ export class AssetLibrary {
 			source,
 			createdAt: meta.createdAt ?? new Date().toISOString(),
 			mimeType,
+			...(meta.generation ? { generation: meta.generation } : {}),
 			width: probe.width,
 			height: probe.height,
-			frameRate: DEFAULT_SEQUENCE_FPS,
-			duration: frames.length / DEFAULT_SEQUENCE_FPS,
+			frameRate,
+			duration: frames.length / frameRate,
 			handle,
 			directoryHandle: this.directoryHandle(source),
 		};
@@ -750,4 +756,5 @@ interface DescribeMeta {
 	path: string;
 	createdAt?: string;
 	generation?: AssetGeneration;
+	frameRate?: number;
 }

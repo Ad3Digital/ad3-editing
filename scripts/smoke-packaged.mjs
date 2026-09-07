@@ -220,6 +220,7 @@ try {
   }, "Inserted clip did not resolve to the generated media");
   assert.equal(linkedBefore.length, 1);
   proof.checks.push("Panel inserted the rendered composition as a linked timeline asset");
+  assert.equal((await cli("check", "hf-smoke-scene")).stats.duration, settings.duration);
 
   await page.$eval('textarea[aria-label="HyperFrames HTML source"]', (element, html) => {
     element.value = html;
@@ -245,11 +246,30 @@ try {
   await page.screenshot({ path: join(output, "hyperframes-updated.png") });
   proof.checks.push("Re-render produced an immutable output and the panel updated the linked asset");
 
-  const transparent = await call(page, "hyperframes:save", { dir, draft: { name: "Transparent smoke", settings: { ...settings, transparent: true }, html: source("Transparent", true) } });
-  const alphaJob = await waitJob(page, dir, await call(page, "hyperframes:render", { dir, id: transparent.id }));
-  assert.equal(alphaJob.result.format, "png-sequence");
+  await page.$eval('input[type="checkbox"]', (element) => {
+    element.checked = true;
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await page.$eval('textarea[aria-label="HyperFrames HTML source"]', (element, html) => {
+    element.value = html;
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+  }, source("Transparent linked", true));
+  await clickButton(page, "^Render$");
+  const alphaResult = await until(async () => {
+    const problem = await page.$eval('[role="alert"]', (element) => element.textContent).catch(() => "");
+    if (problem) throw new Error(problem);
+    const compositions = await call(page, "hyperframes:list", { dir });
+    const rendered = compositions.find((item) => item.id === composition.id)?.rendered;
+    return rendered?.format === "png-sequence" ? rendered : null;
+  }, "Panel did not render the linked composition as a transparent sequence", 600000);
+  await until(async () => (await linkedRecord())?.source === alphaResult.source, "Transparent render was not linked");
+  assert.deepEqual((await cli("context")).generations, linkedBefore, "Changing render format must retain the same linked timeline element");
+  assert.equal((await cli("check", "hf-smoke-scene")).stats.duration, settings.duration, "Changing render format must not shorten the timeline to the sequence's default frame rate");
+  assert.deepEqual(parseYaml(await readFile(manifestPath, "utf8")).assets.map((asset) => asset.path), [originalRecord.path], "Render intermediates and old revisions must not become unrelated library assets");
+  await cli("capture", "hf-smoke-scene", "-t", "1.3", "--separate", "-o", output);
+  proof.checks.push("MP4-to-PNG re-render preserved the linked clip, its duration, and the asset inventory");
   const { readdir } = await import("node:fs/promises");
-  const pngDir = join(dir, alphaJob.result.source);
+  const pngDir = join(dir, alphaResult.source);
   const frames = (await readdir(pngDir)).filter((name) => /\.png$/i.test(name)).sort();
   assert.equal(frames.length, 36);
   const { stdout: alphaText } = await exec(join(runtime, manifest.ffprobe), ["-v", "error", "-show_streams", "-of", "json", join(pngDir, frames[12])]);

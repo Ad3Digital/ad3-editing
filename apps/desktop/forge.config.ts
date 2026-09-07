@@ -65,6 +65,9 @@ const config: ForgeConfig = {
       background: './assets/dmg-background.png',
       iconSize: 120,
       additionalDMGOptions: {
+        // Supported Electron versions require macOS newer than APFS.
+        // Avoid appdmg's legacy HFS+ boot-volume blessing on Intel runners.
+        filesystem: 'APFS',
         'background-color': '#1c1c1c',
         window: { size: { width: 658, height: 498 } },
       },

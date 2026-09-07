@@ -78,17 +78,14 @@ async function linkRenderedAsset(
   if (asset) {
     forgetAssetMedia(asset.id);
     forgetAssetPeaks(asset.id);
-    asset = await library.relink(asset, result.source);
+    asset = await library.relink(asset, result.source, { frameRate: result.fps });
   } else {
-    const imported = await library.import([result.source], { folder: "HyperFrames", generation });
+    const imported = await library.import([result.source], { folder: "HyperFrames", generation, frameRate: result.fps });
     if (imported.failed.length) throw imported.failed[0]!.error;
     asset = imported.assets[0];
     if (!asset) throw new Error("The completed HyperFrames render produced no importable media.");
   }
 
-  if (asset.type === "SEQUENCE") {
-    return library.update(asset, { generation, frameRate: result.fps, duration: result.duration });
-  }
   return library.update(asset, { generation });
 }
 
