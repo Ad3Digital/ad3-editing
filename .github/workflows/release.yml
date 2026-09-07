@@ -95,12 +95,16 @@ jobs:
         run: node --test scripts/asset-library-reload.test.mjs
       - name: Package native installer
         run: npm run make --workspace=@diffusionstudio/desktop -- --arch ${{ matrix.arch }}
-      - name: Smoke packaged Windows app
+      - name: Smoke installed Windows portable
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $app = Get-ChildItem apps/desktop/out -Recurse -File -Filter 'Diffusion Studio.exe' | Select-Object -First 1
-          if (!$app) { throw 'Packaged Windows executable was not found.' }
+          $portable = Get-ChildItem apps/desktop/out/make/zip -Recurse -File -Filter '*.zip' | Select-Object -First 1
+          if (!$portable) { throw 'Windows portable archive was not found.' }
+          $installDirectory = Join-Path $env:RUNNER_TEMP 'AD3 Editing portable'
+          Expand-Archive -LiteralPath $portable.FullName -DestinationPath $installDirectory
+          $app = Get-ChildItem $installDirectory -Recurse -File -Filter 'Diffusion Studio.exe' | Select-Object -First 1
+          if (!$app) { throw 'Installed Windows executable was not found.' }
           $originalPath = $env:PATH
           try {
             $env:PATH = "$env:SystemRoot\System32"
@@ -108,12 +112,30 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'Bundled CLI launcher failed without system Node.' }
           } finally { $env:PATH = $originalPath }
           node scripts/smoke-packaged.mjs --app $app.FullName --output artifacts/smoke/${{ matrix.target }}
-      - name: Smoke packaged macOS app
+      - name: Smoke installed macOS DMG
         if: runner.os == 'macOS'
         shell: bash
         run: |
-          app_bundle="$(find apps/desktop/out -type d -name '*.app' -print -quit)"
-          if [ -z "$app_bundle" ]; then echo 'Packaged macOS app bundle was not found.' >&2; exit 1; fi
+          dmg="$(find apps/desktop/out/make -type f -name '*.dmg' -print -quit)"
+          if [ -z "$dmg" ]; then echo 'macOS DMG was not found.' >&2; exit 1; fi
+          hdiutil verify "$dmg"
+          mount_point="$(mktemp -d)"
+          install_directory="$(mktemp -d)"
+          mounted=false
+          cleanup() {
+            if [ "$mounted" = true ]; then hdiutil detach "$mount_point"; fi
+            if [ -d "$mount_point" ]; then rmdir "$mount_point"; fi
+            rm -rf "$install_directory"
+          }
+          trap cleanup EXIT
+          hdiutil attach "$dmg" -nobrowse -noautoopen -readonly -mountpoint "$mount_point"
+          mounted=true
+          source_bundle="$(find "$mount_point" -maxdepth 1 -type d -name '*.app' -print -quit)"
+          if [ -z "$source_bundle" ]; then echo 'macOS DMG contains no app bundle.' >&2; exit 1; fi
+          app_bundle="$install_directory/AD3 Editing.app"
+          ditto "$source_bundle" "$app_bundle"
+          hdiutil detach "$mount_point"
+          mounted=false
           codesign --verify --deep --strict "$app_bundle"
           app_executable=""
           for candidate in "$app_bundle"/Contents/MacOS/*; do
@@ -140,7 +162,6 @@ jobs:
           dmg="$(find apps/desktop/out/make -type f -name '*.dmg' -print -quit)"
           archive="$(find apps/desktop/out/make -type f -name '*.zip' -print -quit)"
           if [ -z "$dmg" ] || [ -z "$archive" ]; then echo 'macOS DMG or ZIP was not found.' >&2; exit 1; fi
-          hdiutil verify "$dmg"
           cp "$dmg" "release-assets/AD3-Editing-${{ matrix.target }}.dmg"
           cp "$archive" "release-assets/AD3-Editing-${{ matrix.target }}.zip"
       - uses: actions/upload-artifact@v4

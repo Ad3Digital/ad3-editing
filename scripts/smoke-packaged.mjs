@@ -31,6 +31,7 @@ await mkdir(output, { recursive: true });
 const profile = join(output, "profile");
 let child;
 let browser;
+let page;
 let appLog = "";
 const errors = [];
 const proof = { platform: process.platform, arch: process.arch, hyperframes: manifest.version, checks: [] };
@@ -117,7 +118,7 @@ try {
   }
   await until(async () => { try { return (await fetch(endpoint + "/json/version")).ok; } catch { return false; } }, "Packaged Electron did not expose its local CDP endpoint");
   browser = await puppeteer.connect({ browserURL: endpoint, defaultViewport: null });
-  const page = await until(async () => (await browser.pages()).find((page) => page.url().startsWith("file:")), "Packaged application page did not open");
+  page = await until(async () => (await browser.pages()).find((page) => page.url().startsWith("file:")), "Packaged application page did not open");
   page.on("pageerror", (error) => errors.push(error.message));
   await page.waitForFunction(() => !!window.desktop && document.readyState === "complete", { timeout: 120000 });
   await page.screenshot({ path: join(output, "dashboard.png") });
@@ -296,6 +297,15 @@ try {
 } catch (error) {
   proof.ok = false;
   proof.error = error.stack ?? String(error);
+  proof.rendererErrors = errors;
+  if (page && !page.isClosed()) {
+    try {
+      proof.screen = await page.evaluate(() => document.body.innerText);
+      await page.screenshot({ path: join(output, "failure.png"), timeout: 10000 });
+    } catch (captureError) {
+      proof.captureError = String(captureError);
+    }
+  }
   throw error;
 } finally {
   await writeFile(join(output, "proof.json"), JSON.stringify(proof, null, 2) + "\n");
