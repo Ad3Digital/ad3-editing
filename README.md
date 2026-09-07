@@ -87,9 +87,9 @@ to loopback, and preview iframes do not receive the desktop bridge.
 
 The application bundles HyperFrames 0.8.30, its browser, and FFmpeg/FFprobe: these
 operations do not require a separate Node, browser, or FFmpeg installation.
-Built-in templates use native browser animations and work locally. Custom HTML
-can introduce its own network dependencies; keep its assets and appropriately
-licensed libraries local for offline, reproducible rendering.
+Built-in templates use native browser animations and local Arial fonts rather
+than downloading typefaces. Custom HTML can introduce its own network dependencies;
+keep its assets and appropriately licensed libraries local for offline, reproducible rendering.
 
 ## Editing controls
 

@@ -179,8 +179,8 @@ export class AssetLibrary {
 
 	private async loadCurrent(): Promise<void> {
 		for (;;) {
-			await this.flush();
 			const version = this.changeVersion;
+			await this.flush();
 			const manifest = normalizeManifest(await this.fs.readManifest());
 			const next = new Map<string, Asset>();
 			await Promise.all(manifest.assets.map(async (record) => {
@@ -191,7 +191,7 @@ export class AssetLibrary {
 				next.set(asset.id, asset);
 			}));
 
-			// An import or relink may have finished while disk reads were pending.
+			// An import or relink may have finished while disk I/O was pending.
 			// Flush that newer state and reload it instead of restoring stale metadata.
 			if (version !== this.changeVersion) continue;
 			this.declared = new Set(manifest.folders);
@@ -430,9 +430,10 @@ export class AssetLibrary {
 
 	/** Replaces fields of an asset (a transcript, a corrected frame rate). Keeps identity. */
 	public update<T extends Asset>(asset: T, patch: Partial<Omit<T, 'id' | 'handle' | 'type'>>): T {
-		Object.assign(asset, patch);
+		const current = (this.map.get(asset.id) ?? asset) as T;
+		Object.assign(current, patch);
 		this.changed();
-		return asset;
+		return current;
 	}
 
 	/**
@@ -448,11 +449,7 @@ export class AssetLibrary {
 			frameRate: options.frameRate ?? (asset.type === 'SEQUENCE' ? asset.frameRate : undefined),
 		});
 		const from = asset.id;
-		if (next.id === from) {
-			Object.assign(asset, next);
-			this.changed();
-			return asset;
-		}
+		if (next.id === from) return this.update(asset, next);
 		this.map.delete(from);
 		this.reorder(next);
 		this.changed();

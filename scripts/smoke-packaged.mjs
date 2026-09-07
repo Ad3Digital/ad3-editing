@@ -90,7 +90,7 @@ async function clickButton(page, pattern) {
 function source(title, transparent = false) {
   return `<!doctype html><html><head><meta charset="utf-8"><style>
 html,body{margin:0;width:320px;height:180px;overflow:hidden}#smoke{position:relative;width:320px;height:180px;color:#fff;font-family:Arial,sans-serif}#fill{position:absolute;inset:0;background:#18324c}#heading{position:absolute;left:24px;top:64px;font-size:24px;margin:0}
-</style></head><body><div id="smoke" data-composition-id="smoke" data-width="320" data-height="180" data-start="0" data-duration="1.5">
+</style></head><body><div id="smoke" data-composition-id="smoke" data-no-timeline data-width="320" data-height="180" data-start="0" data-duration="1.5">
 ${transparent ? "" : '<div id="fill"></div>'}<div class="clip" data-start="0" data-duration="1.5" data-track-index="0"><h1 id="heading">${title}</h1></div></div>
 <script>const motion=document.querySelector('#heading').animate([{opacity:0,transform:'translateX(-12px)'},{opacity:1,transform:'translateX(0)',offset:0.2},{opacity:1,transform:'translateX(0)',offset:0.4667},{opacity:1,transform:'translateX(16px)',offset:0.8},{opacity:1,transform:'translateX(16px)'}],{duration:1500,iterations:1,fill:'both',easing:'linear'});motion.pause();</script></body></html>`;
 }
@@ -237,8 +237,10 @@ try {
     const rendered = compositions.find((item) => item.id === composition.id)?.rendered;
     return rendered && rendered.source !== firstSource ? rendered : null;
   }, "Panel render did not produce the edited composition", 600000);
+  proof.relink = { expected: { source: updated.source, path: originalRecord.path }, actual: null };
   await until(async () => {
     const asset = await linkedRecord();
+    proof.relink.actual = asset ?? null;
     return asset?.source === updated.source && asset.path === originalRecord.path;
   }, "Re-render did not preserve the linked asset's library path");
   const linkedAfter = await cli("context");

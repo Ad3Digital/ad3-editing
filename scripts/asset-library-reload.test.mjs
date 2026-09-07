@@ -70,3 +70,80 @@ test("an in-flight manifest reload preserves a newly assigned generated-media li
     await library.dispose();
   }
 });
+
+test("a reload waiting for an older save preserves edits made during that save", async () => {
+  let disk = {
+    version: 1, folders: [], assets: [{
+      id: "render-content", path: "Titles/title.mp4", source: "assets/title.mp4",
+      createdAt: "2026-01-01T00:00:00.000Z", type: "VIDEO", mimeType: "video/mp4",
+      width: 320, height: 180, frameRate: 24, duration: 1.5,
+    }],
+  };
+  const entered = Promise.withResolvers();
+  const release = Promise.withResolvers();
+  let holdNextWrite = false;
+  const fs = {
+    async readManifest() { return structuredClone(disk); },
+    async writeManifest(manifest) {
+      const snapshot = structuredClone(manifest);
+      if (holdNextWrite) {
+        holdNextWrite = false;
+        entered.resolve();
+        await release.promise;
+      }
+      disk = snapshot;
+    },
+    async stat() { return null; },
+    async list() { return []; },
+  };
+  const library = new AssetLibrary(fs);
+  try {
+    await library.load();
+    library.update(library.get("render-content"), { generation: { key: "hyperframes", id: "old" } });
+    holdNextWrite = true;
+    const saving = library.flush();
+    await entered.promise;
+    const reloading = library.load();
+    // Let load enter its await flush() while the old write remains in flight.
+    await Promise.resolve();
+    const generation = { key: "hyperframes", id: "latest" };
+    library.update(library.get("render-content"), { generation });
+    release.resolve();
+    await saving;
+    await reloading;
+    assert.deepEqual(library.get("Titles/title.mp4").generation, generation);
+    await library.flush();
+    assert.deepEqual(disk.assets[0].generation, generation);
+  } finally {
+    release.resolve();
+    await library.dispose();
+  }
+});
+
+test("an asset retained across a reload can still update its persisted metadata", async () => {
+  let disk = {
+    version: 1, folders: [], assets: [{
+      id: "render-content", path: "Titles/title.mp4", source: "assets/title.mp4",
+      createdAt: "2026-01-01T00:00:00.000Z", type: "VIDEO", mimeType: "video/mp4",
+      width: 320, height: 180, frameRate: 24, duration: 1.5,
+    }],
+  };
+  const library = new AssetLibrary({
+    async readManifest() { return structuredClone(disk); },
+    async writeManifest(manifest) { disk = structuredClone(manifest); },
+    async stat() { return null; },
+    async list() { return []; },
+  });
+  try {
+    await library.load();
+    const retained = library.get("render-content");
+    await library.load();
+    const generation = { key: "hyperframes", id: "edited-composition" };
+    library.update(retained, { generation });
+    assert.deepEqual(library.get("Titles/title.mp4").generation, generation);
+    await library.flush();
+    assert.deepEqual(disk.assets[0].generation, generation);
+  } finally {
+    await library.dispose();
+  }
+});

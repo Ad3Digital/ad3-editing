@@ -198,8 +198,8 @@ jobs:
         run: >-
           node -e "const fs = require('node:fs'); const expected = ['AD3-Editing-x64-Setup.exe', 'AD3-Editing-win32-x64.zip', 'AD3-Editing-darwin-arm64.dmg', 'AD3-Editing-darwin-arm64.zip', 'AD3-Editing-darwin-x64.dmg', 'AD3-Editing-darwin-x64.zip']; const actual = fs.readdirSync('release-assets').sort(); if (actual.length !== expected.length || actual.some((name, index) => name !== expected.sort()[index])) throw new Error('Expected exactly: ' + expected.join(', ') + '; got: ' + actual.join(', '));"
       - name: Create checksums
-        run: >-
-          node -e "const { createHash } = require('node:crypto'); const { readFileSync, writeFileSync } = require('node:fs'); const files = ['AD3-Editing-x64-Setup.exe', 'AD3-Editing-win32-x64.zip', 'AD3-Editing-darwin-arm64.dmg', 'AD3-Editing-darwin-arm64.zip', 'AD3-Editing-darwin-x64.dmg', 'AD3-Editing-darwin-x64.zip']; writeFileSync('release-assets/SHA256SUMS.txt', files.map((name) => createHash('sha256').update(readFileSync('release-assets/' + name)).digest('hex') + '  ' + name).join('\n') + '\n');"
+        working-directory: release-assets
+        run: sha256sum AD3-Editing-* > SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.resolve.outputs.tag }}
