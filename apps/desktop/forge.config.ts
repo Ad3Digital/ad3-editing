@@ -45,6 +45,7 @@ const config: ForgeConfig = {
     osxSign: process.platform === 'darwin' ? {
       identity: macosSigningIdentity ?? '-',
       identityValidation: !!macosSigningIdentity,
+      continueOnError: false,
     } : undefined,
     osxNotarize:
       process.platform === 'darwin' && canNotarize
