@@ -162,9 +162,9 @@ cd ad3-editing
 npm ci
 ```
 
-Copy `apps/web/.env.example` to `apps/web/.env` for a new checkout. The template
-contains public client configuration; do not commit private credentials or replace
-an existing local configuration unnecessarily.
+Desktop builds need no `.env` file or Supabase credentials. Optional browser-only
+cloud development uses `apps/web/.env.example`; do not commit private credentials
+or replace an existing local configuration unnecessarily.
 
 ```sh
 npm run check
