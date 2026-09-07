@@ -7,11 +7,12 @@ import { MakerDMG } from '@electron-forge/maker-dmg';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { createMacOsSigningOptions, isDeveloperIdSigning } from './scripts/macos-signing-options.mjs';
 
 const { version } = JSON.parse(readFileSync(join(__dirname, '..', '..', 'package.json'), 'utf8'));
 const macosSigningIdentity = process.env.APPLE_SIGNING_IDENTITY;
 const canNotarize =
-  !!macosSigningIdentity &&
+  isDeveloperIdSigning(macosSigningIdentity) &&
   !!process.env.APPLE_ID &&
   !!process.env.APPLE_PASSWORD &&
   !!process.env.APPLE_TEAM_ID;
@@ -42,11 +43,7 @@ const config: ForgeConfig = {
     // A Developer ID identity is deliberately opt-in through the environment.
     // Without one, ad-hoc signing makes the .app bundle internally consistent
     // while accurately leaving distribution unsigned and unnotarized.
-    osxSign: process.platform === 'darwin' ? {
-      identity: macosSigningIdentity ?? '-',
-      identityValidation: !!macosSigningIdentity,
-      continueOnError: false,
-    } : undefined,
+    osxSign: process.platform === 'darwin' ? createMacOsSigningOptions(macosSigningIdentity) : undefined,
     osxNotarize:
       process.platform === 'darwin' && canNotarize
         ? {

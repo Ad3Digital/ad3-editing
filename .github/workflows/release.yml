@@ -93,6 +93,8 @@ jobs:
         run: npm ci
       - name: Verify concurrent asset reload regression
         run: node --test scripts/asset-library-reload.test.mjs
+      - name: Verify macOS signing and preview readiness regressions
+        run: node --experimental-strip-types --test apps/desktop/scripts/macos-signing-options.test.mjs packages/hyperframes-engine/scripts/readiness.test.mjs
       - name: Package native installer
         run: npm run make --workspace=@diffusionstudio/desktop -- --arch ${{ matrix.arch }}
       - name: Smoke installed Windows portable
@@ -136,7 +138,7 @@ jobs:
           ditto "$source_bundle" "$app_bundle"
           hdiutil detach "$mount_point"
           mounted=false
-          codesign --verify --deep --strict "$app_bundle"
+          node scripts/verify-macos-signing.mjs "$app_bundle"
           app_executable=""
           for candidate in "$app_bundle"/Contents/MacOS/*; do
             if [ -f "$candidate" ] && [ -x "$candidate" ]; then app_executable="$candidate"; break; fi
@@ -206,6 +208,10 @@ jobs:
           target_commitish: ${{ needs.resolve.outputs.commit }}
           generate_release_notes: true
           body: |
+            ## macOS startup and preview fixes
+
+            Fixes the ad-hoc hardened-runtime library-validation crash on macOS and avoids the bundled fetch socket-option exception when opening a local HyperFrames preview. Gatekeeper remains enabled; no global security settings are changed.
+
             ## Local HyperFrames engine
 
             Create and edit HTML motion compositions in the new HyperFrames panel, preview them with playback controls, render MP4 or transparent PNG sequences, and insert linked clips into the timeline. Re-rendering updates the linked media while retaining authored clip edits.

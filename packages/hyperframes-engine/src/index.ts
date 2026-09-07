@@ -8,6 +8,7 @@ import { access, copyFile, lstat, mkdir, readdir, readFile, realpath, rename, rm
 import { constants, realpathSync, statSync as statSyncNow } from "node:fs";
 import { basename, delimiter, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { createServer } from "node:net";
+import { probeLoopbackHttp } from "./readiness";
 import { DEFAULT_HYPERFRAMES_SETTINGS, generateTemplate } from "./templates";
 import type { HyperframesComposition, HyperframesDraft, HyperframesEngineOptions, HyperframesJob, HyperframesRenderResult, HyperframesRuntimeStatus, HyperframesSettings } from "./types";
 
@@ -71,7 +72,7 @@ async function waitPort(port: number, child: ChildProcess): Promise<void> {
   const deadline = Date.now() + 30_000;
   for (;;) {
     if (child.exitCode !== null) throw new Error(`HyperFrames preview exited before becoming ready (code ${child.exitCode}).`);
-    try { if ((await fetch(`http://127.0.0.1:${port}/`, { signal: AbortSignal.timeout(1_000) })).status > 0) return; } catch { /* booting */ }
+    if (await probeLoopbackHttp(port)) return;
     if (Date.now() >= deadline) throw new Error("Timed out waiting for the local HyperFrames preview server.");
     const delay = Promise.withResolvers<void>(); setTimeout(delay.resolve, 100); await delay.promise;
   }
