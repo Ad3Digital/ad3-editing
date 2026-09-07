@@ -1,0 +1,13 @@
+diff --git a/node_modules/@electron/packager/dist/platform.js b/node_modules/@electron/packager/dist/platform.js
+index 055c187..fc53abb 100644
+--- a/node_modules/@electron/packager/dist/platform.js
++++ b/node_modules/@electron/packager/dist/platform.js
+@@ -306,7 +306,7 @@ export class App {
+             ...this.commonHookArgs,
+         };
+         await runHooks(this.opts.beforeCopyExtraResources, hookArgs);
+-        await Promise.all(extraResources.map((resource) => fs.promises.cp(resource, path.resolve(this.stagingPath, this.resourcesDir, path.basename(resource)), { recursive: true })));
++        await Promise.all(extraResources.map((resource) => fs.promises.cp(resource, path.resolve(this.stagingPath, this.resourcesDir, path.basename(resource)), { recursive: true, verbatimSymlinks: true })));
+         await runHooks(this.opts.afterCopyExtraResources, hookArgs);
+     }
+     async move() {

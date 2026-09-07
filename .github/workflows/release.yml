@@ -15,6 +15,10 @@ on:
         required: true
         default: main
         type: string
+      publish:
+        description: Publish the GitHub release after all native checks pass
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -159,6 +163,7 @@ jobs:
   release:
     name: Publish GitHub release
     needs: [resolve, package]
+    if: github.event_name == 'push' || inputs.publish
     runs-on: ubuntu-24.04
     permissions:
       contents: write

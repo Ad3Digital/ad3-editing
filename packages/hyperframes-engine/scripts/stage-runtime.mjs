@@ -74,7 +74,8 @@ try {
 
   rmSync(output, { recursive: true, force: true });
   mkdirSync(output, { recursive: true });
-  cpSync(join(work, "node_modules"), join(output, "node_modules"), { recursive: true, dereference: true });
+  // npm launchers must remain relative when the temporary install tree is removed.
+  cpSync(join(work, "node_modules"), join(output, "node_modules"), { recursive: true, verbatimSymlinks: true });
   cpSync(join(work, "package.json"), join(output, "package.json"));
   cpSync(join(work, "package-lock.json"), join(output, "package-lock.json"));
   const requireFromRuntime = createRequire(join(work, "runtime-resolver.cjs"));
