@@ -38,6 +38,8 @@ dist-contract
 
 # Electron
 out/
+artifacts/
+release-assets/
 
 # Vercel
 .vercel

@@ -9,7 +9,7 @@
 //   cli/bin/dapi       POSIX wrapper
 //   cli/bin/dapi.cmd   Windows wrapper
 import { execFileSync } from "node:child_process";
-import { chmodSync, cpSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -65,8 +65,19 @@ while [ -L "$SELF" ]; do
   esac
 done
 DIR="$(cd "$(dirname "$SELF")" && pwd)"
-export DIFFUSION_APP_PATH="$(cd "$DIR/../../../.." && pwd)"
-ELECTRON_RUN_AS_NODE=1 exec "$DIR/../../../MacOS/AD3 Editing" "$DIR/../dapi.js" "$@"
+CONTENTS_DIR="$(cd "$DIR/../../.." && pwd)"
+for CANDIDATE in "$CONTENTS_DIR"/MacOS/*; do
+  if [ -f "$CANDIDATE" ] && [ -x "$CANDIDATE" ]; then
+    APP_EXECUTABLE="$CANDIDATE"
+    break
+  fi
+done
+if [ -z "$APP_EXECUTABLE" ]; then
+  echo "AD3 Editing application executable could not be located." >&2
+  exit 1
+fi
+export DIFFUSION_APP_PATH="$(cd "$CONTENTS_DIR/.." && pwd)"
+ELECTRON_RUN_AS_NODE=1 exec "$APP_EXECUTABLE" "$DIR/../dapi.js" "$@"
 `;
 writeFileSync(join(stageDir, "bin", "dapi"), posixWrapper);
 if (process.platform !== "win32") chmodSync(join(stageDir, "bin", "dapi"), 0o755);
@@ -106,24 +117,5 @@ endlocal & exit /b 1
 `;
 writeFileSync(join(stageDir, "bin", "dapi.cmd"), windowsWrapper);
 
-// Mach-O files inside Resources are not reached by the app-bundle signing
-// pass, and notarization rejects unsigned executables; sign them here.
-if (process.platform === "darwin" && !process.env.SKIP_SIGN) {
-  const identities = execFileSync("security", ["find-identity", "-v", "-p", "codesigning"], {
-    encoding: "utf8",
-  });
-  const identity = identities.match(/"(Developer ID Application: [^"]+)"/)?.[1];
-  if (identity) {
-    const esbuildDir = join(stageDir, "node_modules", "@esbuild");
-    for (const pkg of readdirSync(esbuildDir)) {
-      const bin = join(esbuildDir, pkg, "bin", "esbuild");
-      execFileSync("codesign", ["--force", "--options", "runtime", "--timestamp", "--sign", identity, bin], {
-        stdio: "inherit",
-      });
-    }
-  } else {
-    console.warn("stage-cli: no Developer ID identity found, leaving esbuild binary unsigned");
-  }
-}
 
 console.log(`stage-cli: staged dapi at ${stageDir}`);

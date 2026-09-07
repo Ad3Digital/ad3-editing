@@ -1,0 +1,25 @@
+{
+  "name": "@ad3/hyperframes-engine",
+  "version": "0.203.0",
+  "private": true,
+  "license": "MPL-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types.ts",
+    "./templates": "./src/templates.ts"
+  },
+  "scripts": {
+    "stage-runtime": "node scripts/stage-runtime.mjs"
+  },
+  "dependencies": {
+    "@puppeteer/browsers": "3.2.1",
+    "ffmpeg-static": "5.2.0",
+    "@ffprobe-installer/ffprobe": "2.1.2",
+    "hyperframes": "0.8.30"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "~5.9.3"
+  }
+}

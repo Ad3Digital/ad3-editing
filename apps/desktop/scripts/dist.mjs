@@ -10,8 +10,6 @@ import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
-const { createWindowsInstaller } = require("electron-winstaller");
-
 const desktopDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const rootDir = join(desktopDir, "..", "..");
 const outDir = join(desktopDir, "out");
@@ -21,9 +19,9 @@ const executableName = "Diffusion Studio";
 const productName = "AD3 Editing";
 const makerName = "DiffusionStudio";
 
-function runForge(mode) {
+function runForge(mode, args) {
   const executable = join(rootDir, "node_modules", ".bin", "electron-forge");
-  execFileSync(executable, [mode], { cwd: desktopDir, stdio: "inherit" });
+  execFileSync(executable, [mode, ...args], { cwd: desktopDir, stdio: "inherit" });
 }
 
 function ignored(path) {
@@ -56,7 +54,11 @@ async function packageWindows(version, arch) {
     prune: false,
     ignore: ignored,
     icon: join(desktopDir, "assets", "icon.ico"),
-    extraResource: [join(desktopDir, "cli"), join(desktopDir, "docs")],
+    extraResource: [
+      join(desktopDir, "cli"),
+      join(desktopDir, "hyperframes-engine"),
+      join(desktopDir, "docs"),
+    ],
     win32metadata: {
       CompanyName: "AD3 Editing",
       FileDescription: "AD3 Editing — local professional video editor",
@@ -71,6 +73,9 @@ async function packageWindows(version, arch) {
 }
 
 async function makeWindows(appDir, version, arch) {
+  // electron-winstaller is Windows-only. Loading it lazily lets macOS package
+  // through Forge without resolving its Windows native dependency graph.
+  const { createWindowsInstaller } = require("electron-winstaller");
   const makeDir = join(outDir, "make");
   const squirrelDir = join(makeDir, "squirrel.windows", arch);
   const zipDir = join(makeDir, "zip", "win32", arch);
@@ -104,20 +109,25 @@ async function makeWindows(appDir, version, arch) {
   return { setupPath: join(squirrelDir, setupName), zipPath };
 }
 
+function readRequestedArch(args) {
+  const archIndex = args.indexOf("--arch");
+  return archIndex === -1 ? (process.env.npm_config_arch ?? process.arch) : args[archIndex + 1];
+}
+
 async function main() {
-  const mode = process.argv[2];
+  const [mode, ...forgeArgs] = process.argv.slice(2);
   if (mode !== "package" && mode !== "make") {
     throw new Error(`Expected distribution mode package or make; received ${mode ?? "nothing"}.`);
   }
   if (process.platform !== "win32") {
-    runForge(mode);
+    runForge(mode, forgeArgs);
     return;
   }
 
   const rootPackage = JSON.parse(await readFile(join(rootDir, "package.json"), "utf8"));
-  const arch = process.env.npm_config_arch ?? process.arch;
-  if (!new Set(["x64", "arm64", "ia32"]).has(arch)) {
-    throw new Error(`Unsupported Windows architecture: ${arch}`);
+  const arch = readRequestedArch(forgeArgs);
+  if (!arch || !new Set(["x64", "arm64", "ia32"]).has(arch)) {
+    throw new Error(`Unsupported Windows architecture: ${arch ?? "nothing"}`);
   }
 
   const appDir = await packageWindows(rootPackage.version, arch);

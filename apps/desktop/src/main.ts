@@ -12,6 +12,16 @@ import { startCliServer, stopCliServer, isHeadless } from "./cli-server";
 import { trackInstall } from "./analytics";
 import { setupAppMenu } from "./menu";
 import { mainBridge } from "./main-manager";
+import {
+  cancelHyperframes,
+  disposeHyperframes,
+  hyperframesJob,
+  hyperframesStatus,
+  listHyperframes,
+  previewHyperframes,
+  renderHyperframes,
+  saveHyperframes,
+} from "./hyperframes";
 import { MAIN_CHANNELS } from "./main-channels";
 import {
   compileProject,
@@ -49,7 +59,14 @@ const MACOS_BACKDROP = { blur: 80, red: 0.07, green: 0.07, blue: 0.07, alpha: 0.
 
 // Keep the established user-data directory and Squirrel AUMID. Renaming either
 // would split existing preferences, project roots, taskbar pins, and notifications.
-app.setPath("userData", join(app.getPath("appData"), "Diffusion Studio"));
+// Electron's explicit profile must win so a smoke instance cannot attach to a
+// user's existing editor.
+const hasExplicitUserDataDir = process.argv.some(
+  (arg) => arg === "--user-data-dir" || arg.startsWith("--user-data-dir="),
+);
+if (!hasExplicitUserDataDir) {
+  app.setPath("userData", join(app.getPath("appData"), "Diffusion Studio"));
+}
 app.setName("AD3 Editing");
 if (process.platform === "win32") {
   app.setAppUserModelId("com.squirrel.DiffusionStudio.DiffusionStudio");
@@ -309,6 +326,13 @@ if (app.requestSingleInstanceLock()) {
   mainBridge.handle(MAIN_CHANNELS.PROJECTS_FS_STAT, ({ dir, source }) => statEntry(dir, source));
   mainBridge.handle(MAIN_CHANNELS.PROJECTS_FS_REMOVE, ({ dir, path }) => removeEntry(dir, path));
   mainBridge.handle(MAIN_CHANNELS.PROJECTS_FS_REAL_PATH, ({ dir, source }) => realPathEntry(dir, source));
+  mainBridge.handle(MAIN_CHANNELS.HYPERFRAMES_STATUS, () => hyperframesStatus());
+  mainBridge.handle(MAIN_CHANNELS.HYPERFRAMES_LIST, ({ dir }) => listHyperframes(dir));
+  mainBridge.handle(MAIN_CHANNELS.HYPERFRAMES_SAVE, ({ dir, draft }) => saveHyperframes(dir, draft));
+  mainBridge.handle(MAIN_CHANNELS.HYPERFRAMES_PREVIEW, ({ dir, id }) => previewHyperframes(dir, id));
+  mainBridge.handle(MAIN_CHANNELS.HYPERFRAMES_RENDER, ({ dir, id }) => renderHyperframes(dir, id));
+  mainBridge.handle(MAIN_CHANNELS.HYPERFRAMES_JOB, ({ dir, jobId }) => hyperframesJob(dir, jobId));
+  mainBridge.handle(MAIN_CHANNELS.HYPERFRAMES_CANCEL, ({ dir, jobId }) => cancelHyperframes(dir, jobId));
   mainBridge.handle(MAIN_CHANNELS.FILE_TRANSFER, ({ selector, absolutePath }) =>
     setFileInputFiles(selector, absolutePath),
   );
@@ -368,9 +392,16 @@ if (app.requestSingleInstanceLock()) {
     createWindow(!isHiddenLaunch(process.argv));
   });
 
-  app.on("before-quit", () => {
+  let quitting = false;
+  app.on("before-quit", (event) => {
+    if (quitting) return;
+    event.preventDefault();
+    quitting = true;
     unwatchAll();
     stopCliServer();
+    void disposeHyperframes()
+      .catch((error) => console.error("HyperFrames shutdown failed:", error))
+      .finally(() => app.quit());
   });
 
   app.on("window-all-closed", () => {

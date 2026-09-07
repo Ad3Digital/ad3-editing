@@ -18,6 +18,7 @@ const PKGS = [
   "apps/desktop/package.json",
   "apps/cli/package.json",
   "apps/web/package.json",
+  "packages/hyperframes-engine/package.json",
 ];
 
 const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
@@ -27,6 +28,9 @@ if (!arg) {
   console.error("Usage: npm run release <patch|minor|major|x.y.z>");
   process.exit(1);
 }
+
+const npmCli = process.env.npm_execpath;
+if (!npmCli) throw new Error("Run this command through npm run release so the npm CLI is resolved on this platform.");
 
 if (git("status", "--porcelain")) {
   console.error("Working tree is not clean; commit or stash first.");
@@ -62,7 +66,7 @@ for (const rel of PKGS) {
   writeFileSync(path, JSON.stringify(pkg, null, 2) + "\n");
 }
 
-execFileSync("npm", ["install", "--package-lock-only", "--no-audit", "--no-fund"], {
+execFileSync(process.execPath, [npmCli, "install", "--package-lock-only", "--no-audit", "--no-fund"], {
   cwd: root,
   stdio: "inherit",
 });

@@ -11,6 +11,12 @@
 // main forwards it opaquely without inspecting channel names.
 import type { LogEntry, ScreenshotResult } from "@diffusionstudio/cli/protocol";
 import type { SourceEdit, WriteResult } from "./edit";
+import type {
+  HyperframesComposition,
+  HyperframesDraft,
+  HyperframesJob,
+  HyperframesRuntimeStatus,
+} from "@ad3/hyperframes-engine/types";
 
 export const MAIN_WIRE = {
   REQUEST: "main:request",
@@ -62,6 +68,13 @@ export const MAIN_CHANNELS = {
   PROJECTS_FS_STAT: "projects:fs-stat",
   PROJECTS_FS_REMOVE: "projects:fs-remove",
   PROJECTS_FS_REAL_PATH: "projects:fs-real-path",
+  HYPERFRAMES_STATUS: "hyperframes:status",
+  HYPERFRAMES_LIST: "hyperframes:list",
+  HYPERFRAMES_SAVE: "hyperframes:save",
+  HYPERFRAMES_PREVIEW: "hyperframes:preview",
+  HYPERFRAMES_RENDER: "hyperframes:render",
+  HYPERFRAMES_JOB: "hyperframes:job",
+  HYPERFRAMES_CANCEL: "hyperframes:cancel",
 
   // Main→Renderer events
   AUTH_CALLBACK: "auth:callback",
@@ -110,6 +123,7 @@ export type MainChannel = (typeof MAIN_CHANNELS)[keyof typeof MAIN_CHANNELS];
 export type DeepLinkChannel =
   | typeof MAIN_CHANNELS.AUTH_CALLBACK
   | typeof MAIN_CHANNELS.CHECKOUT_CALLBACK;
+
 
 export type MainRequestMap = {
   [MAIN_CHANNELS.APP_OPEN_EXTERNAL]: { request: { url: string }; response: void };
@@ -183,6 +197,16 @@ export type MainRequestMap = {
   [MAIN_CHANNELS.PROJECTS_FS_STAT]: { request: { dir: string; source: string }; response: FsStat | null };
   [MAIN_CHANNELS.PROJECTS_FS_REMOVE]: { request: { dir: string; path: string }; response: void };
   [MAIN_CHANNELS.PROJECTS_FS_REAL_PATH]: { request: { dir: string; source: string }; response: string | null };
+  [MAIN_CHANNELS.HYPERFRAMES_STATUS]: { request: void; response: HyperframesRuntimeStatus };
+  [MAIN_CHANNELS.HYPERFRAMES_LIST]: { request: { dir: string }; response: HyperframesComposition[] };
+  [MAIN_CHANNELS.HYPERFRAMES_SAVE]: {
+    request: { dir: string; draft: HyperframesDraft };
+    response: HyperframesComposition;
+  };
+  [MAIN_CHANNELS.HYPERFRAMES_PREVIEW]: { request: { dir: string; id: string }; response: { url: string } };
+  [MAIN_CHANNELS.HYPERFRAMES_RENDER]: { request: { dir: string; id: string }; response: HyperframesJob };
+  [MAIN_CHANNELS.HYPERFRAMES_JOB]: { request: { dir: string; jobId: string }; response: HyperframesJob };
+  [MAIN_CHANNELS.HYPERFRAMES_CANCEL]: { request: { dir: string; jobId: string }; response: HyperframesJob };
 };
 
 export type FsEntry = {

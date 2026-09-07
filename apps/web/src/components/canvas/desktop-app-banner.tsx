@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { useEditorApi } from "@/context/dapi";
 import { createStoredSignal } from "@/lib/store";
-import { downloadDesktopApp } from "@/lib/desktop-app";
+import { desktopAppDownloadLabel, downloadDesktopApp } from "@/lib/desktop-app";
 import { track } from "@/lib/analytics";
 import { store } from "@/init";
 
@@ -56,7 +56,7 @@ export function DesktopAppBanner() {
             </p>
           </div>
           <Button variant="secondary" class="w-full" onClick={handleDownload}>
-            Download for Windows
+            {desktopAppDownloadLabel()}
           </Button>
         </div>
       </div>

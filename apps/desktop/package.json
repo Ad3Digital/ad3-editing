@@ -1,7 +1,7 @@
 {
   "name": "@diffusionstudio/desktop",
   "private": true,
-  "version": "0.202.0-windows.2",
+  "version": "0.203.0",
   "license": "MPL-2.0",
   "repository": {
     "type": "git",
@@ -15,11 +15,13 @@
     "build": "npm run check && npm run build:main && npm run build:preload && npm run build:native",
     "build:web": "npm --prefix ../web run build:desktop",
     "stage:cli": "npm --prefix ../cli run build && node scripts/stage-cli.mjs",
+    "stage:hyperframes": "node ../../packages/hyperframes-engine/scripts/stage-runtime.mjs --output ./hyperframes-engine",
     "stage:docs": "node scripts/stage-docs.mjs",
+    "sign:macos-resources": "node scripts/sign-macos-resources.mjs",
     "check": "tsc --noEmit",
     "dev": "npm run build && electron-forge start",
-    "package": "npm run build && npm run build:web && npm run stage:cli && npm run stage:docs && node scripts/dist.mjs package",
-    "make": "npm run build && npm run build:web && npm run stage:cli && npm run stage:docs && node scripts/dist.mjs make",
+    "package": "npm run build && npm run build:web && npm run stage:cli && npm run stage:hyperframes && npm run stage:docs && npm run sign:macos-resources && node scripts/dist.mjs package",
+    "make": "npm run build && npm run build:web && npm run stage:cli && npm run stage:hyperframes && npm run stage:docs && npm run sign:macos-resources && node scripts/dist.mjs make",
     "make:icns": "sh scripts/make-icns.sh"
   },
   "devDependencies": {
@@ -35,6 +37,7 @@
   "dependencies": {
     "@babel/core": "^7.29.7",
     "@babel/preset-typescript": "^7.27.1",
+    "@ad3/hyperframes-engine": "*",
     "@diffusionstudio/cli": "*",
     "@diffusionstudio/jsx": "*",
     "babel-preset-solid": "^1.9.12",

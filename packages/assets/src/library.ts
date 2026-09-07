@@ -84,6 +84,8 @@ export class AssetLibrary {
 	private inflight = new Map<string, Promise<Asset>>();
 	private saveTimer: ReturnType<typeof setTimeout> | undefined;
 	private saving: Promise<void> = Promise.resolve();
+	private loading: Promise<void> = Promise.resolve();
+	private changeVersion = 0;
 	private dirty = false;
 	private disposed = false;
 
@@ -167,32 +169,44 @@ export class AssetLibrary {
 	 * source changed since they were recorded (by size or mtime) are probed
 	 * again. Safe to call again: it reconciles rather than replaces.
 	 */
-	public async load(): Promise<void> {
-		const manifest = normalizeManifest(await this.fs.readManifest());
-		this.declared = new Set(manifest.folders);
+	public load(): Promise<void> {
+		const run = () => this.loadCurrent();
+		this.loading = this.loading.then(run, run);
+		return this.loading;
+	}
 
-		const next = new Map<string, Asset>();
-		await Promise.all(manifest.assets.map(async (record) => {
-			const asset = await this.revive(record).catch((error: unknown) => {
-				console.warn(`[assets] could not load ${record.path}:`, error);
-				return this.attach(record);
-			});
-			next.set(asset.id, asset);
-		}));
+	private async loadCurrent(): Promise<void> {
+		for (;;) {
+			await this.flush();
+			const version = this.changeVersion;
+			const manifest = normalizeManifest(await this.fs.readManifest());
+			const next = new Map<string, Asset>();
+			await Promise.all(manifest.assets.map(async (record) => {
+				const asset = await this.revive(record).catch((error: unknown) => {
+					console.warn(`[assets] could not load ${record.path}:`, error);
+					return this.attach(record);
+				});
+				next.set(asset.id, asset);
+			}));
 
-		// Keep transient assets and the same-id instances entities already hold.
-		for (const [id, asset] of this.map) {
-			if (asset.transient && !next.has(id)) next.set(id, asset);
+			// An import or relink may have finished while disk reads were pending.
+			// Flush that newer state and reload it instead of restoring stale metadata.
+			if (version !== this.changeVersion) continue;
+			this.declared = new Set(manifest.folders);
+			for (const [id, asset] of this.map) {
+				if (asset.transient && !next.has(id)) next.set(id, asset);
+			}
+			this.map.clear();
+			for (const [id, asset] of next) {
+				this.map.set(id, asset);
+			}
+
+			this.publish();
+			await this.scanAssetsDir();
+			this.publish();
+			this.cache.prune(this.map.keys());
+			return;
 		}
-		this.map.clear();
-		for (const [id, asset] of next) {
-			this.map.set(id, asset);
-		}
-
-		this.publish();
-		await this.scanAssetsDir();
-		this.publish();
-		this.cache.prune(this.map.keys());
 	}
 
 	/** Attaches handles to a record; re-examines it when its source changed. */
@@ -550,6 +564,7 @@ export class AssetLibrary {
 
 	private changed(): void {
 		if (this.disposed) return;
+		this.changeVersion++;
 		this.dirty = true;
 		this.publish();
 		clearTimeout(this.saveTimer);

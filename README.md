@@ -9,7 +9,7 @@ AI agents work through a structured CLI and composition code. People work on the
 canvas and timeline. Both edit the same project, with changes written back to its
 SolidJS/TypeScript source.
 
-[Download Windows](https://github.com/Ad3Digital/ad3-editing/releases/latest) ·
+[Download Windows / macOS](https://github.com/Ad3Digital/ad3-editing/releases/latest) ·
 [CLI reference](reference/README.md) ·
 [Composition reference](reference/jsx/README.md) ·
 [Issues](https://github.com/Ad3Digital/ad3-editing/issues)
@@ -26,13 +26,13 @@ SolidJS/TypeScript source.
   with any coding agent that can access the filesystem and terminal.
 
 The editor is **model-agnostic**. This release does not bundle an LLM or a chat
-service: bring your own coding agent and its credentials. The Windows workflow
-is local-only; upstream cloud generation, accounts, billing, and credits are not
-part of this release.
+service: bring your own coding agent and its credentials. The packaged desktop
+workflow is local-only; upstream cloud generation, accounts, billing, credits,
+analytics, and application auto-updates are not part of this release.
 
 ## Install on Windows
 
-Current release: **0.202.0-windows.2**, Windows x64.
+Release **0.203.0** supports Windows x64 and macOS on Apple silicon or Intel.
 
 1. Open [Releases](https://github.com/Ad3Digital/ad3-editing/releases/latest).
 2. Download `AD3-Editing-x64-Setup.exe`, or extract the portable ZIP.
@@ -47,7 +47,49 @@ still `Diffusion Studio.exe`. The Squirrel installation directory remains
 `%APPDATA%\Diffusion Studio`. Existing projects do not need a format migration.
 The application does not download upstream application updates.
 
-Other operating systems are not validated or distributed by this Windows release.
+## Install on macOS
+
+1. Open [Releases](https://github.com/Ad3Digital/ad3-editing/releases/latest).
+2. Choose `AD3-Editing-darwin-arm64.dmg` for Apple silicon, or
+   `AD3-Editing-darwin-x64.dmg` for Intel. Check **Apple menu > About This Mac**
+   if you are unsure. ZIP archives are also available.
+3. Compare the download's SHA-256 with `SHA256SUMS.txt` in the same release
+   (`shasum -a 256 path/to/download.dmg`).
+4. Open the DMG, move the app into **Applications**, and launch it.
+
+The macOS builds have **no Apple Developer ID signature or notarization**.
+If macOS blocks the first launch, use **System Settings > Privacy & Security >
+Open Anyway**, then confirm the one-time prompt. Do not disable Gatekeeper
+globally. Native build and smoke jobs run separately for both Mac architectures;
+this does not replace checking the first launch on your own Mac.
+
+## HyperFrames motion engine
+
+The **HyperFrames** tab in the left sidebar creates titles, lower thirds, and
+animated statistics. Edit their text, colors, duration, frame rate, and dimensions,
+or edit the composition's HTML directly.
+
+1. Create a composition and **Save** it.
+2. Use **Preview** to play, pause, and seek the source in the embedded player.
+3. **Render** locally, then **Insert at playhead** to add a linked timeline clip.
+4. Edit and render again. The linked asset updates without recreating or retiming
+   its timeline clips.
+
+Opaque compositions produce MP4. **Transparent PNG sequence** preserves alpha for
+overlays. HTML, settings, and revisions live in the project's `hyperframes/`
+directory; immutable rendered outputs live in `assets/`. Keep the whole project
+folder when moving or backing up an edit.
+
+`@ad3/hyperframes-engine` is independent of the editor interface. Electron exposes
+its project-scoped save, preview, render, job-status, and cancellation operations
+through IPC; the web interface does not start shell commands. Preview servers bind
+to loopback, and preview iframes do not receive the desktop bridge.
+
+The application bundles HyperFrames 0.8.30, its browser, and FFmpeg/FFprobe: these
+operations do not require a separate Node, browser, or FFmpeg installation.
+Built-in templates use native browser animations and work locally. Custom HTML
+can introduce its own network dependencies; keep its assets and appropriately
+licensed libraries local for offline, reproducible rendering.
 
 ## Editing controls
 
@@ -72,8 +114,9 @@ Shuttle speed never retimes authored clips or changes export timing.
 
 ## Working with an AI agent
 
-The desktop distribution includes `resources/cli/bin/dapi.cmd`. Invoke it directly
-or add that directory to your terminal's PATH. Run `dapi --help` for the full CLI.
+On Windows the distribution includes `resources/cli/bin/dapi.cmd`. On macOS use
+`AD3 Editing.app/Contents/Resources/cli/bin/dapi`. Invoke the launcher directly or
+add its directory to your terminal's PATH. Run `dapi --help` for the full CLI.
 
 ```sh
 dapi open path/to/project
@@ -109,7 +152,9 @@ during fast reverse shuttle. Export decoding remains full-resolution.
 
 ## Build from source
 
-Use **Node.js 24**, npm, Git, and Windows x64 to build the published Windows package.
+Use **Node.js 24**, npm, and Git. Build natively on Windows x64, macOS Apple silicon,
+or macOS Intel for the corresponding published package. macOS builds also require
+the Xcode command-line tools.
 
 ```sh
 git clone https://github.com/Ad3Digital/ad3-editing.git
@@ -130,6 +175,13 @@ Outputs:
 
 - Installer: `apps/desktop/out/make/squirrel.windows/x64/AD3-Editing-x64-Setup.exe`
 - Portable ZIP: `apps/desktop/out/make/zip/win32/x64/`
+- macOS images and ZIPs: `apps/desktop/out/make/`
+
+Packaging stages the pinned HyperFrames runtime and its native tools before
+creating the installers. This build step requires network access; running built-in
+compositions in the installed application does not. Release jobs launch each
+packaged app and exercise preview, MP4 and alpha rendering, timeline insertion,
+linked-asset updates, cancellation, and project isolation.
 
 For development, run `npm run dev`. `npm run check` checks all workspaces and the
 examples. `npm run lint` runs the repository's linters.
@@ -139,13 +191,14 @@ examples. `npm run lint` runs the repository's linters.
 | Path | Purpose |
 | --- | --- |
 | `apps/web` | SolidJS editor interface |
-| `apps/desktop` | Electron application and Windows packaging |
+| `apps/desktop` | Electron application and Windows/macOS packaging |
 | `apps/cli` | Agent-facing `dapi` CLI |
 | `packages/runtime` | Scene state, actions, playback, media decoding, and capture |
 | `packages/reconciler` | Composition-to-runtime reconciliation |
 | `packages/jsx` | Composition authoring API |
 | `packages/assets` | Asset library, manifests, probing, and resolution |
 | `packages/encoder` | Video, audio, and image export |
+| `packages/hyperframes-engine` | Local HyperFrames process engine, templates, and bundled runtime staging |
 | `packages/koota-solid` | Solid bindings for the entity runtime |
 | `reference` | CLI and composition documentation |
 | `examples` | Example compositions |
@@ -169,3 +222,10 @@ Original Diffusion Studio brand assets are not covered by MPL-2.0.
 Copyright (c) Diffusion Studio Inc. All rights reserved.
 The original AD3 Editing icon and marks created for this fork are supplied under
 MPL-2.0. Third-party components and assets retain their respective licenses.
+
+The HyperFrames runtime is Apache-2.0. Packaged third-party notices and native
+FFmpeg/FFprobe license output are included under `resources/hyperframes-engine`
+(inside `Contents/Resources` on macOS). The bundled FFmpeg is a GPL-licensed
+separate executable; see each FFprobe build's captured license for its terms.
+Custom composition dependencies keep their own licenses; built-in templates
+do not depend on GSAP.

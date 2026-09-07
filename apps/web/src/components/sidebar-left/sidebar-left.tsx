@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { Assets } from "./assets";
+import { HyperframesPanel } from "../hyperframes/panel";
 import { useLayout } from "@/context/layout";
 import { useEditorApi } from "@/context/dapi";
 import { createSignal, Show } from "solid-js";
@@ -14,11 +15,35 @@ import { useProject } from "@/context/project";
 import { cx } from "@/lib/cva";
 
 export function SidebarLeft() {
+  const [activePanel, setActivePanel] = createSignal<"assets" | "hyperframes">("assets");
+
   return (
     <div class="flex flex-col h-full overflow-hidden">
       <ElectronHeader />
       <ProjectHeader />
-      <Assets />
+      <div class="flex h-9 shrink-0 gap-1 border-b border-border px-2 py-1">
+        <Button
+          variant={activePanel() === "assets" ? "on" : "ghost"}
+          size="small"
+          class="flex-1"
+          aria-pressed={activePanel() === "assets"}
+          onClick={() => setActivePanel("assets")}
+        >
+          Assets
+        </Button>
+        <Button
+          variant={activePanel() === "hyperframes" ? "on" : "ghost"}
+          size="small"
+          class="flex-1"
+          aria-pressed={activePanel() === "hyperframes"}
+          onClick={() => setActivePanel("hyperframes")}
+        >
+          HyperFrames
+        </Button>
+      </div>
+      <Show when={activePanel() === "assets"} fallback={<HyperframesPanel />}>
+        <Assets />
+      </Show>
     </div>
   );
 }

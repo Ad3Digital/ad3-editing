@@ -9,11 +9,17 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const { version } = JSON.parse(readFileSync(join(__dirname, '..', '..', 'package.json'), 'utf8'));
+const macosSigningIdentity = process.env.APPLE_SIGNING_IDENTITY;
+const canNotarize =
+  !!macosSigningIdentity &&
+  !!process.env.APPLE_ID &&
+  !!process.env.APPLE_PASSWORD &&
+  !!process.env.APPLE_TEAM_ID;
 
 const config: ForgeConfig = {
   packagerConfig: {
     name: 'AD3 Editing',
-    // The old identifier remains the stable macOS/protocol identity for existing installs.
+    executableName: 'AD3 Editing',
     appBundleId: 'studio.diffusion.editor',
     appCategoryType: 'public.app-category.video',
     appVersion: version,
@@ -30,19 +36,22 @@ const config: ForgeConfig = {
       !path.startsWith('/dist/') &&
       path !== '/web' &&
       !path.startsWith('/web/'),
-    // Staged by scripts/stage-cli.mjs and stage-docs.mjs; Electron Forge
-    // places both directories below the platform's resources directory.
-    extraResource: ['./cli', './docs'],
-    osxSign: process.platform === 'darwin' && !process.env.SKIP_SIGN ? {} : undefined,
+    // Staged by scripts/stage-cli.mjs, stage-runtime.mjs, and stage-docs.mjs;
+    // Electron Forge places all three directories below the resources directory.
+    extraResource: ['./cli', './hyperframes-engine', './docs'],
+    // A Developer ID identity is deliberately opt-in through the environment.
+    // Without one, ad-hoc signing makes the .app bundle internally consistent
+    // while accurately leaving distribution unsigned and unnotarized.
+    osxSign: process.platform === 'darwin' ? {
+      identity: macosSigningIdentity ?? '-',
+      identityValidation: !!macosSigningIdentity,
+    } : undefined,
     osxNotarize:
-      process.platform === 'darwin' &&
-      process.env.APPLE_ID &&
-      process.env.APPLE_PASSWORD &&
-      process.env.APPLE_TEAM_ID
+      process.platform === 'darwin' && canNotarize
         ? {
-            appleId: process.env.APPLE_ID,
-            appleIdPassword: process.env.APPLE_PASSWORD,
-            teamId: process.env.APPLE_TEAM_ID,
+            appleId: process.env.APPLE_ID!,
+            appleIdPassword: process.env.APPLE_PASSWORD!,
+            teamId: process.env.APPLE_TEAM_ID!,
           }
         : undefined,
   },

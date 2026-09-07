@@ -11,7 +11,7 @@ import {
   ContextMenuPortal,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { downloadDesktopApp } from "@/lib/desktop-app";
+import { desktopAppDownloadLabel, downloadDesktopApp } from "@/lib/desktop-app";
 import { createStoredSignal } from "@/lib/store";
 import { track } from "@/lib/analytics";
 import { store } from "@/init";
@@ -51,7 +51,7 @@ export function DashboardGetDesktopApp() {
             </div>
           </div>
           <Button variant="secondary" onClick={() => downloadDesktopApp("dashboard_footer")}>
-            Download for Windows
+            {desktopAppDownloadLabel()}
           </Button>
         </ContextMenuTrigger>
         <ContextMenuPortal>

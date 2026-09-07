@@ -9,8 +9,9 @@ import './index.css'
 import App from './app'
 import { initAnalytics } from './lib/analytics'
 import { restoreLastRoute } from './lib/persist-route'
+import { isLocalOnlyDesktop } from './lib/local-mode'
 
-if (import.meta.env.PROD) {
+if (import.meta.env.PROD && !isLocalOnlyDesktop()) {
   Sentry.init({
     dsn: 'https://5786931d60606166d379cd2405683cb1@o4511326229889024.ingest.us.sentry.io/4511326232903680',
     sendDefaultPii: true,
@@ -36,7 +37,7 @@ if (window.desktop) {
   restoreLastRoute();
 }
 
-initAnalytics()
+if (!isLocalOnlyDesktop()) initAnalytics()
 
 const root = document.getElementById('root')
 

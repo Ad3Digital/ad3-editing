@@ -1,0 +1,195 @@
+name: Release desktop installers
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing or new version tag to release (for example v0.203.0)
+        required: true
+        type: string
+      ref:
+        description: Commit, branch, or tag to build
+        required: true
+        default: main
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: Resolve release source
+    runs-on: ubuntu-24.04
+    outputs:
+      commit: ${{ steps.release.outputs.commit }}
+      tag: ${{ steps.release.outputs.tag }}
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+      - id: release
+        shell: bash
+        run: |
+          node -e "const fs = require('node:fs'); const tag = process.env.RELEASE_TAG; if (!/^v[0-9]+\.[0-9]+\.[0-9]+$/.test(tag)) throw new Error('Release tag must be v<major>.<minor>.<patch>.'); const version = tag.slice(1); const manifests = ['package.json', 'apps/desktop/package.json', 'apps/web/package.json', 'apps/cli/package.json']; for (const path of manifests) { if (JSON.parse(fs.readFileSync(path, 'utf8')).version !== version) throw new Error(path + ' must have version ' + version); }"
+          selected_commit="$(git rev-parse HEAD)"
+          if git rev-parse -q --verify "refs/tags/$RELEASE_TAG^{commit}" >/dev/null; then
+            tag_commit="$(git rev-list -n 1 "$RELEASE_TAG")"
+            if [ "$tag_commit" != "$selected_commit" ]; then
+              echo "Tag $RELEASE_TAG already points at $tag_commit, not selected commit $selected_commit." >&2
+              exit 1
+            fi
+          fi
+          echo "commit=$selected_commit" >> "$GITHUB_OUTPUT"
+          echo "tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
+  package:
+    name: ${{ matrix.target }}
+    needs: resolve
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: win32-x64
+            runner: windows-2022
+            arch: x64
+          - target: darwin-arm64
+            runner: macos-14
+            arch: arm64
+            uname: arm64
+          - target: darwin-x64
+            runner: macos-15-intel
+            arch: x64
+            uname: x86_64
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.commit }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Verify native runner architecture
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if ($env:PROCESSOR_ARCHITECTURE -ne 'AMD64') { throw "Expected AMD64 runner, got $env:PROCESSOR_ARCHITECTURE." }
+      - name: Verify native runner architecture
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          test "$(uname -m)" = "${{ matrix.uname }}"
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Verify concurrent asset reload regression
+        run: node --test scripts/asset-library-reload.test.mjs
+      - name: Package native installer
+        run: npm run make --workspace=@diffusionstudio/desktop -- --arch ${{ matrix.arch }}
+      - name: Smoke packaged Windows app
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $app = Get-ChildItem apps/desktop/out -Recurse -File -Filter 'Diffusion Studio.exe' | Select-Object -First 1
+          if (!$app) { throw 'Packaged Windows executable was not found.' }
+          $originalPath = $env:PATH
+          try {
+            $env:PATH = "$env:SystemRoot\System32"
+            & (Join-Path $app.DirectoryName 'resources/cli/bin/dapi.cmd') --version
+            if ($LASTEXITCODE -ne 0) { throw 'Bundled CLI launcher failed without system Node.' }
+          } finally { $env:PATH = $originalPath }
+          node scripts/smoke-packaged.mjs --app $app.FullName --output artifacts/smoke/${{ matrix.target }}
+      - name: Smoke packaged macOS app
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          app_bundle="$(find apps/desktop/out -type d -name '*.app' -print -quit)"
+          if [ -z "$app_bundle" ]; then echo 'Packaged macOS app bundle was not found.' >&2; exit 1; fi
+          codesign --verify --deep --strict "$app_bundle"
+          app_executable=""
+          for candidate in "$app_bundle"/Contents/MacOS/*; do
+            if [ -f "$candidate" ] && [ -x "$candidate" ]; then app_executable="$candidate"; break; fi
+          done
+          if [ -z "$app_executable" ]; then echo 'Packaged macOS executable was not found.' >&2; exit 1; fi
+          PATH=/usr/bin:/bin "$app_bundle/Contents/Resources/cli/bin/dapi" --version
+          node scripts/smoke-packaged.mjs --app "$app_executable" --output artifacts/smoke/${{ matrix.target }}
+      - name: Collect Windows release assets
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release-assets | Out-Null
+          $setup = Get-ChildItem apps/desktop/out/make -Recurse -File -Filter '*-Setup.exe' | Select-Object -First 1
+          $portable = Get-ChildItem apps/desktop/out/make/zip -Recurse -File -Filter '*.zip' | Select-Object -First 1
+          if (!$setup -or !$portable) { throw 'Windows installer or portable archive was not found.' }
+          Copy-Item $setup.FullName release-assets/AD3-Editing-x64-Setup.exe
+          Copy-Item $portable.FullName release-assets/AD3-Editing-win32-x64.zip
+      - name: Collect macOS release assets
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          mkdir -p release-assets
+          dmg="$(find apps/desktop/out/make -type f -name '*.dmg' -print -quit)"
+          archive="$(find apps/desktop/out/make -type f -name '*.zip' -print -quit)"
+          if [ -z "$dmg" ] || [ -z "$archive" ]; then echo 'macOS DMG or ZIP was not found.' >&2; exit 1; fi
+          hdiutil verify "$dmg"
+          cp "$dmg" "release-assets/AD3-Editing-${{ matrix.target }}.dmg"
+          cp "$archive" "release-assets/AD3-Editing-${{ matrix.target }}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ad3-${{ matrix.target }}
+          path: release-assets/*
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-${{ matrix.target }}
+          path: |
+            artifacts/smoke/${{ matrix.target }}/*.png
+            artifacts/smoke/${{ matrix.target }}/*.json
+            artifacts/smoke/${{ matrix.target }}/*.log
+          if-no-files-found: warn
+          retention-days: 7
+
+  release:
+    name: Publish GitHub release
+    needs: [resolve, package]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          pattern: ad3-*
+          merge-multiple: true
+      - name: Verify complete release asset set
+        run: >-
+          node -e "const fs = require('node:fs'); const expected = ['AD3-Editing-x64-Setup.exe', 'AD3-Editing-win32-x64.zip', 'AD3-Editing-darwin-arm64.dmg', 'AD3-Editing-darwin-arm64.zip', 'AD3-Editing-darwin-x64.dmg', 'AD3-Editing-darwin-x64.zip']; const actual = fs.readdirSync('release-assets').sort(); if (actual.length !== expected.length || actual.some((name, index) => name !== expected.sort()[index])) throw new Error('Expected exactly: ' + expected.join(', ') + '; got: ' + actual.join(', '));"
+      - name: Create checksums
+        run: >-
+          node -e "const { createHash } = require('node:crypto'); const { readFileSync, writeFileSync } = require('node:fs'); const files = ['AD3-Editing-x64-Setup.exe', 'AD3-Editing-win32-x64.zip', 'AD3-Editing-darwin-arm64.dmg', 'AD3-Editing-darwin-arm64.zip', 'AD3-Editing-darwin-x64.dmg', 'AD3-Editing-darwin-x64.zip']; writeFileSync('release-assets/SHA256SUMS.txt', files.map((name) => createHash('sha256').update(readFileSync('release-assets/' + name)).digest('hex') + '  ' + name).join('\n') + '\n');"
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.resolve.outputs.tag }}
+          target_commitish: ${{ needs.resolve.outputs.commit }}
+          generate_release_notes: true
+          body: |
+            ## Local HyperFrames engine
+
+            Create and edit HTML motion compositions in the new HyperFrames panel, preview them with playback controls, render MP4 or transparent PNG sequences, and insert linked clips into the timeline. Re-rendering updates the linked media while retaining authored clip edits.
+
+            Packages include HyperFrames 0.8.30, Chrome Headless Shell, FFmpeg and FFprobe. Windows x64, macOS Apple silicon and macOS Intel are built and exercised natively before publication.
+
+            ## macOS security notice
+
+            The macOS builds have **no Apple Developer ID signature or notarization**. After verifying the matching SHA-256 value in `SHA256SUMS.txt`, macOS may block the first launch. In **System Settings > Privacy & Security**, click **Open Anyway**, then confirm the one-time prompt. Do not disable Gatekeeper globally.
+
+            Download the `darwin-arm64` image for Apple silicon and `darwin-x64` for Intel Macs.
+          files: release-assets/*
+          fail_on_unmatched_files: true

@@ -1,6 +1,6 @@
 {
   "name": "@diffusionstudio/editor",
-  "version": "0.202.0-windows.2",
+  "version": "0.203.0",
   "private": true,
   "license": "MPL-2.0",
   "description": "AD3 Editing — agentic video editing for AI agents and human editors.",

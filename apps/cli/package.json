@@ -1,7 +1,7 @@
 {
   "name": "@diffusionstudio/cli",
   "private": true,
-  "version": "0.202.0-windows.2",
+  "version": "0.203.0",
   "license": "MPL-2.0",
   "bin": {
     "dapi": "./dist/index.js"
