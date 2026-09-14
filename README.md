@@ -114,6 +114,15 @@ Shuttle speed never retimes authored clips or changes export timing.
 
 ## Working with an AI agent
 
+The [AD3 Editing skill](skills/ad3-editing/SKILL.md) teaches an agent to inspect
+footage, choose speech cuts, edit JSX without losing human timeline changes,
+align captions and audio, and verify exports. Copy `skills/ad3-editing/` into
+your agent's skills directory (for example, `~/.codex/skills/`), or ask the agent
+to read that `SKILL.md` directly from this checkout. This installs instructions
+for your agent; the desktop app and any optional local transcription tool are
+separate. The skill works with the existing `dapi` interface and does not require
+a new desktop release.
+
 On Windows the distribution includes `resources/cli/bin/dapi.cmd`. On macOS use
 `AD3 Editing.app/Contents/Resources/cli/bin/dapi`. Invoke the launcher directly or
 add its directory to your terminal's PATH. Run `dapi --help` for the full CLI.
@@ -125,7 +134,7 @@ dapi media probe path/to/clip.mp4
 dapi media filmstrip path/to/clip.mp4
 ```
 
-Use the returned scene IDs with `dapi capture` and `dapi check`. `dapi export`
+Use scene IDs from the project's JSX with `dapi capture` and `dapi check`. `dapi export`
 renders a project to a local video file; see its `--help` for output options.
 The [CLI reference](reference/README.md) documents arguments and structured output.
 Some optional media commands require additional tools or providers; consult their
