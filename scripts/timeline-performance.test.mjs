@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { before, test } from 'node:test';
-import { mkdtemp } from 'node:fs/promises';
+import { mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
-let createPointer, VideoExporter, VideoBuffer;
+let createPointer, VideoExporter, VideoBuffer, VideoDecoderQueue;
 before(async () => {
   const directory = await mkdtemp(join(tmpdir(), 'ad3-performance-tests-'));
   for (const [name, path] of [
@@ -20,11 +20,14 @@ before(async () => {
       plugins: [{ name: 'assert-only', setup(build) {
         build.onResolve({ filter: /^@\/utils$/ }, () => ({ path: 'assert', namespace: 'fixture' }));
         build.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: 'export function assert(value, message) { if (!value) throw new Error(message); }' }));
+        build.onLoad({ filter: /runtime[\\/]src[\\/]media[\\/]video\.ts$/ }, async ({ path }) => ({
+          contents: await readFile(path, 'utf8') + '\nexport { VideoDecoderQueue };', loader: 'ts',
+        }));
       } }],
     });
   }
   ({ createPointer } = require(join(directory, 'pointer.cjs')));
-  ({ VideoExporter, VideoBuffer } = require(join(directory, 'video.cjs')));
+  ({ VideoExporter, VideoBuffer, VideoDecoderQueue } = require(join(directory, 'video.cjs')));
 });
 
 test('hit testing keeps the topmost target, passive targets and drag owner across frames', () => {
@@ -94,4 +97,41 @@ test('a paused jump into a cold clip paints a keyframe before the exact seek', (
   });
   decoder.seekTo(3000, 30, true);
   assert.equal(decoder.scrubbed, 6000);
+});
+
+test('decoder output cannot bypass input backpressure, even after partial dequeue', async () => {
+  const queue = new VideoDecoderQueue(() => {});
+  let submitted = 0;
+  const decoder = { state: 'configured', decodeQueueSize: 6,
+    decode() { submitted++; this.decodeQueueSize++; },
+    close() { this.state = 'closed'; },
+  };
+  queue.decoder = decoder;
+  const pending = queue.decode({ type: 'delta', microsecondTimestamp: 100,
+    toEncodedVideoChunk: () => ({}),
+  });
+  queue.handleOutput({ timestamp: 0, close() {} });
+  await Promise.resolve();
+  assert.equal(submitted, 0, 'delayed output is not free input capacity');
+  decoder.decodeQueueSize = 5;
+  queue.handleDequeue();
+  await Promise.resolve();
+  assert.equal(submitted, 0, 'a dequeue must recheck the limit');
+  decoder.decodeQueueSize = 3;
+  queue.handleDequeue();
+  await pending;
+  assert.equal(submitted, 1);
+  assert.equal(decoder.decodeQueueSize, 4);
+});
+
+test('idling a clip wakes a blocked submit without feeding the closed decoder', async () => {
+  const queue = new VideoDecoderQueue(() => {});
+  let submitted = 0;
+  queue.decoder = { state: 'configured', decodeQueueSize: 4,
+    decode() { submitted++; }, close() { this.state = 'closed'; },
+  };
+  const pending = queue.decode({ type: 'delta', toEncodedVideoChunk: () => ({}) });
+  queue.dispose();
+  await pending;
+  assert.equal(submitted, 0);
 });

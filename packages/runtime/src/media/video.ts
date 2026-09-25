@@ -62,8 +62,8 @@ const SCRUB_EVENT_WINDOW_MS = 250;
  */
 const SCRUB_SETTLE_MS = 120;
 
-const MIN_CACHE_COUNT = 16;
-const MAX_CACHE_COUNT = 32;
+const MIN_CACHE_COUNT = 30;
+const MAX_CACHE_COUNT = 81;
 
 type PreviewSeek = { frame: number; forward: boolean; keyTimestamp: number | null };
 
@@ -114,7 +114,7 @@ export class VideoBuffer {
 		this.asset = asset;
 
 		// Keep roughly a second of high-fps footage without increasing the pixel budget.
-		const count = Math.min(MAX_CACHE_COUNT, Math.max(MIN_CACHE_COUNT, Math.ceil(asset.frameRate / 2)));
+		const count = Math.min(MAX_CACHE_COUNT, Math.max(MIN_CACHE_COUNT, Math.ceil(asset.frameRate)));
 		const pixels = Math.min(asset.width * asset.height, MAX_TILE_PIXELS, Math.floor(CACHE_PIXEL_BUDGET / count));
 		this.cache = new FrameCache({ pixels, count });
 
@@ -530,7 +530,6 @@ class VideoDecoderQueue {
 
 
 	private handleOutput(frame: VideoFrame) {
-		this.resolver?.resolve(null);
 		this.inFlight.delete(frame.timestamp);
 		for (const timestamp of this.inFlight) {
 			if (timestamp < frame.timestamp) this.inFlight.delete(timestamp);
@@ -585,15 +584,20 @@ class VideoDecoderQueue {
 			return;
 		}
 
-		if (this.decoder.decodeQueueSize > 2) {
-			this.resolver = Promise.withResolvers();
+		const decoder = this.decoder;
+		// Output is not backpressure: a codec can output a delayed frame while
+		// dozens of input chunks are still queued. Only dequeue releases capacity,
+		// and it must be checked again after every wakeup, before submitting.
+		while (decoder.state === 'configured' && decoder.decodeQueueSize >= 4) {
+			this.resolver ??= Promise.withResolvers();
+			await this.resolver.promise;
+			if (this.decoder !== decoder) return;
 		}
-
-		this.decoder.decode(packet.toEncodedVideoChunk());
+		if (decoder.state !== 'configured') return;
+		decoder.decode(packet.toEncodedVideoChunk());
 		this.lastSubmitted = packet;
 		this.inFlight.add(packet.microsecondTimestamp);
 
-		await this.resolver?.promise;
 	}
 
 	public async flush() {
