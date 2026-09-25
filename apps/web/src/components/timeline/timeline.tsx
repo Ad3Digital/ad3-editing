@@ -2,10 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { For, Show, onCleanup, onMount } from 'solid-js';
+import { For, Show, createSignal, onCleanup, onMount } from 'solid-js';
 import { toast } from 'somoto';
 import { useWorld } from '@diffusionstudio/koota-solid';
-import { FrameRate, framesToSeconds, getActiveEntity } from '@diffusionstudio/runtime';
+import { FrameRate, Selected, Source, framesToSeconds, getActiveEntity } from '@diffusionstudio/runtime';
 import { droppedFiles, importFiles } from '@/engine/asset-actions';
 import { insertAsset } from '@/engine/insert-asset';
 import { insertAssetsInNewScene } from '@/engine/new-scene';
@@ -13,7 +13,12 @@ import { useLibrary } from '@/engine/library';
 import { useTimeline } from '@/context/timeline';
 import { ASSET_DRAG_TYPE } from '@/components/sidebar-left/folder-item';
 import { useDerived } from '@/engine/hooks/use-derived';
-import { PIN_COLORS, closePinPicker, pinControls } from '@/engine/timeline/pins';
+import { PIN_COLORS, closePinPicker, pinControls, hitPin, removePin } from '@/engine/timeline/pins';
+import { TimelineSurface } from '@/engine/timeline/surface';
+import { getTimelineScene } from '@/engine/timeline/view';
+import { ProjectConfig } from '@/engine/traits';
+import { getDocumentEditor } from '@/engine/editor';
+import type { Entity } from 'koota';
 
 /**
  * The timeline's canvas. What is drawn on it is the timeline system's
@@ -25,10 +30,35 @@ export function Timeline() {
   const timeline = useTimeline();
   const library = useLibrary();
   const pins = pinControls(world);
+  const [clipMenu, setClipMenu] = createSignal<{ x: number; y: number; entities: Entity[] } | null>(null);
+  const changeClipColor = (color: string | null) => {
+    const entities = clipMenu()?.entities;
+    setClipMenu(null);
+    if (entities) void world.get(ProjectConfig)?.setClipColors(entities, color).catch(() => toast.error('Não foi possível salvar a cor dos clipes.'));
+  };
+  const contextMenu = (event: MouseEvent) => {
+    const surface = world.get(TimelineSurface);
+    const scene = getTimelineScene(world);
+    const rect = surface?.canvas?.getBoundingClientRect();
+    if (!scene || !rect) return;
+    const pin = hitPin(world, scene, event.clientX - rect.left, event.clientY - rect.top);
+    if (pin >= 0) {
+      event.preventDefault(); event.stopPropagation(); setClipMenu(null); removePin(world, scene, pin); return;
+    }
+    const id = surface?.pointer?.hitAt(event.clientX, event.clientY)?.split('/')[0];
+    const entity = world.query(Source).find(e => String(e.id()) === id);
+    if (!entity || event.clientY - rect.top < 30) return;
+    event.preventDefault(); event.stopPropagation();
+    if (!entity.has(Selected)) getDocumentEditor(world).select(entity);
+    const entities = entity.has(Selected) ? [...world.query(Selected, Source)] : [entity];
+    setClipMenu({ x: Math.max(0, Math.min(rect.width - 240, event.clientX - rect.left)), y: Math.max(0, Math.min(rect.height - 145, event.clientY - rect.top)), entities });
+    queueMicrotask(() => document.querySelector<HTMLButtonElement>('[data-clip-color-picker] button')?.focus());
+  };
   const pickerOpen = useDerived(() => pins.pickerScene !== null && pins.pickerScene === getActiveEntity(world));
   const color = useDerived(() => pins.color);
   const dismissPicker = (event: PointerEvent) => {
     if (event.target instanceof Element && !event.target.closest('[data-pin-picker]')) closePinPicker(world);
+    if (event.target instanceof Element && !event.target.closest('[data-clip-color-picker]')) setClipMenu(null);
   };
   onMount(() => document.addEventListener('pointerdown', dismissPicker));
   onCleanup(() => document.removeEventListener('pointerdown', dismissPicker));
@@ -90,7 +120,22 @@ export function Timeline() {
         id="timeline-canvas"
         on:drop={handleDrop}
         on:dragover={handleDragOver}
+        on:contextmenu={contextMenu}
       />
+      <Show when={clipMenu()}>{(menu) => (
+        <div data-clip-color-picker role="dialog" aria-label="Cor dos clipes" class="absolute z-50 w-60 rounded-lg border border-input bg-background p-3 shadow-lg"
+          style={{ left: `${menu().x}px`, top: `${menu().y}px` }}
+          onKeyDown={event => { event.stopPropagation(); if (event.key === 'Escape') setClipMenu(null); }}>
+          <div class="mb-3 text-xs">Cor do clipe{menu().entities.length > 1 ? ` (${menu().entities.length} selecionados)` : ''}</div>
+          <div class="flex gap-1.5">
+            <For each={PIN_COLORS}>{swatch => (
+              <button type="button" class="size-5 rounded-full border border-white/30" style={{ 'background-color': swatch.hex }}
+                aria-label={`Clipe ${swatch.label}`} title={swatch.label} onClick={() => changeClipColor(swatch.hex)} />
+            )}</For>
+          </div>
+          <button type="button" class="mt-3 text-xs text-muted-foreground" onClick={() => changeClipColor(null)}>Restaurar cor padrão</button>
+        </div>
+      )}</Show>
       <Show when={pickerOpen()}>
         <div
           data-pin-picker
@@ -122,7 +167,7 @@ export function Timeline() {
               />
             )}</For>
           </div>
-          <p class="mt-2 text-xs text-muted-foreground">Toque em ' para colocar um pin. Segure por 2s para escolher a cor.</p>
+          <p class="mt-2 text-xs text-muted-foreground">' adiciona ou remove no cursor. Arraste para mover; botão direito remove. Segure por 2s para escolher a cor.</p>
         </div>
       </Show>
     </div>

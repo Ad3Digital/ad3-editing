@@ -185,6 +185,27 @@ export class ProjectConfig {
 	private readonly readySignal = createSignal(false);
 	private readonly exports = createSignal<Record<string, ExportConfig>>({});
 	private readonly markerSignal = createSignal<Record<string, TimelineMarker[]>>({});
+	private readonly clipColorSignal = createSignal<Record<string, string>>({});
+	public clipColorOf(entity: Entity): string | undefined {
+		const colors = this.clipColorSignal[0]();
+		const key = entity.get(Source)?.value;
+		return key ? colors[key] : undefined;
+	}
+	public async setClipColors(entities: Entity[], color: string | null): Promise<void> {
+		if (!this.ready() || (color !== null && !/^#[0-9a-f]{6}$/i.test(color))) return;
+		const colors = { ...this.clipColorSignal[0]() };
+		for (const entity of entities) {
+			const key = entity.get(Source)?.value;
+			if (!key) continue;
+			if (color) colors[key] = color;
+			else delete colors[key];
+		}
+		this.clipColorSignal[1](colors);
+		const next = { ...this.raw };
+		if (Object.keys(colors).length) next.clipColors = colors;
+		else delete next.clipColors;
+		await this.updateProjectConfig(next, true);
+	}
 
 	/** Reactive timeline markers, grouped by the durable scene id. */
 	public readonly markers: Accessor<Record<string, TimelineMarker[]>> = this.markerSignal[0];
@@ -220,6 +241,9 @@ export class ProjectConfig {
 		this.raw = isRecord(value) ? value : {};
 		this.exports[1](parseExports(this.raw.export));
 		this.markerSignal[1](parseMarkers(this.raw.markers));
+		this.clipColorSignal[1](isRecord(this.raw.clipColors) ? Object.fromEntries(
+			Object.entries(this.raw.clipColors).filter((entry): entry is [string, string] => typeof entry[1] === 'string' && /^#[0-9a-f]{6}$/i.test(entry[1]))
+		) : {});
 		this.readySignal[1](true);
 	}
 

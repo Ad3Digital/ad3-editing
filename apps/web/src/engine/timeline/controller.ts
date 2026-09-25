@@ -33,6 +33,8 @@ import {
 	ZOOM_SENSITIVITY,
 } from './config';
 import { getFrameRate } from './view';
+import { hitPin, pinControls, scenePins, finishPinDrag } from './pins';
+import { Computed } from '@diffusionstudio/runtime';
 
 import type { Entity, World } from 'koota';
 
@@ -195,6 +197,35 @@ export function createTimelineController(world: World) {
 
 	const clientToTime = (clientX: number): number => clientToFrame(clientX) / getFrameRate(world);
 
+	const pointerDown = (event: PointerEvent): void => {
+		const scene = getTimelineScene(world);
+		const rect = surface.canvas?.getBoundingClientRect();
+		const index = scene && rect ? hitPin(world, scene, event.clientX - rect.left, event.clientY - rect.top) : -1;
+		if (event.button === 0 && scene && index >= 0) {
+			const time = scenePins(world, scene)[index]!.time;
+			pinControls(world).drag = { scene, index, time, offset: time - clientToTime(event.clientX) };
+			surface.canvas?.setPointerCapture(event.pointerId);
+			event.preventDefault();
+			return;
+		}
+		pointer.down(event);
+	};
+	const pointerMove = (event: PointerEvent): void => {
+		const drag = pinControls(world).drag;
+		if (!drag) { pointer.move(event); return; }
+		if (drag.scene !== getTimelineScene(world)) { finishPinDrag(world, true); return; }
+		const fps = getFrameRate(world);
+		const duration = drag.scene.get(Computed)?.duration ?? Infinity;
+		drag.time = Math.max(0, Math.min(duration, Math.round((clientToTime(event.clientX) + drag.offset) * fps))) / fps;
+	};
+	const pointerUp = (event: PointerEvent): void => {
+		if (!pinControls(world).drag) { pointer.up(event); return; }
+		pointerMove(event);
+		finishPinDrag(world);
+		if (surface.canvas?.hasPointerCapture(event.pointerId)) surface.canvas.releasePointerCapture(event.pointerId);
+	};
+	const pointerCancel = (): void => finishPinDrag(world, true);
+
 	const setMinimized = (minimized: boolean): void => {
 		surface.minimized = minimized;
 	};
@@ -213,7 +244,7 @@ export function createTimelineController(world: World) {
 		observer.observe(parent);
 
 		canvas.addEventListener('wheel', handleWheel);
-		canvas.addEventListener('pointerdown', pointer.down, { passive: true });
+		canvas.addEventListener('pointerdown', pointerDown);
 
 		applyResize();
 	};
@@ -222,7 +253,8 @@ export function createTimelineController(world: World) {
 		observer.disconnect();
 
 		surface.canvas?.removeEventListener('wheel', handleWheel);
-		surface.canvas?.removeEventListener('pointerdown', pointer.down);
+		surface.canvas?.removeEventListener('pointerdown', pointerDown);
+		finishPinDrag(world, true);
 
 		// Dropped rather than kept stale: the draw pass no-ops until another
 		// canvas is attached.
@@ -248,16 +280,18 @@ export function createTimelineController(world: World) {
 		layerObserver.observe(layers);
 
 		// On the body, so a drag that leaves the canvas still finishes.
-		document.body.addEventListener('pointermove', pointer.move, { passive: true });
-		document.body.addEventListener('pointerup', pointer.up, { passive: true });
+		document.body.addEventListener('pointermove', pointerMove, { passive: true });
+		document.body.addEventListener('pointerup', pointerUp, { passive: true });
+		document.body.addEventListener('pointercancel', pointerCancel);
 	};
 
 	const unmount = (): void => {
 		layerObserver.disconnect();
 		surface.pointer = null;
 
-		document.body.removeEventListener('pointermove', pointer.move);
-		document.body.removeEventListener('pointerup', pointer.up);
+		document.body.removeEventListener('pointermove', pointerMove);
+		document.body.removeEventListener('pointerup', pointerUp);
+		document.body.removeEventListener('pointercancel', pointerCancel);
 	};
 
 	return {

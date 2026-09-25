@@ -266,6 +266,13 @@ export function createPointer(options: PointerOptions) {
   }
 
   const pointer = {
+    hitAt(clientX: number, clientY: number): string | undefined {
+      const rect = options.canvas?.getBoundingClientRect();
+      if (!rect) return;
+      const x = (clientX - rect.left) * window.devicePixelRatio;
+      const y = (clientY - rect.top) * window.devicePixelRatio;
+      return hitRegions.prev.findLast(r => !r.passthrough && x >= r.minX && x < r.maxX && y >= r.minY && y < r.maxY)?.id;
+    },
     get position() {
       return position;
     },

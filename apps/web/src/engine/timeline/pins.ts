@@ -30,6 +30,7 @@ export const PinControls = trait(() => ({
 	pressedAt: null as number | null,
 	pressedScene: null as Entity | null,
 	pickerScene: null as Entity | null,
+	drag: null as { scene: Entity; index: number; time: number; offset: number } | null,
 }));
 const EMPTY_PINS: readonly TimelineMarker[] = [];
 export const PIN_HOLD_MS = 2000;
@@ -54,7 +55,10 @@ export function addPinAtPlayhead(world: World): void {
 	}
 	const fps = world.get(FrameRate)?.value ?? 30;
 	const frame = Math.max(0, Math.round(scene.get(Computed)?.localTime ?? 0));
-	const pins = [...scenePins(world, scene), { time: frame / fps, color: pinControls(world).color }];
+	const existing = scenePins(world, scene);
+	const atPlayhead = existing.some(pin => Math.round(pin.time * fps) === frame);
+	const pins = atPlayhead ? existing.filter(pin => Math.round(pin.time * fps) !== frame)
+		: [...existing, { time: frame / fps, color: pinControls(world).color }];
 	void config.setSceneMarkers(scene, pins).catch(() => toast.error('Não foi possível salvar os pins do projeto.'));
 }
 
@@ -63,6 +67,31 @@ export function clearPins(world: World): void {
 	const config = world.get(ProjectConfig);
 	if (!scene || !config?.ready()) return;
 	void config.setSceneMarkers(scene, []).catch(() => toast.error('Não foi possível salvar os pins do projeto.'));
+}
+
+export function hitPin(world: World, scene: Entity, x: number, y: number): number {
+	if (y < 0 || y > 18) return -1;
+	const resolution = getResolution(world, scene);
+	const scroll = getScrollX(world, scene) * resolution;
+	const fps = world.get(FrameRate)?.value ?? 30;
+	return scenePins(world, scene).findLastIndex(pin => Math.abs(framesToPixels(pin.time * fps, resolution) - scroll - x) <= 7);
+}
+
+export function removePin(world: World, scene: Entity, index: number): void {
+	const config = world.get(ProjectConfig);
+	if (!config?.ready()) return;
+	void config.setSceneMarkers(scene, scenePins(world, scene).filter((_, i) => i !== index))
+		.catch(() => toast.error('Não foi possível remover o marcador.'));
+}
+
+export function finishPinDrag(world: World, cancel = false): void {
+	const state = pinControls(world);
+	const drag = state.drag;
+	state.drag = null;
+	const config = world.get(ProjectConfig);
+	if (!drag || cancel || !config?.ready()) return;
+	const pins = scenePins(world, drag.scene).map((pin, index) => index === drag.index ? { ...pin, time: drag.time } : pin);
+	void config.setSceneMarkers(drag.scene, pins).catch(() => toast.error('Não foi possível mover o marcador.'));
 }
 
 export function closePinPicker(world: World): void {
@@ -109,8 +138,13 @@ export function renderPins(world: World, scene: Entity, surface: TimelineSurface
 	const scroll = getScrollX(world, scene) * resolution;
 	const fps = world.get(FrameRate)?.value ?? 30;
 	ctx.save();
-	for (const pin of scenePins(world, scene)) {
-		const x = framesToPixels(pin.time * fps, resolution) - scroll;
+	const drag = pinControls(world).drag;
+	const position = surface.pointer?.position;
+	if (drag?.scene === scene) surface.cursor = 'grabbing';
+	else if (position && hitPin(world, scene, position.currentX, position.currentY) >= 0) surface.cursor = 'grab';
+	for (const [index, pin] of scenePins(world, scene).entries()) {
+		const time = drag?.scene === scene && drag.index === index ? drag.time : pin.time;
+		const x = framesToPixels(time * fps, resolution) - scroll;
 		if (x < -5 || x > surface.layout.width + 5) continue;
 		ctx.fillStyle = pin.color;
 		if (!surface.minimized) {

@@ -5,6 +5,7 @@
 import { Caption, CaptionType, Chars, ClipDragOrigin, Computed, Hidden, Name, Selected, TrimDragOrigin, fitsChildren, getGeneratingColor, getSourceFailure, isCaption, isGenerating, isGroup, isText, store } from '@diffusionstudio/runtime';
 
 import { getDocumentEditor } from '../../editor';
+import { ProjectConfig } from '../../traits';
 import {
 	CLIP_BREAKPOINTS,
 	CLIP_CORNER_RADIUS,
@@ -58,7 +59,8 @@ export function renderClip(
 
 	const asset = getClipAsset(world, entity);
 	const error = getSourceFailure(entity);
-	const style = getClipStyle(entity, asset, !!error?.length);
+	const color = world.get(ProjectConfig)?.clipColorOf(entity);
+	const style = color && !error ? { background: color + '66', foreground: '#FFFFFF', primary: color } : getClipStyle(entity, asset, !!error?.length);
 
 	handleBody(world, surface, entity, left, width, row);
 
