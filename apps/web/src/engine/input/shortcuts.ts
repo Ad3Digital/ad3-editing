@@ -37,6 +37,8 @@ import { getDocumentEditor } from '../editor';
 import { groupSelection, ungroupSelection, unwrapSequenceSelection, wrapSelectionInScene, wrapSelectionInSequence } from '../group';
 import { getEditHistory } from '../history';
 import { splitAtPlayhead, trimLeftAtPlayhead, trimRightAtPlayhead } from '../split';
+import { addPinAtPlayhead, clearPins, closePinPicker, onPinLifted, onPinPressed, updatePinHold } from '../timeline/pins';
+import { clearGapSelection, closeSelectedGaps } from '../timeline/gaps';
 import { Keys, MODIFIER_KEYS, Pointer } from '../traits';
 import { editTransform } from './interactions';
 
@@ -61,6 +63,10 @@ export function redoEdit(world: World): void {
 }
 
 export function deleteSelection(world: World): void {
+	// A selected gap is the stretch of nothing between two clips: closing it
+	// is what delete means there — the follower is pulled over the hole.
+	if (closeSelectedGaps(world)) return;
+
 	const selected = [...world.query(Selected)];
 
 	if (selected.length) {
@@ -343,6 +349,35 @@ export function selectAll(world: World): void {
 }
 
 /**
+ * Selects everything from where the edit is on: the anchor clip itself and
+ * every clip of the active scene that starts at or after it, sequences opened
+ * up the same way a cut opens them, so one press gathers the rest of the reel
+ * for a drag. Nothing selected takes the playhead as the anchor instead.
+ */
+export function selectAllForward(world: World): void {
+	const scene = getActiveEntity(world);
+	if (scene === null) return;
+
+	const computed = store(world, Computed);
+	const units: Entity[] = [];
+	const collect = (parent: Entity): void => {
+		for (const child of world.query(NODES, ChildOf(parent))) {
+			if (isSequence(child)) collect(child);
+			else units.push(child);
+		}
+	};
+	collect(scene);
+	let anchor = Number.POSITIVE_INFINITY;
+	for (const unit of units) {
+		if (unit.has(Selected)) anchor = Math.min(anchor, computed.start[unit.id()] ?? 0);
+	}
+	if (!Number.isFinite(anchor)) anchor = computed.localTime[scene.id()] ?? 0;
+	clearGapSelection(world);
+	selectTool(ToolType.MOVE)(world);
+	getDocumentEditor(world).select(units.filter(unit => (computed.start[unit.id()] ?? 0) >= anchor));
+}
+
+/**
  * Selects what holds the selection. A sequence is a container the timeline
  * draws rather than a node the canvas selects, so the walk goes on through
  * it; a node the stage holds directly has nothing to go up to.
@@ -390,6 +425,8 @@ export function selectChildren(world: World): void {
 /** Drops the selection, and whatever tool was drawing with it. */
 function deselect(world: World): void {
 	getDocumentEditor(world).clearSelection();
+	closePinPicker(world);
+	clearGapSelection(world);
 
 	const tool = world.get(Tool)?.value ?? ToolType.MOVE;
 	if (tool !== ToolType.MOVE && tool !== ToolType.HAND) selectTool(ToolType.MOVE)(world);
@@ -423,8 +460,11 @@ const PRESSED_SHORTCUTS: readonly Shortcut[] = [
 	{ keys: ['f', '!mod'], action: selectTool(ToolType.SCENE) },
 	{ keys: ['t', '!mod'], action: selectTool(ToolType.TEXT) },
 	{ keys: ['r', '!mod'], action: selectTool(ToolType.RECT) },
-	{ keys: ['a', '!mod'], action: seekFrames(-1) },
+	{ keys: ['a', '!mod', '!alt'], action: selectAllForward },
 	{ keys: ['d', '!mod'], action: seekFrames(1) },
+	{ keys: ["'", '!mod', '!alt'], action: onPinPressed },
+	{ keys: ['m', '!mod', '!alt'], action: addPinAtPlayhead },
+	{ keys: ['m', 'alt', '!mod'], action: clearPins },
 	{ keys: ['w', '!mod', '!shift', '!alt'], action: splitAtPlayhead },
 	{ keys: ['q', '!mod', '!shift', '!alt'], action: trimLeftAtPlayhead },
 	{ keys: ['e', '!mod', '!shift', '!alt'], action: trimRightAtPlayhead },
@@ -449,6 +489,7 @@ const PRESSED_SHORTCUTS: readonly Shortcut[] = [
 ];
 
 const LIFTED_SHORTCUTS: readonly Shortcut[] = [
+	{ keys: ["'", '!mod'], action: onPinLifted },
 	{ keys: [' '], action: onSpaceLifted },
 ];
 
@@ -494,4 +535,5 @@ export function shortcutSystem(world: World): void {
 	}
 
 	updateSpaceHold(world, keys.held);
+	updatePinHold(world, keys.held);
 }

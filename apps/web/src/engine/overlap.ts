@@ -2,59 +2,58 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/**
- * The no-overlap rule of a `<sequence>`, kept as edits. The runtime has this
- * too (`resolveSequentialOverlaps` in actions/overlap.ts), where it trims,
- * removes and splits the traits themselves: that settles the canvas and
- * nothing else. A drop is an edit of the project, so the version the editor
- * uses is this one — same rules, spelled through the document, so the file
- * ends up saying what the timeline shows.
- *
- * The model is overwrite: what the user just dropped wins, and the siblings
- * it landed on give way — trimmed at whichever edge is covered, removed when
- * they are covered entirely, and split in two when the drop lands inside one.
- */
-
-import { ChildOf, Computed, Geometry, Group, Sequential, getParentNode, isGroup, store } from '@diffusionstudio/runtime';
+// Moving into a sequence never trims its neighbours. New sequence creation
+// retains its separate, authored precedence rule below.
+import { AdjustmentLayer, ChildOf, Computed, Geometry, Group, Sequential, getParentNode, isGroup, store } from '@diffusionstudio/runtime';
 import { Or } from 'koota';
 
 import { getDocumentEditor } from './editor';
-import { trimIn, trimOut } from './timing';
+import { moveEntityTo, trimIn, trimOut } from './timing';
 
 import type { DocumentEditor } from './editor';
 import type { Entity, World } from 'koota';
 
-/**
- * Settles every sequence the just-dropped clips landed in. `dragged` is what
- * the user was holding, and it is authoritative: those clips keep what they
- * are, and never trim or remove each other.
- */
-export function resolveSequentialOverlaps(world: World, dragged: Entity[]): void {
-	if (dragged.length === 0) return;
-
-	const editor = getDocumentEditor(world);
+/** Places a dropped selection in the nearest free space, preserving all lengths and offsets. */
+export function resolveDragJoins(world: World, dragged: Entity[]): void {
 	const computed = store(world, Computed);
-	const ignore = new Set(dragged);
-
-	for (const entity of dragged) {
-		const parent = getParentNode(entity);
-		if (parent === null || !parent.has(Sequential)) continue;
-
-		const occStart = computed.start[entity.id()];
-		const occEnd = computed.end[entity.id()];
-		if (occStart === undefined || occEnd === undefined || occEnd <= occStart) continue;
-
-		// Snapshot before mutating: resolving removes, trims and copies, all of
-		// which change the live query — and a copy a split makes is the other
-		// half of a sibling already dealt with, not another one to deal with.
-		const siblings = [...world.query(Or(Geometry, Group), ChildOf(parent))]
-			.filter((sibling) => !ignore.has(sibling));
-
-		for (const sibling of siblings) {
-			resolveEntityOverlap(world, editor, sibling, occStart, occEnd, ignore);
+	const moving = new Set(dragged);
+	const clips = dragged.map(entity => ({
+		entity,
+		start: computed.start[entity.id()] ?? 0,
+		end: computed.end[entity.id()] ?? 0,
+	}));
+	const forbidden: { start: number; end: number }[] = [];
+	let minimum = Number.NEGATIVE_INFINITY;
+	for (const clip of clips) {
+		minimum = Math.max(minimum, -clip.start);
+		const parent = getParentNode(clip.entity);
+		if (!parent?.has(Sequential) || clip.end <= clip.start) continue;
+		for (const sibling of world.query(Or(Geometry, Group, AdjustmentLayer), ChildOf(parent))) {
+			if (moving.has(sibling)) continue;
+			const start = computed.start[sibling.id()] ?? 0;
+			const end = computed.end[sibling.id()] ?? 0;
+			if (end > start) forbidden.push({ start: start - clip.end, end: end - clip.start });
 		}
 	}
+	// Open intervals: touching endpoints leave a valid exact-fit position.
+	forbidden.sort((a, b) => a.start - b.start);
+	const merged: typeof forbidden = [];
+	for (const span of forbidden) {
+		const last = merged[merged.length - 1];
+		if (last && span.start < last.end) last.end = Math.max(last.end, span.end);
+		else merged.push(span);
+	}
+	let delta = Math.max(0, minimum);
+	for (const span of merged) {
+		if (delta <= span.start || delta >= span.end) continue;
+		delta = span.start >= minimum && delta - span.start < span.end - delta
+			? span.start : span.end;
+		break;
+	}
+	if (delta === 0) return;
+	for (const clip of clips) moveEntityTo(world, clip.entity, clip.start + delta);
 }
+
 
 /**
  * Settles a sequence that has just been made, where there is no dropped clip

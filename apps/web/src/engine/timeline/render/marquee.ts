@@ -1,8 +1,8 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-
 import { getDocumentEditor } from '../../editor';
+import { clearGapSelection } from '../gaps';
 
 import type { World } from 'koota';
 import type { TimelineSurfaceState } from '../surface';
@@ -26,6 +26,7 @@ export function updateMarquee(world: World, surface: TimelineSurfaceState): void
 
 	if (clicked) {
 		getDocumentEditor(world).clearSelection();
+		clearGapSelection(world);
 	}
 
 	if (!dragging) {
@@ -40,6 +41,7 @@ export function updateMarquee(world: World, surface: TimelineSurfaceState): void
 	// nothing and each clip decides for itself from there.
 	if (!surface.marquee) {
 		getDocumentEditor(world).clearSelection();
+		clearGapSelection(world);
 	}
 
 	surface.marquee = {

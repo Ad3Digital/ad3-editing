@@ -62,6 +62,7 @@ export function createPointer(options: PointerOptions) {
   } | null = null;
 
   let shiftPressed = false;
+  let hitTest: { x: number; y: number; primary?: string; passive: Set<string> } | null = null;
 
   function down(event: PointerEvent) {
     const rect = options.canvas?.getBoundingClientRect();
@@ -165,24 +166,26 @@ export function createPointer(options: PointerOptions) {
     const mouseX = position.currentX * window.devicePixelRatio;
     const mouseY = position.currentY * window.devicePixelRatio;
 
-    const matches = hitRegions.prev.filter(({ minX, minY, maxX, maxY }) => (
-      mouseX >= minX &&
-      mouseX < maxX &&
-      mouseY >= minY &&
-      mouseY < maxY
-    ));
+    // All regions in a frame test the same previous-frame geometry and pointer.
+    // Scanning it once per region made large timelines quadratic while dragging.
+    if (!hitTest || hitTest.x !== mouseX || hitTest.y !== mouseY) {
+      hitTest = { x: mouseX, y: mouseY, passive: new Set() };
+      for (const region of hitRegions.prev) {
+        if (mouseX < region.minX || mouseX >= region.maxX || mouseY < region.minY || mouseY >= region.maxY) continue;
+        if (region.passthrough) hitTest.passive.add(region.id);
+        else hitTest.primary = region.id;
+      }
+    }
 
-    const lastMatch = matches.findLast(({ passthrough }) => !passthrough);
-
-    let isPrimary = lastMatch?.id === regionData.id;
-    let isPassive = matches.some(({ passthrough, id }) => passthrough && id == regionData.id);
+    let isPrimary = hitTest.primary === regionData.id;
+    let isPassive = hitTest.passive.has(regionData.id);
     let hovering = isPrimary || isPassive;
     let pressing = hovering && position?.state == 'pressing';
     let pressed = hovering && position?.state == 'pressed';
 
     // Track the region that was pressed down on
     if (pressed) {
-      pressRegionID = lastMatch?.id ?? null;
+      pressRegionID = hitTest.primary ?? null;
     }
 
     // Assign dragging state after a distance threshold has been passed
@@ -238,6 +241,7 @@ export function createPointer(options: PointerOptions) {
   }
 
   function reset() {
+    hitTest = null;
     hitRegions.prev = [...hitRegions.next];
     hitRegions.next.length = 0;
 

@@ -117,8 +117,8 @@ export function createTimelineController(world: World) {
 	};
 
 	/**
-	 * A vertical wheel zooms around the time beneath the cursor. Ctrl reserves
-	 * the same gesture for horizontal timeline travel; Shift keeps the layer
+	 * Ctrl + wheel zooms around the time beneath the cursor. The wheel alone
+	 * moves horizontally along the timeline; Shift keeps the layer
 	 * rows scrollable, and a horizontal trackpad keeps its direct pan.
 	 */
 	const handleWheel = (event: WheelEvent): void => {
@@ -129,15 +129,13 @@ export function createTimelineController(world: World) {
 			const resolution = getResolution(world, scene);
 			const scrollX = getScrollX(world, scene);
 
-			if (event.ctrlKey) {
+			if (!event.ctrlKey && !event.shiftKey) {
 				const delta = Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY;
 				setScrollX(world, scene, scrollX + (delta * SCROLL_X_SENSITIVITY) / resolution);
-			} else if (event.shiftKey) {
+			} else if (!event.ctrlKey && event.shiftKey) {
 				const delta = deltaY || deltaX;
 				setScrollY(world, scene, getScrollY(world, scene) + delta);
 				applyScroll();
-			} else if (Math.abs(deltaX) > Math.abs(deltaY)) {
-				setScrollX(world, scene, scrollX + (deltaX * SCROLL_X_SENSITIVITY) / resolution);
 			} else {
 				const rect = surface.canvas?.getBoundingClientRect();
 				const anchor = event.clientX - (rect?.left ?? 0);

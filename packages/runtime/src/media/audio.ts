@@ -70,6 +70,7 @@ export class AudioDecoder {
 	private nextTimestamp = 0;
 	private generation = 0;
 	private request = 0;
+	private scheduledOptions: PlayOptions | null = null;
 	private audioTrack: InputAudioTrack | null = null;
 	private sink!: AudioBufferSink;
 
@@ -156,6 +157,17 @@ export class AudioDecoder {
 			return;
 		}
 
+		// A live trim/move changes already scheduled audio, even if the requested
+		// source frames are cached. Cancel it before checking the buffered range.
+		const previous = this.scheduledOptions;
+		if (previous && (previous.trimStart !== options.trimStart
+			|| previous.trimEnd !== options.trimEnd
+			|| previous.playbackRate !== options.playbackRate
+			|| previous.relativeDelay !== options.relativeDelay)) {
+			this.reset();
+		}
+		this.scheduledOptions = { ...options };
+
 		const { relativeFrom, relativeTo } = options;
 		if (this.firstBuffer && relativeFrom >= this.firstBuffer.timestamp
 			&& this.lastBuffer && this.lastBuffer.timestamp >= relativeTo) return;
@@ -239,6 +251,7 @@ export class AudioDecoder {
 	public reset() {
 		this.generation++;
 		this.request++;
+		this.scheduledOptions = null;
 		void this.iterator?.return();
 		this.iterator = null;
 		this.firstBuffer = null;

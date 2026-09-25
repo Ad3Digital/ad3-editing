@@ -19,6 +19,7 @@ import { getNodeHeight, getRowTransform, getSubtreeHeight } from '../layout';
 import { getResolution, getViewport, pixelsToFrames } from '../view';
 import { isDragging } from '../drag';
 import { getClipAlpha, renderClip } from './clip';
+import { renderGaps } from '../gaps';
 import { renderKeyframeTrack } from './keyframes';
 
 import type { Entity, World } from 'koota';
@@ -131,11 +132,19 @@ function renderRow(
 	// A clip being dragged is drawn after the ones it is passing over, so it
 	// stays on top of them for as long as it is moving.
 	const children = [...world.query(Or(Geometry, Group, AdjustmentLayer), ChildOf(node.entity))];
+	const computed = store(world, Computed);
+	const resolution = getResolution(world, scene);
+	const [left, right] = getViewport(world, scene, surface.layout.width);
+	const minFrame = pixelsToFrames(left - VIEWPORT_PADDING, resolution);
+	const maxFrame = pixelsToFrames(right + VIEWPORT_PADDING, resolution);
+	const visible = children.filter(child => isDragging(child)
+		|| ((computed.end[child.id()] ?? 0) >= minFrame && (computed.start[child.id()] ?? 0) <= maxFrame));
 
-	for (const child of children) {
+	for (const child of visible) {
 		if (!isDragging(child)) renderClip(world, scene, surface, child, row);
 	}
-	for (const child of children) {
+	for (const child of visible) {
 		if (isDragging(child)) renderClip(world, scene, surface, child, row);
 	}
+	renderGaps(world, scene, surface, node.entity, row);
 }

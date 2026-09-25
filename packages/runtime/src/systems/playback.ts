@@ -131,7 +131,7 @@ function forwardVideoDecoder(world: World, scene: Entity, entity: Entity, fill: 
 	const warmupDecoder = globalFrame >= start - WARMUP_FRAMES && globalFrame < end + WARMUP_FRAMES && hasCache;
 
 	if (computed.visibility[eid] !== 1 && !warmupDecoder) {
-		if (hasCache) fill.get(VideoDecoderHandle)?.idle();
+		fill.get(VideoDecoderHandle)?.idle();
 		return;
 	}
 
@@ -139,7 +139,7 @@ function forwardVideoDecoder(world: World, scene: Entity, entity: Entity, fill: 
 	const decoder = resolveVideoDecoder(world, fill);
 	if (decoder) {
 		const seekFrame = clamp(localFrame, source.in, source.out);
-		const seekPromise = decoder.seekTo(seekFrame, fps);
+		const seekPromise = decoder.seekTo(seekFrame, fps, hasCache && !scene.get(Playback)?.playing);
 		framePromises(world)?.push(seekPromise ?? null);
 	}
 }

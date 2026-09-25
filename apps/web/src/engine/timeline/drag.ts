@@ -14,6 +14,7 @@
 
 import {
 	AdjustmentLayer,
+	ChildOf,
 	ClipDragOrigin,
 	Computed,
 	Geometry,
@@ -21,16 +22,20 @@ import {
 	KeyframeDragOrigin,
 	Selected,
 	TrimDragOrigin,
+	getParentNode,
+	isSequence,
 	findAssetDuration,
 	store,
 } from '@diffusionstudio/runtime';
-import { Not, Or } from 'koota';
+import { Or } from 'koota';
 
 import { clamp } from '@/utils';
-import { resolveSequentialOverlaps } from '../overlap';
+import { getDocumentEditor } from '../editor';
+import { getEditHistory } from '../history';
+import { clearGapSelection } from './gaps';
 import { authoredTime, moveEntityTo, trimIn, trimOut } from '../timing';
 import { findSnapDelta, findSnapFrame } from './snapping';
-import { framesToPixels, pixelsToFrames } from './view';
+import { framesToPixels, getResolution, getTimelineScene, pixelsToFrames } from './view';
 
 import type { Entity, World } from 'koota';
 import type { TimelineSurfaceState } from './surface';
@@ -40,87 +45,81 @@ const NODES = Or(Geometry, Group, AdjustmentLayer);
 /** Which edge of a clip a trim is holding. */
 export type TrimEdge = 'in' | 'out';
 
-/**
- * Opens and closes the gestures in flight, once a frame before anything is
- * drawn.
- *
- * Closing is what has to happen here rather than where the drag was applied:
- * a gesture ends when the pointer is let go, which is not an event any clip
- * receives — the clip only ever hears that it is still being dragged.
- */
+/** Applies one shared delta even to selected clips outside the viewport. */
 export function updateDragGestures(world: World, surface: TimelineSurfaceState): void {
 	const position = surface.pointer?.position;
-	const dragging = !!position && position.state !== 'idle';
-
-	if (!dragging) {
-		endGesture(world, ClipDragOrigin);
-		endGesture(world, TrimDragOrigin);
-		// Keyframes have no sequence to settle: they sit where they are put.
-		for (const keyframe of world.query(KeyframeDragOrigin)) keyframe.remove(KeyframeDragOrigin);
-		return;
+	const scene = getTimelineScene(world);
+	if (scene && position && position.state !== 'idle' && world.query(NODES, ClipDragOrigin).length) {
+		applyClipDrag(world, surface, getResolution(world, scene));
 	}
+	if (position && position.state !== 'idle' && position.state !== 'lifted') return;
+	let ended = false;
+	for (const entity of world.query(NODES, ClipDragOrigin)) {
+		entity.remove(ClipDragOrigin);
+		ended = true;
+	}
+	for (const entity of world.query(NODES, TrimDragOrigin)) {
+		entity.remove(TrimDragOrigin);
+		ended = true;
+	}
+	for (const keyframe of world.query(KeyframeDragOrigin)) keyframe.remove(KeyframeDragOrigin);
+	if (ended) getEditHistory(world).endGesture();
+}
 
-	// A drag of a selected clip is a drag of the selection, so the rest of it
-	// is snapshotted the moment the first clip starts moving. Done here, once,
-	// rather than per clip: a clip scrolled out of view is not drawn, and it
-	// would otherwise be left behind by the drag.
-	if (world.query(NODES, ClipDragOrigin, Selected).length > 0) {
-		for (const entity of world.query(NODES, Selected, Not(ClipDragOrigin))) {
-			beginClipDrag(world, entity);
+/** Snapshots the whole selection before any member moves. */
+export function beginClipDrag(world: World, entity: Entity): void {
+	const editor = getDocumentEditor(world);
+	clearGapSelection(world);
+	if (!entity.has(Selected)) editor.select(entity);
+	const selection = new Set(world.query(NODES, Selected));
+	const computed = store(world, Computed);
+	getEditHistory(world).beginGesture();
+	for (const member of selection) {
+		let parent = getParentNode(member);
+		while (parent && !selection.has(parent)) parent = getParentNode(parent);
+		if (parent) continue; // Selected descendants travel with their parent.
+		member.add(ClipDragOrigin);
+		member.set(ClipDragOrigin, {
+			authored: authoredTime(world, member, 'start') ?? 0,
+			start: computed.start[member.id()] ?? 0,
+			end: computed.end[member.id()] ?? 0,
+		});
+	}
+}
+
+function applyClipDrag(world: World, surface: TimelineSurfaceState, resolution: number): void {
+	const moving = new Set(world.query(NODES, ClipDragOrigin));
+	const computed = store(world, Computed);
+	let min = Number.NEGATIVE_INFINITY;
+	let max = Number.POSITIVE_INFINITY;
+	for (const member of moving) {
+		const origin = member.get(ClipDragOrigin)!;
+		min = Math.max(min, -origin.start);
+		const parent = getParentNode(member);
+		if (!parent || !isSequence(parent)) continue;
+		for (const sibling of world.query(NODES, ChildOf(parent))) {
+			if (moving.has(sibling)) continue;
+			const start = computed.start[sibling.id()] ?? 0;
+			const end = computed.end[sibling.id()] ?? 0;
+			if (end <= start) continue;
+			if (end <= origin.start) min = Math.max(min, end - origin.start);
+			if (start >= origin.end) max = Math.min(max, start - origin.end);
 		}
 	}
-}
-
-/**
- * Ends whichever gesture `origin` marks: the snapshots come off, and the
- * sequences the clips landed in are settled around them (the clips that moved
- * win, and their neighbours give way).
- */
-function endGesture(world: World, origin: typeof ClipDragOrigin | typeof TrimDragOrigin): void {
-	const moved = [...world.query(NODES, origin)];
-	if (moved.length === 0) return;
-
-	for (const entity of moved) entity.remove(origin);
-
-	resolveSequentialOverlaps(world, moved);
-}
-
-/** Notes where `entity` is, so the frames of the drag can be measured from it. */
-export function beginClipDrag(world: World, entity: Entity): void {
-	const computed = store(world, Computed);
-	const eid = entity.id();
-
-	entity.add(ClipDragOrigin);
-	entity.set(ClipDragOrigin, {
-		authored: authoredTime(world, entity, 'start') ?? 0,
-		start: computed.start[eid] ?? 0,
-		end: computed.end[eid] ?? 0,
-	});
-}
-
-/**
- * Places `entity` at where it started plus how far the pointer has come,
- * pulled to a snap if one is near.
- */
-export function applyClipDrag(
-	world: World,
-	surface: TimelineSurfaceState,
-	entity: Entity,
-	resolution: number,
-): void {
-	const origin = entity.get(ClipDragOrigin)!;
 	const offset = pixelsToFrames(draggedPixels(surface), resolution);
-
-	// One snap for the whole drag, found from every clip in it, so clips
-	// dragged together stay the same distance apart.
 	const snap = findSnapDelta(world, resolution, offset);
-	if (snap) surface.snapX = framesToPixels(snap.frame, resolution);
-
-	moveEntityTo(world, entity, origin.start + offset - (snap?.delta ?? 0));
+	const wanted = offset - (snap?.delta ?? 0);
+	const delta = clamp(wanted, min, max);
+	if (snap && delta === wanted) surface.snapX = framesToPixels(snap.frame, resolution);
+	for (const member of moving) {
+		moveEntityTo(world, member, member.get(ClipDragOrigin)!.start + delta);
+	}
 }
 
 /** Notes where `entity`'s edges are, so a trim can be measured from them. */
 export function beginTrim(world: World, entity: Entity): void {
+	clearGapSelection(world);
+	getEditHistory(world).beginGesture();
 	const computed = store(world, Computed);
 	const eid = entity.id();
 
@@ -152,7 +151,7 @@ export function applyTrim(
 	// Snapped only where the snap is somewhere the edge could have gone
 	// anyway; otherwise it would look like it stuck and then slipped.
 	const snapped = findSnapFrame(world, resolution, wanted);
-	const frame = clamp(snapped !== null && snapped > min && snapped < max ? snapped : wanted, min, max);
+	const frame = clamp(snapped !== null && snapped >= min && snapped <= max ? snapped : wanted, min, max);
 
 	if (snapped !== null && frame === snapped) surface.snapX = framesToPixels(frame, resolution);
 
@@ -160,11 +159,7 @@ export function applyTrim(
 	else trimOut(world, entity, frame);
 }
 
-/**
- * How far the edge can go. Each clip is its own row, so a neighbour is no
- * constraint — only the clip's other edge, and how much source there is left
- * to show at this end.
- */
+/** Source limits and stationary neighbours bound an edge throughout the trim. */
 function trimBounds(
 	world: World,
 	entity: Entity,
@@ -173,6 +168,18 @@ function trimBounds(
 ): [min: number, max: number] {
 	let min = edge === 'in' ? 0 : origin.start + 1;
 	let max = edge === 'in' ? origin.end - 1 : Number.POSITIVE_INFINITY;
+	const parent = getParentNode(entity);
+	if (parent && isSequence(parent)) {
+		const computed = store(world, Computed);
+		for (const sibling of world.query(NODES, ChildOf(parent))) {
+			if (sibling === entity) continue;
+			const start = computed.start[sibling.id()] ?? 0;
+			const end = computed.end[sibling.id()] ?? 0;
+			if (end <= start) continue;
+			if (edge === 'in' && end <= origin.start) min = Math.max(min, end);
+			if (edge === 'out' && start >= origin.end) max = Math.min(max, start);
+		}
+	}
 
 	const duration = findAssetDuration(world, entity);
 	if (duration === null) return [min, max];

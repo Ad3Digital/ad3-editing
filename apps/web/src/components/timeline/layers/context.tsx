@@ -8,7 +8,7 @@ import { Expanded, getEntityTree, isMask, isSequence } from "@diffusionstudio/ru
 
 import { useEditor, useTimelineIndex } from "@/engine/hooks";
 import { useTimeline } from "@/context/timeline";
-import { resolveSequentialOverlaps } from "@/engine/overlap";
+import { resolveDragJoins } from "@/engine/overlap";
 import { assert, clamp } from "@/utils";
 import { flattenRows, getListBottom, hitRows, resolveGap } from "./drag";
 
@@ -228,8 +228,9 @@ export function LayerContextProvider(props: { children: JSX.Element }) {
     }
 
     if (!editor.reparent(entity, drop.parent)) return;
-    // A sequence keeps its clips on one line; the drop wins the overlaps.
-    if (isSequence(drop.parent)) resolveSequentialOverlaps(world, [entity]);
+    // A sequence keeps its clips on one line; the drop butts flush against
+    // whatever it landed on, and nothing on the line is cut.
+    if (isSequence(drop.parent)) resolveDragJoins(world, [entity]);
     if (!drop.parent.has(Expanded)) editor.editProperty(drop.parent, 'expanded', true);
   };
 

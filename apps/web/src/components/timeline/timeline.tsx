@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { onCleanup, onMount } from 'solid-js';
+import { For, Show, onCleanup, onMount } from 'solid-js';
 import { toast } from 'somoto';
 import { useWorld } from '@diffusionstudio/koota-solid';
 import { FrameRate, framesToSeconds, getActiveEntity } from '@diffusionstudio/runtime';
@@ -12,6 +12,8 @@ import { insertAssetsInNewScene } from '@/engine/new-scene';
 import { useLibrary } from '@/engine/library';
 import { useTimeline } from '@/context/timeline';
 import { ASSET_DRAG_TYPE } from '@/components/sidebar-left/folder-item';
+import { useDerived } from '@/engine/hooks/use-derived';
+import { PIN_COLORS, closePinPicker, pinControls } from '@/engine/timeline/pins';
 
 /**
  * The timeline's canvas. What is drawn on it is the timeline system's
@@ -22,6 +24,14 @@ export function Timeline() {
   const world = useWorld();
   const timeline = useTimeline();
   const library = useLibrary();
+  const pins = pinControls(world);
+  const pickerOpen = useDerived(() => pins.pickerScene !== null && pins.pickerScene === getActiveEntity(world));
+  const color = useDerived(() => pins.color);
+  const dismissPicker = (event: PointerEvent) => {
+    if (event.target instanceof Element && !event.target.closest('[data-pin-picker]')) closePinPicker(world);
+  };
+  onMount(() => document.addEventListener('pointerdown', dismissPicker));
+  onCleanup(() => document.removeEventListener('pointerdown', dismissPicker));
 
   onMount(() => timeline.attachCanvas());
   onCleanup(() => timeline.detachCanvas());
@@ -81,6 +91,40 @@ export function Timeline() {
         on:drop={handleDrop}
         on:dragover={handleDragOver}
       />
+      <Show when={pickerOpen()}>
+        <div
+          data-pin-picker
+          role="dialog"
+          aria-label="Cores dos pins"
+          class="absolute left-2 top-10 z-50 rounded-lg border border-input bg-background p-3 shadow-lg"
+          onKeyDown={(event) => {
+            event.stopPropagation();
+            if (event.key === 'Escape') closePinPicker(world);
+          }}
+        >
+          <div class="mb-2 flex items-center justify-between gap-4 text-xs">
+            <span>Cores dos pins</span>
+            <button type="button" aria-label="Fechar cores dos pins" onClick={() => closePinPicker(world)}>Fechar</button>
+          </div>
+          <div class="flex gap-2">
+            <For each={PIN_COLORS}>{(swatch) => (
+              <button
+                type="button"
+                class="size-6 rounded-full border-2 focus-visible:outline-2 focus-visible:outline-offset-2"
+                style={{ 'background-color': swatch.hex, 'border-color': color() === swatch.hex ? 'white' : 'transparent' }}
+                aria-label={swatch.label}
+                aria-pressed={color() === swatch.hex}
+                title={swatch.label}
+                onClick={() => {
+                  pins.color = swatch.hex;
+                  closePinPicker(world);
+                }}
+              />
+            )}</For>
+          </div>
+          <p class="mt-2 text-xs text-muted-foreground">Toque em ' para colocar um pin. Segure por 2s para escolher a cor.</p>
+        </div>
+      </Show>
     </div>
   );
 }

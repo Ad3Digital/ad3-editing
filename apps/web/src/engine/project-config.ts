@@ -64,6 +64,12 @@ export type ExportConfig = {
 	audio?: ExportAudioSettings;
 };
 
+/** A timeline pin, stored in seconds and rendered with its CSS hex color. */
+export type TimelineMarker = {
+	time: number;
+	color: string;
+};
+
 /**
  * The key a scene's config sits under: its `id` in the JSX, read off the
  * source stamp (`<file>:<id>`). Undefined before it has one (nothing
@@ -136,6 +142,32 @@ function parseExports(value: unknown): Record<string, ExportConfig> {
 	return exports;
 }
 
+/** Timeline markers as read from the file: invalid pins do not reach the editor. */
+function parseTimelineMarkers(value: unknown): TimelineMarker[] {
+	if (!Array.isArray(value)) return [];
+
+	const markers: TimelineMarker[] = [];
+	for (const entry of value) {
+		if (!isRecord(entry)) continue;
+		const time = number(entry.time);
+		const color = typeof entry.color === 'string' && /^#[0-9A-Fa-f]{6}$/.test(entry.color) ? entry.color : undefined;
+		if (time !== undefined && time >= 0 && color) markers.push({ time, color });
+	}
+	return markers;
+}
+
+/** The `markers` field as read from the file: one valid pin array per scene id. */
+function parseMarkers(value: unknown): Record<string, TimelineMarker[]> {
+	if (!isRecord(value)) return {};
+
+	const markers: Record<string, TimelineMarker[]> = {};
+	for (const [key, entry] of Object.entries(value)) {
+		if (Array.isArray(entry)) markers[key] = parseTimelineMarkers(entry);
+	}
+	return markers;
+}
+
+
 /**
  * The config of the project at `dir`. `load` reads the file; the setters
  * update the signals first and write the file after, so a panel sees its
@@ -147,25 +179,48 @@ export class ProjectConfig {
 	private readonly dir: string;
 	private raw: Record<string, unknown> = {};
 	private disposed = false;
+	private revision = 0;
+	private writeQueue: Promise<void> = Promise.resolve();
+	private loadVersion = 0;
+	private readonly readySignal = createSignal(false);
 	private readonly exports = createSignal<Record<string, ExportConfig>>({});
+	private readonly markerSignal = createSignal<Record<string, TimelineMarker[]>>({});
+
+	/** Reactive timeline markers, grouped by the durable scene id. */
+	public readonly markers: Accessor<Record<string, TimelineMarker[]>> = this.markerSignal[0];
+
+	/** Whether the current project config has loaded without being superseded. */
+	public readonly ready: Accessor<boolean> = this.readySignal[0];
 
 	public constructor(world: World, dir: string) {
 		this.world = world;
 		this.dir = dir;
 	}
 
-	/** Reads the config from the project. */
+	/**
+	 * Reads the config from the project. Wait for local writes first so a
+	 * reload cannot replace a just-saved setting with an older file snapshot.
+	 */
 	public async load(): Promise<void> {
-		let value: unknown = null;
+		const revision = this.revision;
+		const loadVersion = ++this.loadVersion;
+		this.readySignal[1](false);
+		await this.writeQueue;
+		if (this.disposed || revision !== this.revision || loadVersion !== this.loadVersion) return;
+
+		let value: unknown;
 		try {
 			value = await readProjectConfig(this.dir);
 		} catch (error) {
 			console.warn('Failed to read the project config', error);
+			return;
 		}
-		if (this.disposed) return;
+		if (this.disposed || revision !== this.revision || loadVersion !== this.loadVersion) return;
 
 		this.raw = isRecord(value) ? value : {};
 		this.exports[1](parseExports(this.raw.export));
+		this.markerSignal[1](parseMarkers(this.raw.markers));
+		this.readySignal[1](true);
 	}
 
 	/**
@@ -197,13 +252,46 @@ export class ProjectConfig {
 		const next = { ...this.raw };
 		if (Object.keys(exports).length) next.export = exports;
 		else delete next.export;
-		this.raw = next;
 		this.exports[1](parseExports(next.export));
+		await this.updateProjectConfig(next);
+	}
 
+	/**
+	 * Replaces a scene's timeline pins. Pins without a finite non-negative
+	 * time and a six-digit CSS hex color are ignored.
+	 */
+	public async setSceneMarkers(scene: Entity, markers: TimelineMarker[]): Promise<void> {
+		const key = sceneConfigKey(scene);
+		if (!key) {
+			console.warn('Cannot write timeline markers for a scene without an id');
+			return;
+		}
+
+		const sceneMarkers = parseTimelineMarkers(markers);
+		const allMarkers = isRecord(this.raw.markers) ? { ...this.raw.markers } : {};
+		if (sceneMarkers.length) allMarkers[key] = sceneMarkers;
+		else delete allMarkers[key];
+
+		const next = { ...this.raw };
+		if (Object.keys(allMarkers).length) next.markers = allMarkers;
+		else delete next.markers;
+		this.markerSignal[1](parseMarkers(next.markers));
+		await this.updateProjectConfig(next, true);
+	}
+
+	/** Updates local state and serializes writes so later changes win on disk. */
+	private async updateProjectConfig(next: Record<string, unknown>, propagateWriteError = false): Promise<void> {
+		this.raw = next;
+		this.revision += 1;
+
+		const config = Object.keys(next).length ? next : null;
+		const write = this.writeQueue.then(() => writeProjectConfig(this.dir, config));
+		this.writeQueue = write.catch(() => undefined);
 		try {
-			await writeProjectConfig(this.dir, Object.keys(next).length ? next : null);
+			await write;
 		} catch (error) {
 			console.warn('Failed to write the project config', error);
+			if (propagateWriteError) throw error;
 		}
 	}
 

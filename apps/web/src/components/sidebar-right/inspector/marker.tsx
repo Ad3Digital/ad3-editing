@@ -18,22 +18,13 @@ import {
   SelectPortal,
 } from '@/components/ui/select';
 
-const MARKER_COLORS = [
-  { value: 'yellow', label: 'Yellow', hex: '#F59E0B' },
-  { value: 'blue', label: 'Blue', hex: '#3B82F6' },
-  { value: 'green', label: 'Green', hex: '#10B981' },
-  { value: 'pink', label: 'Pink', hex: '#EC4899' },
-  { value: 'purple', label: 'Purple', hex: '#A855F7' },
-  { value: 'orange', label: 'Orange', hex: '#F97316' },
-  { value: 'cyan', label: 'Cyan', hex: '#06B6D4' },
-  { value: 'red', label: 'Red', hex: '#EF4444' },
-] as const;
+import { PIN_COLORS } from '@/engine/timeline/pins';
 
 export function MarkerPanel() {
   const [timecode, setTimecode] = createSignal('00:00:07');
   const [color, setColor] = createSignal<string>('pink');
 
-  const selectedColor = () => MARKER_COLORS.find((c) => c.value === color());
+  const selectedColor = () => PIN_COLORS.find((c) => c.value === color());
 
   return (
     <PanelSection
@@ -60,10 +51,10 @@ export function MarkerPanel() {
         <Select
           value={color()}
           onChange={(v) => setColor(v ?? 'pink')}
-          options={MARKER_COLORS.map((c) => c.value)}
+          options={PIN_COLORS.map((c) => c.value)}
           itemComponent={(itemProps) => {
             const itemColor = () =>
-              MARKER_COLORS.find((c) => c.value === itemProps.item.rawValue);
+              PIN_COLORS.find((c) => c.value === itemProps.item.rawValue);
             return (
               <SelectItem item={itemProps.item}>
                 <div class="flex items-center gap-2">

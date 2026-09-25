@@ -45,7 +45,7 @@ const DISPLAY_TOLERANCE_FRAMES = 4;
 /**
  * Total pixel budget of the preview frame cache
  */
-const CACHE_PIXEL_BUDGET = 768 * 432 * 81; // 81 tiles at 768x432
+const CACHE_PIXEL_BUDGET = 960 * 540 * 24;
 
 /**
  * Per-tile pixel cap (~720p) — enough detail for the preview canvas.
@@ -62,8 +62,8 @@ const SCRUB_EVENT_WINDOW_MS = 250;
  */
 const SCRUB_SETTLE_MS = 120;
 
-const MIN_CACHE_COUNT = 30;
-const MAX_CACHE_COUNT = 81;
+const MIN_CACHE_COUNT = 16;
+const MAX_CACHE_COUNT = 32;
 
 type PreviewSeek = { frame: number; forward: boolean; keyTimestamp: number | null };
 
@@ -114,7 +114,7 @@ export class VideoBuffer {
 		this.asset = asset;
 
 		// Keep roughly a second of high-fps footage without increasing the pixel budget.
-		const count = Math.min(MAX_CACHE_COUNT, Math.max(MIN_CACHE_COUNT, Math.ceil(asset.frameRate)));
+		const count = Math.min(MAX_CACHE_COUNT, Math.max(MIN_CACHE_COUNT, Math.ceil(asset.frameRate / 2)));
 		const pixels = Math.min(asset.width * asset.height, MAX_TILE_PIXELS, Math.floor(CACHE_PIXEL_BUDGET / count));
 		this.cache = new FrameCache({ pixels, count });
 
@@ -155,7 +155,7 @@ export class VideoBuffer {
 		}
 	}
 
-	public seekTo(frame: number, frameRate: number): undefined {
+	public seekTo(frame: number, frameRate: number, scrubbing = false): undefined {
 		if (!this.packetSink || this.errored || this.mode === 'discarded') return;
 		const targetFrame = Math.max(0, Math.min(this.lastFrameIndex,
 			Math.round((frame / frameRate) * this.asset.frameRate)));
@@ -175,7 +175,7 @@ export class VideoBuffer {
 		// cancelled by the next one and nothing ever paints.
 		const jumped = Math.abs(targetFrame - previousFrame) > FORWARD_BIAS_FRAMES;
 
-		if (consecutive && jumped && this.scrubTo(targetFrame)) {
+		if ((scrubbing || consecutive) && jumped && this.scrubTo(targetFrame)) {
 			return;
 		}
 
@@ -270,29 +270,32 @@ export class VideoBuffer {
 				const seek = this.pendingSeek;
 				this.pendingSeek = null;
 				const generation = this.seekGeneration;
-				if (seek.keyTimestamp !== null) {
-					this.activeRange = null;
-					await this.decodeKeyframe(seek.keyTimestamp, generation);
-					continue;
-				}
-				const [left, right] = this.computeWindow(seek.frame, seek.forward);
-				this.activeRange = [left, right];
-				this.activeForward = seek.forward;
-				let seed = seek.frame;
-				if (seek.forward) {
-					while (seed <= right && this.isBlockedFrame(seed)) seed++;
-					await this.fillCache([seed, right], generation);
-				} else {
-					while (seed >= left && this.cache.has(seed)) seed--;
-					if (seed >= left) {
-						await this.fillCache([left, Math.min(this.lastFrameIndex, seed + DRAIN_FRAMES)], generation, true);
+				try {
+					if (seek.keyTimestamp !== null) {
+						this.activeRange = null;
+						await this.decodeKeyframe(seek.keyTimestamp, generation);
+						continue;
 					}
+					const [left, right] = this.computeWindow(seek.frame, seek.forward);
+					this.activeRange = [left, right];
+					this.activeForward = seek.forward;
+					let seed = seek.frame;
+					if (seek.forward) {
+						while (seed <= right && this.isBlockedFrame(seed)) seed++;
+						await this.fillCache([seed, right], generation);
+					} else {
+						while (seed >= left && this.cache.has(seed)) seed--;
+						if (seed >= left) {
+							await this.fillCache([left, Math.min(this.lastFrameIndex, seed + DRAIN_FRAMES)], generation, true);
+						}
+					}
+				} catch (error) {
+					// Closing an obsolete decoder must not poison a reactivated clip.
+					if (generation !== this.seekGeneration || this.mode !== 'alive') continue;
+					this.errored = true;
+					console.error('Video preview decoding failed', error);
+					break;
 				}
-			}
-		} catch (error) {
-			if (this.mode === 'alive') {
-				this.errored = true;
-				console.error('Video preview decoding failed', error);
 			}
 		} finally {
 			this.activeRange = null;
@@ -622,7 +625,6 @@ export class VideoExporter {
 	public asset: VideoAsset;
 	public initialized: Promise<void>;
 
-	private input: Input | null = null;
 	private canvasSink: CanvasSink | null = null;
 	private iterator: AsyncGenerator<WrappedCanvas, void, unknown> | null = null;
 	private currentCanvas: WrappedCanvas | null = null;
@@ -635,9 +637,8 @@ export class VideoExporter {
 
 	private async initialize() {
 		try {
-			const blob = await getAssetFile(this.asset);
-			this.input = new Input({ formats: ALL_FORMATS, source: new BlobSource(blob) });
-			const track = await this.input.getPrimaryVideoTrack();
+			// Cuts of one long source share its demuxer and sample tables.
+			const track = await getVideoTrack(this.asset);
 			assert(track, 'Video track not found');
 			// See VideoBuffer.initialize: clamp so an edit-list head trim (negative first
 			// timestamp) doesn't offset every exported frame relative to the audio.
@@ -662,6 +663,7 @@ export class VideoExporter {
 		if (targetFrame === lastFrame) return;
 
 		if (!this.iterator || targetFrame < lastFrame) {
+			await this.iterator?.return();
 			this.iterator = this.canvasSink?.canvases(this.framesToSeconds(targetFrame)) ?? null;
 		}
 		if (!this.iterator) return;
@@ -695,12 +697,16 @@ export class VideoExporter {
 		return this.currentCanvas.canvas;
 	}
 
-	public idle(): void { }
+	public idle(): void {
+		// A finished cut must release predecoded full-resolution frames immediately.
+		// Keeping every cut's iterator alive exhausts memory on long edits.
+		void this.iterator?.return();
+		this.iterator = null;
+		this.currentCanvas = null;
+	}
 
 	public dispose(): void {
-		this.iterator?.return();
-		this.iterator = null;
-		this.input?.dispose();
+		this.idle();
 	}
 }
 

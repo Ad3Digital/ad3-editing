@@ -3,13 +3,15 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 export * from './config';
+export * from './gaps';
 export * from './constants';
 export * from './controller';
 export * from './drag';
 export * from './snapping';
 export * from './layout';
-export * from './media';
 export * from './peaks';
+export * from './pins';
+export * from './media';
 export * from './style';
 export * from './surface';
 export * from './timeline';

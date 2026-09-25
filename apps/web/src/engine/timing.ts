@@ -122,8 +122,11 @@ export function trimOut(world: World, entity: Entity, frame: number): void {
  * all travel with it.
  */
 export function moveEntityTo(world: World, entity: Entity, frame: number): void {
-	const start = frame - getTimelineOrigin(entity);
-	const delta = start - (authoredTime(world, entity, 'start') ?? 0);
+	// A container's visible start can come from its first child, rather than
+	// its authored offset. Move by the visible delta so grouped overlays keep
+	// their internal timing when a gap is closed or a group is dragged.
+	const delta = frame - (entity.get(Computed)?.start ?? 0);
+	const start = (authoredTime(world, entity, 'start') ?? 0) + delta;
 	if (delta === 0) return;
 
 	// Before the start, which moves the origin the end would then be read

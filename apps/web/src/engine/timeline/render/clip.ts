@@ -14,7 +14,8 @@ import {
 	CLIP_LABEL_HEIGHT,
 	TRIM_HANDLE_WIDTH,
 } from '../config';
-import { applyClipDrag, applyTrim, beginClipDrag, beginTrim } from '../drag';
+import { applyTrim, beginClipDrag, beginTrim } from '../drag';
+import { clearGapSelection } from '../gaps';
 import { getClipAsset, getClipFallbackName, getClipStyle } from '../style';
 import { truncateText } from '../text';
 import { framesToPixels, getResolution, getViewport } from '../view';
@@ -48,7 +49,7 @@ export function renderClip(
 	const computed = store(world, Computed);
 	const resolution = getResolution(world, scene);
 
-	let left = framesToPixels(computed.start[entity.id()] ?? 0, resolution);
+	const left = framesToPixels(computed.start[entity.id()] ?? 0, resolution);
 	const width = framesToPixels(computed.end[entity.id()] ?? 0, resolution) - left;
 
 	// Every region of this clip is scoped to it, so two clips at the same
@@ -59,13 +60,8 @@ export function renderClip(
 	const error = getSourceFailure(entity);
 	const style = getClipStyle(entity, asset, !!error?.length);
 
-	handleBody(world, surface, entity, left, width, row, resolution);
+	handleBody(world, surface, entity, left, width, row);
 
-	// A drag that has just moved the clip has moved where it is drawn, so the
-	// left edge is read again; the width does not change with it.
-	if (entity.has(ClipDragOrigin)) {
-		left = framesToPixels(computed.start[entity.id()] ?? 0, resolution);
-	}
 
 	const generating = isGenerating(entity);
 
@@ -235,22 +231,22 @@ function handleBody(
 	left: number,
 	width: number,
 	row: RowCursor,
-	resolution: number,
 ): void {
 	const pointer = surface.pointer!;
 	const editor = getDocumentEditor(world);
-
-	const { clicked, dragging, intersectsMarquee } = pointer.region(left, 0, width, row.height);
+	const { pressed, clicked, dragging, intersectsMarquee } = pointer.region(left, 0, width, row.height);
 	const selected = entity.has(Selected);
+	if (pressed) {
+		clearGapSelection(world);
+		if (!selected) editor.select(entity, { extend: pointer.shiftPressed });
+	}
+
 
 	// A press that travels starts a move. The press selected the clip first,
 	// so a drag of an unselected clip moves that one and a drag of a selected
 	// one moves everything selected (see `updateDragGestures`).
 	if (dragging && !entity.has(ClipDragOrigin) && !entity.has(TrimDragOrigin)) {
 		beginClipDrag(world, entity);
-	}
-	if (entity.has(ClipDragOrigin)) {
-		applyClipDrag(world, surface, entity, resolution);
 	}
 
 	// While a marquee is out, the clips it covers are the selection: entering
@@ -263,6 +259,10 @@ function handleBody(
 	}
 
 	if (!clicked) return;
+
+	// A click anywhere but the gap takes the gap selection back off, so
+	// Delete acts on the clips again.
+	clearGapSelection(world);
 
 	if (pointer.shiftPressed) editor.select(entity, { extend: true });
 	else editor.select(entity);

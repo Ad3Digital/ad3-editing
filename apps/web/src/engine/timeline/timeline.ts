@@ -12,6 +12,7 @@
 import { useCursor } from '@/hooks/use-cursor';
 import { RULER_HEIGHT } from './config';
 import { renderLayers, renderMarquee, renderPlayhead, renderRuler, renderSnapLine, renderWorkarea, updateMarquee } from './render';
+import { renderPins } from './pins';
 import { updateDragGestures } from './drag';
 import { TimelineSurface } from './surface';
 import { ensureTimelineView, getTimelineScene } from './view';
@@ -67,6 +68,7 @@ export function timelineSystem(world: World): void {
 		renderRuler(world, scene, surface);
 		renderWorkarea(world, scene, surface);
 		renderPlayhead(world, scene, surface);
+		renderPins(world, scene, surface);
 
 		if (!surface.minimized) renderSnapLine(world, scene, surface);
 

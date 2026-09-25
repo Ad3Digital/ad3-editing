@@ -95,8 +95,8 @@ keep its assets and appropriately licensed libraries local for offline, reproduc
 
 | Input | Action |
 | --- | --- |
-| Wheel over timeline | Zoom around the cursor |
-| Ctrl + wheel | Pan horizontally without changing the zoom or playhead |
+| Wheel over timeline | Pan horizontally without changing the zoom or playhead |
+| Ctrl + wheel | Zoom around the cursor |
 | Shift + wheel | Scroll track rows vertically |
 | Horizontal trackpad gesture | Pan timeline horizontally |
 | J | Reverse shuttle: 2× → 3× → 4× → 5× |
@@ -152,6 +152,8 @@ It requires an installed and authenticated GitHub CLI.
 - Coalesced seek requests instead of an accumulated promise chain.
 - Codec output drained for short clips, final frames, and keyframe scrubs.
 - Idle decoders reactivated at the requested frame.
+- Cancelled decoding from an idle clip cannot mark a reactivated preview as failed;
+  the newest seek continues after the obsolete decoder closes.
 - Bounded, indexed preview caches and direct drawing into preview tiles.
 - Cache resolution adapted to frame rate within a fixed pixel budget.
 - Audio re-anchored after seeks or rate changes, with obsolete work cancelled.
