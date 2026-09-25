@@ -10,6 +10,13 @@ import type { IpcRendererEvent } from "electron";
 
 const ALLOWED_RENDERER_TO_MAIN: ReadonlySet<string> = new Set([MAIN_WIRE.REQUEST]);
 
+if (process.argv.includes('--ad3-native-preview')) {
+  contextBridge.exposeInMainWorld('ad3NativePreview', {
+    frame: (request: unknown) => ipcRenderer.invoke('ad3:native-preview', 'frame', request),
+    close: (session: string) => ipcRenderer.invoke('ad3:native-preview', 'close', { session }),
+  });
+}
+
 const ALLOWED_MAIN_TO_RENDERER: ReadonlySet<string> = new Set([
   MAIN_WIRE.RESPONSE,
   MAIN_WIRE.EVENT,

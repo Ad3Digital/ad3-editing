@@ -30,6 +30,7 @@ import {
 } from '../media';
 import { whenHtmlReady } from '../media/html';
 import { AudioBus } from '../media/audio-bus';
+import { hasNativePreview } from '../media/native-video';
 
 import type { Entity, World } from 'koota';
 
@@ -128,7 +129,10 @@ function forwardVideoDecoder(world: World, scene: Entity, entity: Entity, fill: 
 	const start = computed.start[eid]!;
 	const end = computed.end[eid]!;
 	const hasCache = world.get(Mode)?.value === 'realtime';
-	const warmupDecoder = globalFrame >= start - WARMUP_FRAMES && globalFrame < end + WARMUP_FRAMES && hasCache;
+	// Long-GOP sources need a head start before a cut, especially at shuttle speed.
+	// Warm only the first frame; the native worker then blocks until the clip advances.
+	const lookahead = hasNativePreview() ? Math.max(WARMUP_FRAMES, fps * Math.max(1, Math.abs(scene.get(Playback)?.speed || 1)) * 2) : WARMUP_FRAMES;
+	const warmupDecoder = globalFrame >= start - lookahead && globalFrame < end + WARMUP_FRAMES && hasCache;
 
 	if (computed.visibility[eid] !== 1 && !warmupDecoder) {
 		fill.get(VideoDecoderHandle)?.idle();

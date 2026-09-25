@@ -12,6 +12,7 @@ import { startCliServer, stopCliServer, isHeadless } from "./cli-server";
 import { trackInstall } from "./analytics";
 import { setupAppMenu } from "./menu";
 import { mainBridge } from "./main-manager";
+import { nativePreviewAvailable, setupNativePreview, stopNativePreview } from './native-preview';
 import {
   cancelHyperframes,
   disposeHyperframes,
@@ -213,6 +214,7 @@ function createWindow(show = true) {
     icon: join(app.getAppPath(), "assets", "icon.ico"),
     webPreferences: {
       preload: join(app.getAppPath(), "dist", "preload.js"),
+      additionalArguments: nativePreviewAvailable() ? ['--ad3-native-preview'] : [],
     },
   });
 
@@ -374,6 +376,7 @@ if (app.requestSingleInstanceLock()) {
   });
 
   app.whenReady().then(() => {
+    setupNativePreview();
     if (!app.isPackaged && process.platform === "darwin") {
       const devIcon = nativeImage.createFromPath(join(app.getAppPath(), "assets", "icon-dev.png"));
       if (!devIcon.isEmpty()) app.dock?.setIcon(devIcon);
@@ -398,6 +401,7 @@ if (app.requestSingleInstanceLock()) {
     event.preventDefault();
     quitting = true;
     unwatchAll();
+    stopNativePreview();
     stopCliServer();
     void disposeHyperframes()
       .catch((error) => console.error("HyperFrames shutdown failed:", error))

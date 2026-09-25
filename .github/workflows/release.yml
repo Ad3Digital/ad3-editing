@@ -91,6 +91,16 @@ jobs:
           test "$(uname -m)" = "${{ matrix.uname }}"
       - name: Install locked dependencies
         run: npm ci
+      - name: Prepare Rust native preview toolchain
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          cargo test --locked --manifest-path native/preview/Cargo.toml
+          if ($LASTEXITCODE -ne 0) { throw 'Native preview unit tests failed.' }
+      - name: Verify native preview client regressions
+        run: node --test scripts/native-preview-client.test.mjs scripts/timeline-performance.test.mjs scripts/audio-retiming.test.mjs
       - name: Verify concurrent asset reload regression
         run: node --test scripts/asset-library-reload.test.mjs
       - name: Verify macOS signing and preview readiness regressions

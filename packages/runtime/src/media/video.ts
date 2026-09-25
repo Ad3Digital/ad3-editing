@@ -4,12 +4,13 @@
 
 import { BlobSource, ALL_FORMATS, Input, InputVideoTrack, EncodedPacketSink, EncodedPacket, CanvasSink, type WrappedCanvas } from 'mediabunny';
 
-import { AssetId, VideoDecoderHandle, Mode } from '../traits';
+import { AssetId, VideoDecoderHandle, Mode, Library } from '../traits';
 import { assert } from '../utils/assert';
 import { getAsset, getAssetFile, getSequenceFrameRate } from '../actions/assets';
 import { FrameCache } from './frame-cache';
 import { getKeyframeIndex } from './keyframe-index';
 import { SequenceDecoder } from './sequence';
+import { NativeVideoBuffer, hasNativePreview } from './native-video';
 
 import type { Entity, World } from 'koota';
 import type { KeyframeIndex } from './keyframe-index';
@@ -741,7 +742,7 @@ export class VideoExporter {
  * a file, an exact-seeking reader for encoding one, and a frames directory
  * read off disk. Nothing downstream of `resolveVideoDecoder` asks which.
  */
-export type VideoDecoderInstance = VideoBuffer | VideoExporter | SequenceDecoder;
+export type VideoDecoderInstance = VideoBuffer | VideoExporter | SequenceDecoder | NativeVideoBuffer;
 
 const videoTrackCache = new Map<string, Promise<InputVideoTrack | null>>();
 
@@ -811,7 +812,10 @@ export function resolveVideoDecoder(world: World, entity: Entity): VideoDecoderI
 		decoder = new SequenceDecoder(asset, hasCache);
 		decoder.frameRate = getSequenceFrameRate(entity, asset);
 	} else if (asset.type === 'VIDEO') {
-		decoder = hasCache ? new VideoBuffer(asset) : new VideoExporter(asset);
+		const source = world.get(Library)?.fs.absolute?.(asset.source) ?? asset.source;
+		decoder = hasCache && hasNativePreview() && !/^https?:/i.test(source)
+			? new NativeVideoBuffer(asset, source)
+			: hasCache ? new VideoBuffer(asset) : new VideoExporter(asset);
 	} else {
 		return null;
 	}
