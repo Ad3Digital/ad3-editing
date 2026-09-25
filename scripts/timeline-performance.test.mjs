@@ -92,6 +92,7 @@ test('a paused jump into a cold clip paints a keyframe before the exact seek', (
   Object.assign(decoder, {
     packetSink: {}, errored: false, mode: 'alive', asset: { frameRate: 60 },
     currentFrame: -1, lastFrameIndex: 30000, lastSeekAt: -Infinity,
+    transport: null,
     touch() {}, scrubTo(frame) { this.scrubbed = frame; return true; },
     exactSeekTo() { throw new Error('cold scrub should use its keyframe first'); },
   });
@@ -134,4 +135,27 @@ test('idling a clip wakes a blocked submit without feeding the closed decoder', 
   queue.dispose();
   await pending;
   assert.equal(submitted, 0);
+});
+
+test('returning from shuttle restarts a failed decode even at the same frame', () => {
+  const decoder = Object.create(VideoBuffer.prototype);
+  let disposed = 0, returned = 0, sought = null;
+  Object.assign(decoder, {
+    packetSink: {}, errored: true, mode: 'alive', asset: { frameRate: 60 },
+    currentFrame: 3000, lastFrameIndex: 30000, lastSeekAt: performance.now(),
+    transport: 5, seekGeneration: 4, pendingSeek: { frame: 3200 },
+    activeRange: [3100, 3200], pendingScrub: new Set([3100]), settleTimer: null,
+    queue: { dispose() { disposed++; } }, iterator: { return() { returned++; } },
+    touch() {}, exactSeekTo(frame) { sought = frame; },
+  });
+  decoder.seekTo(1500, 30, false, 1);
+  assert.equal(disposed, 1);
+  assert.equal(returned, 1);
+  assert.equal(decoder.errored, false);
+  assert.equal(decoder.pendingSeek, null);
+  assert.equal(decoder.pendingScrub.size, 0);
+  assert.equal(sought, 3000);
+  // Steady playback at the same speed must not keep rebuilding the decoder.
+  decoder.seekTo(1500, 30, false, 1);
+  assert.equal(disposed, 1);
 });

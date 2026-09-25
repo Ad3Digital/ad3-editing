@@ -139,7 +139,9 @@ function forwardVideoDecoder(world: World, scene: Entity, entity: Entity, fill: 
 	const decoder = resolveVideoDecoder(world, fill);
 	if (decoder) {
 		const seekFrame = clamp(localFrame, source.in, source.out);
-		const seekPromise = decoder.seekTo(seekFrame, fps, hasCache && !scene.get(Playback)?.playing);
+		const playback = scene.get(Playback);
+		const transport = playback?.playing ? (playback.speed || 1) * (computed.playbackRate[eid] || 1) : 0;
+		const seekPromise = decoder.seekTo(seekFrame, fps, hasCache && !playback?.playing, transport);
 		framePromises(world)?.push(seekPromise ?? null);
 	}
 }

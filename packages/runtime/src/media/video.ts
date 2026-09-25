@@ -109,6 +109,7 @@ export class VideoBuffer {
 	private idleTimer: ReturnType<typeof setTimeout> | null = null;
 	private settleTimer: ReturnType<typeof setTimeout> | null = null;
 	private lastSeekAt: number = -Infinity;
+	private transport: number | null = null;
 
 	public constructor(asset: VideoAsset) {
 		this.asset = asset;
@@ -155,8 +156,11 @@ export class VideoBuffer {
 		}
 	}
 
-	public seekTo(frame: number, frameRate: number, scrubbing = false): undefined {
-		if (!this.packetSink || this.errored || this.mode === 'discarded') return;
+	public seekTo(frame: number, frameRate: number, scrubbing = false, transport = scrubbing ? 0 : 1): undefined {
+		if (!this.packetSink || this.mode === 'discarded') return;
+		if (this.transport !== null && this.transport !== transport) this.resetTransport();
+		this.transport = transport;
+		if (this.errored) return;
 		const targetFrame = Math.max(0, Math.min(this.lastFrameIndex,
 			Math.round((frame / frameRate) * this.asset.frameRate)));
 		if (targetFrame === this.currentFrame && this.mode === 'alive') return;
@@ -180,6 +184,22 @@ export class VideoBuffer {
 		}
 
 		this.exactSeekTo(targetFrame, previousFrame);
+	}
+
+	/** A new playback speed must never inherit a stalled or obsolete decode pass. */
+	private resetTransport(): void {
+		this.seekGeneration++;
+		this.pendingSeek = null;
+		this.activeRange = null;
+		this.pendingScrub.clear();
+		if (this.settleTimer !== null) clearTimeout(this.settleTimer);
+		this.settleTimer = null;
+		this.queue.dispose();
+		void this.iterator?.return();
+		this.iterator = null;
+		this.currentFrame = -1;
+		this.lastSeekAt = -Infinity;
+		this.errored = false;
 	}
 
 	/**
