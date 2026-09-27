@@ -16,3 +16,5 @@ mod motion;
 mod reactivity;
 #[path = "rendering.rs"]
 mod rendering;
+#[path = "textures.rs"]
+mod textures;

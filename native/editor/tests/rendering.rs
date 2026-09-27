@@ -5,12 +5,280 @@ use ad3_editor::{
     project::ProjectRenderer,
     render::RenderPlan,
     source::SourceDocument,
+    texture::TextureFrame,
     timing::Timeline,
 };
 use std::{
     fs,
     time::{SystemTime, UNIX_EPOCH},
 };
+
+#[test]
+#[ignore = "requires installed FFmpeg and FFprobe; run with --ignored"]
+fn native_video_textures_keep_source_clock_alpha_transform_and_export_frames() {
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let folder = std::env::temp_dir().join(format!(
+        "ad3-rust-texture-video-{}-{stamp}",
+        std::process::id()
+    ));
+    fs::create_dir(&folder).unwrap();
+    for index in 0..8u8 {
+        image::RgbaImage::from_pixel(16, 8, image::Rgba([index * 30, 40, 180, 128]))
+            .save(folder.join(format!("frame{index:02}.png")))
+            .unwrap();
+    }
+    let tools = Tools::default();
+    checked_output(
+        command(&tools.ffmpeg)
+            .args(["-v", "error", "-nostdin", "-n", "-framerate", "4", "-i"])
+            .arg(folder.join("frame%02d.png"))
+            .args(["-c:v", "ffv1", "-pix_fmt", "bgra"])
+            .arg(folder.join("source.mkv")),
+    )
+    .unwrap();
+    // A one-frame Matroska track without DefaultDuration has avg_frame_rate=0/0.
+    // Preserve every packet, replace only that optional EBML metadata element ID.
+    checked_output(
+        command(&tools.ffmpeg)
+            .args(["-v", "error", "-nostdin", "-n", "-i"])
+            .arg(folder.join("source.mkv"))
+            .args(["-frames:v", "1", "-c:v", "ffv1"])
+            .arg(folder.join("one-frame.mkv")),
+    )
+    .unwrap();
+    let mut no_rate = fs::read(folder.join("one-frame.mkv")).unwrap();
+    let tag = no_rate
+        .windows(3)
+        .position(|bytes| bytes == [0x23, 0xe3, 0x83])
+        .unwrap();
+    no_rate[tag + 2] = 0x82;
+    fs::write(folder.join("no-rate.mkv"), no_rate).unwrap();
+    let raw = checked_output(
+        command(&tools.ffprobe)
+            .args([
+                "-v",
+                "error",
+                "-show_entries",
+                "stream=avg_frame_rate",
+                "-of",
+                "json",
+            ])
+            .arg(folder.join("no-rate.mkv")),
+    )
+    .unwrap();
+    let raw: serde_json::Value = serde_json::from_slice(&raw.stdout).unwrap();
+    assert_eq!(raw["streams"][0]["avg_frame_rate"], "0/0");
+    let recovered_rate = tools.probe(&folder.join("no-rate.mkv")).unwrap();
+    assert_eq!(recovered_rate.frame_rate, 4.0);
+    let no_rate_doc=SourceDocument::parse(folder.join("no-rate.tsx"),r#"export default <stage><scene id="s" active width={16} height={8} workarea={[0,0.25]}><video src="no-rate.mkv" width={16} height={8}/></scene></stage>"#.into()).unwrap();
+    let mut no_rate_renderer =
+        ProjectRenderer::new(&no_rate_doc, &folder, tools.clone(), true).unwrap();
+    let pixels = no_rate_renderer
+        .frame_plan("s", 0.0, 4.0, false)
+        .unwrap()
+        .frame(&tools, &folder)
+        .unwrap();
+    assert_eq!(&pixels[..4], &[0, 40, 179, 128]);
+    // Container start timestamps must not lengthen the source's content clock.
+    checked_output(
+        command(&tools.ffmpeg)
+            .args(["-v", "error", "-nostdin", "-n", "-i"])
+            .arg(folder.join("source.mkv"))
+            .args(["-c:v", "copy", "-output_ts_offset", "2"])
+            .arg(folder.join("shifted.mkv")),
+    )
+    .unwrap();
+    let shifted = tools.probe(&folder.join("shifted.mkv")).unwrap();
+    assert_eq!(shifted.start_time, 2.0);
+    assert_eq!(shifted.duration, Some(2.0));
+    let texture_store = ad3_editor::texture::TextureStore::new(tools.clone());
+    let shifted_time = ad3_editor::texture::source_time(0.5, 0.0, 1.0, 8.0, &shifted).unwrap();
+    assert_eq!(shifted_time, 2.5);
+    let shifted_pixels = texture_store
+        .frame(
+            &ad3_editor::texture::TextureRequest {
+                path: folder.join("shifted.mkv"),
+                probe: shifted,
+                frame: TextureFrame::Video(shifted_time),
+            },
+            None,
+        )
+        .unwrap();
+    assert_eq!(&shifted_pixels.data()[..4], &[30, 20, 90, 128]);
+    // Pixel aspect and display rotation normalize the decoder bitmap before fit.
+    checked_output(
+        command(&tools.ffmpeg)
+            .args(["-v", "error", "-nostdin", "-n", "-i"])
+            .arg(folder.join("source.mkv"))
+            .args([
+                "-vf", "setsar=2", "-c:v", "libx264", "-pix_fmt", "yuv444p", "-crf", "0",
+            ])
+            .arg(folder.join("sar.mp4")),
+    )
+    .unwrap();
+    let sar = tools.probe(&folder.join("sar.mp4")).unwrap();
+    assert_eq!(sar.display_dimensions().unwrap(), (32, 8));
+    checked_output(
+        command(&tools.ffmpeg)
+            .args([
+                "-v",
+                "error",
+                "-nostdin",
+                "-n",
+                "-display_rotation",
+                "90",
+                "-i",
+            ])
+            .arg(folder.join("sar.mp4"))
+            .args(["-c:v", "copy"])
+            .arg(folder.join("rotated.mp4")),
+    )
+    .unwrap();
+    let rotated = tools.probe(&folder.join("rotated.mp4")).unwrap();
+    assert_eq!(rotated.display_dimensions().unwrap(), (8, 32));
+    let rotated_pixels = texture_store
+        .frame(
+            &ad3_editor::texture::TextureRequest {
+                path: folder.join("rotated.mp4"),
+                probe: rotated,
+                frame: TextureFrame::Video(0.5),
+            },
+            None,
+        )
+        .unwrap();
+    assert_eq!((rotated_pixels.width(), rotated_pixels.height()), (8, 32));
+    assert!((58..=62).contains(&rotated_pixels.data()[0]));
+    let fit_doc=SourceDocument::parse(folder.join("rotated.tsx"),r#"export default <stage><scene id="s" active width={16} height={16} workarea={[0,1]}><video src="rotated.mp4" width={16} height={16} objectFit="contain"/></scene></stage>"#.into()).unwrap();
+    let mut fit_renderer = ProjectRenderer::new(&fit_doc, &folder, tools.clone(), true).unwrap();
+    let fit_pixels = fit_renderer
+        .frame_plan("s", 0.5, 8.0, false)
+        .unwrap()
+        .frame(&tools, &folder)
+        .unwrap();
+    assert_eq!(fit_pixels[(8 * 16 + 3) * 4 + 3], 0);
+    assert_eq!(fit_pixels[(8 * 16 + 7) * 4 + 3], 255);
+    let document=SourceDocument::parse(folder.join("index.tsx"),r#"export default <stage>
+      <scene id="s" active width={64} height={48} workarea={[0,0.5]}>
+        <video id="v" src="source.mkv" x={16} y={12} width={16} height={8} rotation={90} cornerRadius={2}
+          sourceIn={0.5} sourceOut={1.5} playbackRate={2} opacity={0.5} objectFit="fill"/>
+      </scene></stage>"#.into()).unwrap();
+    let mut renderer = ProjectRenderer::new(&document, &folder, tools.clone(), true).unwrap();
+    let plan = renderer.frame_plan("s", 0.0, 8.0, false).unwrap();
+    assert!(plan.is_native());
+    let first = plan.frame(&tools, &folder).unwrap();
+    let middle = renderer
+        .frame_plan("s", 0.25, 8.0, false)
+        .unwrap()
+        .frame(&tools, &folder)
+        .unwrap();
+    let reverse = renderer
+        .frame_plan("s", 0.0, 8.0, false)
+        .unwrap()
+        .frame(&tools, &folder)
+        .unwrap();
+    assert_eq!(first, reverse);
+    let at = (12 * 64 + 24) * 4;
+    assert!(
+        (58..=62).contains(&first[at]) && (118..=122).contains(&middle[at]),
+        "{:?} {:?}",
+        &first[at..at + 4],
+        &middle[at..at + 4]
+    );
+    assert_eq!(first[at + 3], 64);
+    assert_eq!(first[(12 * 64 + 18) * 4 + 3], 0);
+    let end = renderer
+        .frame_plan("s", 0.5, 8.0, false)
+        .unwrap()
+        .frame(&tools, &folder)
+        .unwrap();
+    assert!(end.iter().all(|n| *n == 0));
+    let output = folder.join("native.mp4");
+    let report = ProjectRenderer::export(
+        &document,
+        &folder,
+        tools.clone(),
+        &output,
+        8.0,
+        None,
+        |_, _| {},
+    )
+    .unwrap();
+    assert_eq!(report.frames, 4);
+    assert_eq!((report.width, report.height), (64, 48));
+    let decoded = checked_output(
+        command(&tools.ffmpeg)
+            .args(["-v", "error", "-i"])
+            .arg(&output)
+            .args(["-f", "rawvideo", "-pix_fmt", "rgba", "pipe:1"]),
+    )
+    .unwrap()
+    .stdout;
+    let stride = 64 * 48 * 4;
+    assert_eq!(decoded.len(), stride * 4);
+    assert!(
+        decoded[at] < 25 && decoded[3 * stride + at] > decoded[at] + 12,
+        "{} -> {}",
+        decoded[at],
+        decoded[3 * stride + at]
+    );
+    assert!(decoded[(12 * 64 + 18) * 4] < 10);
+    let pending = renderer.frame_plan("s", 0.0, 8.0, false).unwrap();
+    // Same coded size, different stream timestamp: a stale plan must not reuse
+    // its old clock against newly decoded source bytes, even on a cache hit.
+    fs::copy(folder.join("shifted.mkv"), folder.join("source.mkv")).unwrap();
+    assert!(
+        pending
+            .frame(&tools, &folder)
+            .err()
+            .unwrap()
+            .contains("changed since probing")
+    );
+    let fresh = renderer
+        .frame_plan("s", 0.0, 8.0, false)
+        .unwrap()
+        .frame(&tools, &folder)
+        .unwrap();
+    assert_eq!(fresh, first);
+    assert_eq!(renderer.library.probes["v"].start_time, 2.0);
+    // Simulate a stream frame exceeding its initial probe dimensions: enforce
+    // the expected raw byte count at the pipe reader, before pixel allocation.
+    let mut mismatched = tools.probe(&folder.join("source.mkv")).unwrap();
+    mismatched.width = 2;
+    mismatched.height = 2;
+    let request = ad3_editor::texture::TextureRequest {
+        path: folder.join("source.mkv"),
+        probe: mismatched,
+        frame: TextureFrame::Video(2.0),
+    };
+    let error = ad3_editor::texture::TextureStore::new(tools.clone())
+        .frame(&request, None)
+        .err()
+        .unwrap();
+    assert!(error.contains("exceeded its limit"), "{error}");
+    let mut too_large = request.clone();
+    too_large.probe.width = 4096;
+    too_large.probe.height = 4097;
+    assert!(
+        ad3_editor::texture::TextureStore::new(tools.clone())
+            .frame(&too_large, None)
+            .err()
+            .unwrap()
+            .contains("16-megapixel")
+    );
+    let absolute = fs::canonicalize(&folder).unwrap();
+    assert!(absolute.starts_with(fs::canonicalize(std::env::temp_dir()).unwrap()));
+    assert!(
+        absolute
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .starts_with("ad3-rust-texture-video-")
+    );
+    fs::remove_dir_all(absolute).unwrap();
+}
 
 #[test]
 #[ignore = "requires installed FFmpeg and FFprobe; run with --ignored"]

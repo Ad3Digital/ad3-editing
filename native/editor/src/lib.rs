@@ -23,6 +23,7 @@ pub mod source;
 mod source_inspect;
 mod stack;
 pub mod text_motion;
+pub mod texture;
 pub mod timing;
 pub mod transport;
 

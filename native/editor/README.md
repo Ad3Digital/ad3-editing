@@ -17,12 +17,13 @@ cargo run --locked --manifest-path native/editor/Cargo.toml --bin dapi-rust -- -
 cargo run --locked --manifest-path native/editor/Cargo.toml --features desktop --bin ad3-editing -- /path/to/project
 ```
 
-Six runnable projects are included: `examples/static` exercises source editing;
+Seven runnable projects are included: `examples/static` exercises source editing;
 `examples/modules` exercises imported components/JSON; `examples/reactive` animates
 rectangles and text through the native ticker, signals, `For` and `Show`;
 `examples/inspect` exposes editable controls from an imported component module;
 `examples/motion` combines slide/fade/text presets with an animated color track;
-`examples/vectors` exercises native rounded shapes, transforms and group opacity.
+`examples/vectors` exercises native rounded shapes, transforms and group opacity;
+`examples/media` combines native image/video composition with generated test assets.
 Pass the full path to a folder to the native executable.
 
 The desktop application opens an existing project folder or source entry, shows
@@ -75,17 +76,25 @@ Rendered media never overwrites an existing output or original footage.
   bounds, camera resolution, inherited culling and point/quad selection kernels.
   Original-function reference fixtures cover rotation, simultaneous shear, flips,
   default/explicit anchors, singular matrices, group exclusions and selection
-  boundaries. The vector compositor now uses these kernels for scene traversal.
-- `compositor.rs`: native CPU vector rasterization with tiny-skia for scenes made
-  of rectangles, groups, sequences and audio nodes. Shared preview/capture/export
+  boundaries. The compositor now uses these kernels for scene traversal.
+- `compositor.rs`: native CPU rasterization with tiny-skia for scenes made
+  of rectangles, images, videos, groups, sequences and audio nodes. Shared preview/capture/export
   draw lists apply position/offset, rotation, uniform/axis scale, inherited opacity,
   rounded corners and scene clipping. Group bounds follow the original parent-first
   traversal using previous child transforms. Offline frames/PNG preserve alpha;
   H.264 frames explicitly composite over black. Realtime scene previews use the
-  stage background. Vector frames do not invoke FFmpeg to draw pixels.
-- `media.rs`: local probing, linked asset resolution, video frames and waveform.
+  stage background. Media fit and clipping use the same native transformed geometry.
+  Native composition does not invoke FFmpeg filters for stacking or drawing.
+- `texture.rs`: Rust PNG/JPEG/WebP/GIF/BMP/TIFF decoding, EXIF orientation,
+  premultiplied alpha and a shared 128 MiB/256-entry decoded texture LRU.
+  FFmpeg supplies source video RGBA, including display rotation and normalization
+  of non-square pixels. Composition/source frame quantization, positive timestamps,
+  last-frame clamping, contain/cover/fill and reverse seeks feed the same draw list.
+  Cached frames are immutable and changed source files invalidate their entries.
+- `media.rs`: native image probing, local FFprobe metadata, linked asset resolution,
+  video frames and waveform. Matroska content duration excludes positive start offsets.
 - `render.rs`: shared frame/output interface and the existing FFmpeg composition
-  path for projects containing media or text: rectangles, basic unwrapped text,
+  path for projects containing remaining node types such as text: rectangles, basic unwrapped text,
   video/image fitting, stacking, opacity, trimmed/rate-adjusted audio, mixing,
   workarea MP4 export and PNG/RGBA capture.
 - `color.rs`: original packed-RGB parsing, its 43 named colors, RGB/HSL syntax,
@@ -100,7 +109,7 @@ Rendered media never overwrites an existing output or original footage.
   inherited style clocks and uniform-scale rules. Sampling derives a new tree
   from authored values each frame, so reverse seeks do not accumulate changes.
   Preview/export integrate leaf/group fade/slide, text reveals/scramble and supported
-  position/color/opacity/gain tracks. Vector-only scenes also render grow/shrink,
+  position/color/opacity/gain tracks. Native vector/media scenes also render grow/shrink,
   spin/twist and numeric transform/size/corner tracks. Blur presets and style targets
   still require their pending graphics implementations; unsupported render
   properties fail explicitly. Group opacity inherits per draw, as in the original
@@ -146,10 +155,10 @@ this ledger is waived because a smaller example renders successfully.
 | --- | --- | --- |
 | Source/project model | Static TSX edits; native ES modules, reactive props, signals/effects, For/Index/Show and ticker; original file spans; live `@inspect` and imported initializer writeback | Remaining package/Solid/browser APIs, generation hooks, loop unrolling and general multi-file JSX edits; complete last-good-render behavior |
 | Timeline | Source/timeline clocks, workareas, cuts/trims/moves, nested rates, transport | Ripple Q/E, multi-selection, clipboard/grouping, transitions, keyframe tracks, all timeline gestures/colors/toggles and established constraints |
-| Graphics | Native transformed/rounded vector scenes; static media and basic unwrapped text through FFmpeg | Unified native media/text drawing, GPU compositor, remaining transforms/constraints, masks, blend modes, gradients, paints, strokes, shadows, effects, wrapped/styled text, HTML, surfaces, WGSL and adjustment layers |
+| Graphics | Native transformed/rounded vectors, images and video; basic unwrapped text through FFmpeg | Unified native text drawing, GPU compositor, remaining transforms/constraints, masks, blend modes, gradients, paints, strokes, shadows, effects, wrapped/styled text, HTML, surfaces, WGSL and adjustment layers |
 | Audio | Offline retiming and Rust stereo mixing with per-frame reactive/preset/keyframe gain | Real-time output and seek/rate re-anchoring, solo/bus hierarchy, sample-accurate gain automation, syncTo and precise behavior across all cuts/rates |
-| Animation/captions | Native preset/keyframe sampling integrated with preview/export, including vector transforms | Transform rendering for media/text, blur/style rendering, sequence targeting, transition behavior, track editing UI, transcript parsing and every caption preset |
-| Media/assets | Local FFprobe and linked YAML sources | Hash/manifest lifecycle, import/relink/move/folders, proxies and bounded caches, frame directories, remote resolution/modifiers, transcripts |
+| Animation/captions | Native preset/keyframe sampling integrated with preview/export, including vector/media transforms | Transform rendering for text, blur/style rendering, sequence targeting, transition behavior, track editing UI, transcript parsing and every caption preset |
+| Media/assets | Rust raster image codecs/EXIF, FFprobe/video RGBA, linked YAML sources and bounded shared decoded texture cache | Hash/manifest lifecycle, import/relink/move/folders, SVG/remaining formats, color profiles/HDR, proxies and persistent decoders/cache tiers, VFR/container timestamp parity, frame directories, remote resolution/modifiers, transcripts |
 | CLI/IPC | Native explicit-project commands | Existing dapi flags/output/contracts, open/context IPC, logs, fonts, screenshots, filmstrips/contact sheets and all applicable local commands |
 | HyperFrames | Existing separate package untouched | Rust save/template/preview/render/cancel engine, project isolation, immutable outputs and linked timeline updates |
 | Desktop | Basic native editor | All inspector/canvas interactions, shortcuts, native pickers/menus, project dashboard/create/rename/duplicate, watcher/reload, session persistence, accessible UI QA |
@@ -189,6 +198,28 @@ clipping, odd/fractional dimensions, repeated resizing and exclusive PNG output.
 A real CLI run captured `examples/vectors` with deliberately unavailable codec
 executables, then exported and probed 72 H.264 frames at 960x540/24 fps (3 seconds).
 Its PNG, decoded MP4 frame and actual egui window were visually inspected.
+
+The following media stage passed 90 ordinary tests and all four FFmpeg integration
+tests, Clippy for every target with desktop enabled, and the desktop build.
+Media regressions cover fit, alpha, transforms, rounded clipping, negative destination
+sizes, JPEG EXIF, shared ownership/eviction, file changes, cancellation, wide images,
+unsupported image formats, source clocks and real export frames. Real fixtures also
+cover non-square pixels combined with display rotation and a positive Matroska
+timestamp offset. A source replacement after frame planning must invalidate even
+a cached video frame; resampling reprobes it and recovers. A decoded frame larger
+than its probed dimensions is rejected at the output pipe. Cancellation reaches
+image probing and FFprobe as well as texture decoding. These CFR fixtures do not
+establish VFR parity.
+Missing average FPS is covered by a real one-frame Matroska fixture with its
+optional DefaultDuration removed (`avg_frame_rate=0/0`). Probing measures packet
+count/content duration when available, then uses a valid nominal rate if needed.
+Metadata-dependent video clocks resolve during pixel rendering, and a regression
+verifies recovery from an invalid clock without remounting the scene.
+`tests/reference/generate-media-fit.mjs --check` compares 24 fit cases to the
+actual original render function, including fractional, negative and zero boxes.
+The real CLI captured `examples/media` at two times and exported 48 H.264 frames
+at 960x540/24 fps (2 seconds). Both captures, a decoded MP4 frame and the actual
+egui window were visually inspected; the UI error log was empty.
 
 `@inspect` coverage includes semantic binding/shadowing, escaped identifiers,
 UTF-8 initializer spans, VM garbage collection/remounts, imported-module edits,
@@ -283,17 +314,20 @@ count at 48 kHz. The report distinguishes the authored
 workarea duration from the video duration; audio covers the workarea at 48 kHz.
 `playing()` is true in exports. The ticker's frame accessor uses the output FPS
 in exports and 30 fps in the editor/capture, matching the current engine behavior.
-Vector-only export rasterizes each frame in Rust and streams it to one encoder.
-Media/text export still composes one CPU frame per FFmpeg invocation; native
+Native vector/media export rasterizes each frame in Rust and streams it to one encoder.
+Uncached video frames still start a separate FFmpeg decode process. Scenes using
+the older text renderer still compose one CPU frame per FFmpeg invocation; native
 GPU rendering and persistent decoders remain pending. Decoded audio is held in
 job-owned temporary files, with a limit of 128 distinct source/rate variants.
 
-The vector compositor chooses a backend from all materialized node types on the
+The compositor chooses a backend from all materialized node types on the
 first frame, including hidden nodes, and retains it and geometry history per scene.
-Mixed media/text scenes retain the older renderer and its transform restrictions.
-A vector scene with incompatible nodes, properties or planning data stays stopped
+Scenes containing text retain the older renderer and its transform restrictions.
+A native scene with incompatible nodes, properties or planning data stays stopped
 until the project is reopened; cancellation during pixel rendering remains
-recoverable. Seamless media/text transitions await unified native drawing.
+recoverable. Both backends explicitly reject unsupported properties; the older
+renderer is not a generic fallback for styles. Seamless text transitions await
+unified native drawing.
 Nested scenes, masks, aspect constraints and negative-size rounded shapes fail
 explicitly. Rounded corners use a fine cubic approximation;
 browser Canvas antialiasing is not assumed byte-identical. Preview currently
@@ -304,6 +338,23 @@ of one. Repeated resizes derive their ratio from the original scene dimensions.
 Color/corner keyframes preserve the original trait membership: a color track
 does not paint an unfilled rectangle, and mixed-corner fallbacks resolve before
 an animated uniform radius.
+
+Native source textures currently cap decoded pixels at 4096x4096 in total (16 Mi
+pixels, with other aspect ratios allowed). Rust image decoder allocation is limited
+to 128 MiB. The shared cache owns at most 128 MiB and 256 entries; in-flight frames
+and codec working buffers are additional allocations. File reads/seeks and pixel
+conversion check cancellation; codec CPU work between reads can delay cancellation.
+Image requests never fall through to the video decoder: unsupported native formats,
+including SVG, fail explicitly. Animated raster image assets use the first bitmap,
+as the original image asset decoder does. Color profile/HDR conversion, exact browser
+interpolation and arbitrary display rotations remain pending. Cache identity uses
+canonical path, length and modification time, not content hashing. Container/VFR
+timing needs broader parity coverage beyond the checked CFR/Matroska cases.
+Probes carry that source version through frame planning. Changed sources require
+resampling before decode, and a change during probing/decoding rejects the result.
+Raw video stdout is bounded to the expected RGBA frame size (at most 64 MiB);
+unexpected output size fails instead of admitting a different frame resolution.
+FFprobe stdout is capped at 16 MiB. Oversized process output triggers kill/reap.
 
 Native exports also cap absolute workarea endpoint indices at 2^40 frames, leaving
 precision headroom for conversion between frame indices and seconds. This is

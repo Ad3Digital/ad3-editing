@@ -139,7 +139,7 @@ impl Motion {
             "cornerRadiusBottomRight",
             "cornerRadiusBottomLeft",
         ];
-        let vector = matches!(original.tag.as_str(), "rect" | "scene");
+        let vector = matches!(original.tag.as_str(), "rect" | "scene" | "image" | "video");
         let mixed = corners.iter().any(|key| original.props.contains_key(*key));
         if vector && mixed {
             // MixedCornerRadius is established from authored props, before
@@ -352,7 +352,7 @@ impl Motion {
                 return Err(format!("{}: motion {key} is non-finite", node.id));
             }
             if key == "color" {
-                let key = if matches!(node.tag.as_str(), "rect" | "scene") {
+                let key = if matches!(node.tag.as_str(), "rect" | "scene" | "image" | "video") {
                     "fill"
                 } else {
                     "color"

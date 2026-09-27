@@ -1,6 +1,6 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. https://mozilla.org/MPL/2.0/
-use crate::{Result, document::Node};
+use crate::{Result, document::Node, encoder::cancelled};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 #[cfg(windows)]
@@ -13,7 +13,10 @@ use std::{
     io::Read,
     path::{Path, PathBuf},
     process::{Command, Output, Stdio},
-    sync::atomic::{AtomicBool, Ordering},
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
     thread,
     time::{Duration, Instant},
 };
@@ -64,6 +67,15 @@ pub fn checked_output_cancellable(
     cancel: Option<&AtomicBool>,
     timeout: Duration,
 ) -> Result<Output> {
+    checked_output_cancellable_limit(command, cancel, timeout, 512 * 1024 * 1024)
+}
+
+pub fn checked_output_cancellable_limit(
+    command: &mut Command,
+    cancel: Option<&AtomicBool>,
+    timeout: Duration,
+    stdout_limit: u64,
+) -> Result<Output> {
     if cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)) {
         return Err("Operation cancelled".into());
     }
@@ -79,23 +91,34 @@ pub fn checked_output_cancellable(
         })?;
     let stdout = child.stdout.take().ok_or("Missing process stdout")?;
     let stderr = child.stderr.take().ok_or("Missing process stderr")?;
+    let reader_failed = Arc::new(AtomicBool::new(false));
     let read = |stream: Box<dyn Read + Send>, limit: u64| {
+        let reader_failed = reader_failed.clone();
         thread::spawn(move || {
-            let mut bytes = Vec::new();
-            stream
-                .take(limit + 1)
-                .read_to_end(&mut bytes)
-                .map_err(|e| e.to_string())?;
-            if bytes.len() as u64 > limit {
-                return Err("Process output exceeded its limit".to_string());
+            let result = (|| {
+                let mut bytes = Vec::new();
+                stream
+                    .take(limit.saturating_add(1))
+                    .read_to_end(&mut bytes)
+                    .map_err(|e| e.to_string())?;
+                if bytes.len() as u64 > limit {
+                    return Err("Process output exceeded its limit".to_string());
+                }
+                Ok(bytes)
+            })();
+            if result.is_err() {
+                reader_failed.store(true, Ordering::Relaxed);
             }
-            Ok(bytes)
+            result
         })
     };
-    let out = read(Box::new(stdout), 512 * 1024 * 1024);
+    let out = read(Box::new(stdout), stdout_limit);
     let err = read(Box::new(stderr), 1024 * 1024);
     let started = Instant::now();
     let status = loop {
+        if reader_failed.load(Ordering::Relaxed) {
+            break Err("Process output read failed or exceeded its limit".into());
+        }
         if cancel.is_some_and(|flag| flag.load(Ordering::Relaxed)) {
             break Err("Operation cancelled".to_owned());
         }
@@ -116,9 +139,9 @@ pub fn checked_output_cancellable(
     let stdout = out.join().map_err(|_| "Process stdout reader failed")?;
     let stderr = err.join().map_err(|_| "Process stderr reader failed")?;
     let output = Output {
-        status: status?,
         stdout: stdout?,
         stderr: stderr?,
+        status: status?,
     };
     if !output.status.success() {
         let error = String::from_utf8_lossy(&output.stderr);
@@ -132,8 +155,30 @@ pub fn checked_output_cancellable(
     Ok(output)
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct SourceVersion {
+    pub(crate) path: PathBuf,
+    len: u64,
+    modified: Option<std::time::SystemTime>,
+}
+impl SourceVersion {
+    pub(crate) fn read(path: &Path) -> Result<Self> {
+        let path = fs::canonicalize(path).map_err(|e| e.to_string())?;
+        let info = fs::metadata(&path).map_err(|e| e.to_string())?;
+        if !info.is_file() {
+            return Err("Media source is not a file".into());
+        }
+        Ok(Self {
+            path,
+            len: info.len(),
+            modified: info.modified().ok(),
+        })
+    }
+}
+
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+#[serde(default)]
 pub struct Probe {
     pub duration: Option<f64>,
     pub width: u32,
@@ -144,6 +189,41 @@ pub struct Probe {
     pub has_video: bool,
     pub has_audio: bool,
     pub still: bool,
+    pub rotation: f64,
+    pub pixel_aspect: f64,
+    pub start_time: f64,
+    #[serde(skip)]
+    pub version: Option<SourceVersion>,
+}
+
+impl Probe {
+    pub fn display_dimensions(&self) -> Result<(u32, u32)> {
+        if !self.rotation.is_finite() {
+            return Err("Invalid video rotation metadata".into());
+        }
+        let turns = self.rotation / 90.0;
+        if (turns - turns.round()).abs() > 1e-6 {
+            return Err("Arbitrary video display rotation is not ported yet".into());
+        }
+        let aspect = if self.pixel_aspect == 0.0 {
+            1.0
+        } else {
+            self.pixel_aspect
+        };
+        if !aspect.is_finite() || aspect <= 0.0 {
+            return Err("Invalid video pixel aspect ratio".into());
+        }
+        let width = crate::timing::round_frame(self.width as f64 * aspect);
+        if width < 1.0 || width > u32::MAX as f64 {
+            return Err("Video display width overflows".into());
+        }
+        let width = width as u32;
+        Ok(if turns.rem_euclid(2.0).round() == 1.0 {
+            (self.height, width)
+        } else {
+            (width, self.height)
+        })
+    }
 }
 
 fn number(value: &Value) -> Option<f64> {
@@ -152,13 +232,34 @@ fn number(value: &Value) -> Option<f64> {
         .or_else(|| value.as_str().and_then(|v| v.parse().ok()))
         .filter(|v| v.is_finite())
 }
+fn frame_rate(value: &Value) -> Option<f64> {
+    let (a, b) = value.as_str()?.split_once('/')?;
+    let value = a.parse::<f64>().ok()? / b.parse::<f64>().ok()?;
+    (value.is_finite() && value > 0.0).then_some(value)
+}
+
+// Matroska's DURATION tag and container duration are end timestamps; FFprobe's
+// stream duration (and formats such as MPEG-TS) already reports elapsed time.
+fn timestamp(value: &str) -> Option<f64> {
+    let mut parts = value.split(':');
+    let hours = parts.next()?.parse::<f64>().ok()?;
+    let minutes = parts.next()?.parse::<f64>().ok()?;
+    let seconds = parts.next()?.parse::<f64>().ok()?;
+    let result = hours * 3600.0 + minutes * 60.0 + seconds;
+    (parts.next().is_none() && result.is_finite() && result >= 0.0).then_some(result)
+}
 
 impl Tools {
     pub fn probe(&self, path: &Path) -> Result<Probe> {
+        self.probe_cancellable(path, None)
+    }
+    pub fn probe_cancellable(&self, path: &Path, cancel: Option<&AtomicBool>) -> Result<Probe> {
+        cancelled(cancel)?;
         if !path.is_file() {
             return Err(format!("Media file not found: {}", path.display()));
         }
-        let output = checked_output(
+        let version = SourceVersion::read(path)?;
+        let output = checked_output_cancellable_limit(
             command(&self.ffprobe)
                 .args([
                     "-v",
@@ -170,10 +271,25 @@ impl Tools {
                     "-of",
                     "json",
                 ])
-                .arg(path),
+                .arg(&version.path),
+            cancel,
+            Duration::from_secs(120),
+            16 * 1024 * 1024,
         )?;
+        cancelled(cancel)?;
+        if SourceVersion::read(path)? != version {
+            return Err("Media source changed during probing".into());
+        }
         let metadata: Value = serde_json::from_slice(&output.stdout).map_err(|e| e.to_string())?;
-        let mut probe = Probe::default();
+        let format = metadata["format"]["format_name"].as_str().unwrap_or("");
+        let matroska = format
+            .split(',')
+            .any(|name| matches!(name, "matroska" | "webm"));
+        let mut probe = Probe {
+            version: Some(version),
+            ..Default::default()
+        };
+        let mut nominal_rate = None;
         let streams = metadata
             .get("streams")
             .and_then(Value::as_array)
@@ -195,17 +311,35 @@ impl Tools {
                         .unwrap_or(0)
                         .try_into()
                         .map_err(|_| "Media height overflow")?;
-                    if let Some((a, b)) = stream["avg_frame_rate"]
+                    probe.frame_rate = frame_rate(&stream["avg_frame_rate"]).unwrap_or(0.0);
+                    nominal_rate = frame_rate(&stream["r_frame_rate"]);
+                    probe.duration = stream.get("duration").and_then(number);
+                    probe.start_time = stream.get("start_time").and_then(number).unwrap_or(0.0);
+                    if probe.duration.is_none() && matroska {
+                        probe.duration = stream["tags"]["DURATION"]
+                            .as_str()
+                            .and_then(timestamp)
+                            .map(|end| (end - probe.start_time.max(0.0)).max(0.0));
+                    }
+                    probe.rotation = stream
+                        .get("side_data_list")
+                        .and_then(Value::as_array)
+                        .and_then(|items| {
+                            items
+                                .iter()
+                                .find_map(|item| item.get("rotation").and_then(number))
+                        })
+                        .unwrap_or(0.0);
+                    if let Some((a, b)) = stream["sample_aspect_ratio"]
                         .as_str()
-                        .and_then(|s| s.split_once('/'))
+                        .and_then(|s| s.split_once(':'))
                     {
-                        let numerator = a.parse::<f64>().unwrap_or(0.0);
-                        let denominator = b.parse::<f64>().unwrap_or(0.0);
-                        if denominator > 0.0 {
-                            probe.frame_rate = numerator / denominator;
+                        let a = a.parse::<f64>().unwrap_or(0.0);
+                        let b = b.parse::<f64>().unwrap_or(0.0);
+                        if a.is_finite() && b.is_finite() && a > 0.0 && b > 0.0 {
+                            probe.pixel_aspect = a / b;
                         }
                     }
-                    probe.duration = stream.get("duration").and_then(number);
                 }
                 Some("audio") if !probe.has_audio => {
                     probe.has_audio = true;
@@ -214,6 +348,13 @@ impl Tools {
                     probe.channels = stream["channels"].as_u64().unwrap_or(0) as u32;
                     if !probe.has_video {
                         probe.duration = stream.get("duration").and_then(number);
+                        probe.start_time = stream.get("start_time").and_then(number).unwrap_or(0.0);
+                        if probe.duration.is_none() && matroska {
+                            probe.duration = stream["tags"]["DURATION"]
+                                .as_str()
+                                .and_then(timestamp)
+                                .map(|end| (end - probe.start_time.max(0.0)).max(0.0));
+                        }
                     }
                 }
                 _ => (),
@@ -221,14 +362,58 @@ impl Tools {
         }
         if probe.duration.is_none() {
             probe.duration = metadata["format"].get("duration").and_then(number);
+            if matroska {
+                probe.duration = probe
+                    .duration
+                    .map(|end| (end - probe.start_time.max(0.0)).max(0.0));
+            }
         }
-        let format = metadata["format"]["format_name"].as_str().unwrap_or("");
         probe.still = !probe.has_audio && (format.ends_with("_pipe") || format == "image2");
         if probe.still {
             probe.duration = None;
         }
         if probe.duration.is_some_and(|duration| duration <= 0.0) {
             return Err("Media has no positive duration".into());
+        }
+        if probe.has_video && !probe.still && probe.frame_rate <= 0.0 {
+            // The original asset rate is packet count divided by content time.
+            // Only scan packets when ordinary average metadata is missing.
+            let measured = if let Some(duration) = probe.duration {
+                let output = checked_output_cancellable_limit(
+                    command(&self.ffprobe)
+                        .args([
+                            "-v",
+                            "error",
+                            "-protocol_whitelist",
+                            "file,pipe",
+                            "-select_streams",
+                            "V:0",
+                            "-count_packets",
+                            "-show_entries",
+                            "stream=nb_read_packets",
+                            "-of",
+                            "json",
+                        ])
+                        .arg(&probe.version.as_ref().unwrap().path),
+                    cancel,
+                    Duration::from_secs(120),
+                    16 * 1024 * 1024,
+                )?;
+                let packets: Value =
+                    serde_json::from_slice(&output.stdout).map_err(|e| e.to_string())?;
+                number(&packets["streams"][0]["nb_read_packets"])
+                    .map(|count| count / duration)
+                    .filter(|rate| rate.is_finite() && *rate > 0.0)
+            } else {
+                None
+            };
+            probe.frame_rate = measured
+                .or(nominal_rate)
+                .ok_or("Video has no usable frame rate metadata")?;
+        }
+        cancelled(cancel)?;
+        if Some(SourceVersion::read(path)?) != probe.version {
+            return Err("Media source changed during probing".into());
         }
         Ok(probe)
     }
@@ -298,7 +483,7 @@ pub struct MediaLibrary {
 }
 
 #[derive(Default)]
-pub struct ProbeCache(BTreeMap<(PathBuf, u64, Option<std::time::SystemTime>), Probe>);
+pub struct ProbeCache(BTreeMap<(SourceVersion, bool), Probe>);
 
 impl MediaLibrary {
     pub fn load(root: &Node, project: &Path, tools: &Tools) -> Result<Self> {
@@ -311,6 +496,16 @@ impl MediaLibrary {
         tools: &Tools,
         cache: &mut ProbeCache,
     ) -> Result<Self> {
+        Self::load_cached_cancellable(root, project, tools, cache, None)
+    }
+    pub fn load_cached_cancellable(
+        root: &Node,
+        project: &Path,
+        tools: &Tools,
+        cache: &mut ProbeCache,
+        cancel: Option<&AtomicBool>,
+    ) -> Result<Self> {
+        cancelled(cancel)?;
         let manifest = project.join("assets.yml");
         let manifest: Value = if manifest.is_file() {
             if fs::metadata(&manifest).map_err(|e| e.to_string())?.len() > 16 * 1024 * 1024 {
@@ -327,6 +522,7 @@ impl MediaLibrary {
             durations: BTreeMap::new(),
         };
         for node in root.nodes() {
+            cancelled(cancel)?;
             if !matches!(
                 node.tag.as_str(),
                 "video" | "audio" | "image" | "videoPaint" | "imagePaint"
@@ -362,13 +558,26 @@ impl MediaLibrary {
             if !path.is_file() {
                 return Err(format!("{}: source not found: {}", node.id, path.display()));
             }
-            let metadata = fs::metadata(&path).map_err(|error| error.to_string())?;
-            let cache_key = (path.clone(), metadata.len(), metadata.modified().ok());
+            let version = SourceVersion::read(&path)?;
+            let image = matches!(node.tag.as_str(), "image" | "imagePaint");
+            let cache_key = (version.clone(), image);
             let probe = if let Some(probe) = cache.0.get(&cache_key) {
                 Probe::clone(probe)
             } else {
-                let probe = tools.probe(&path)?;
-                cache.0.retain(|(existing, _, _), _| *existing != path);
+                let probe = if matches!(node.tag.as_str(), "image" | "imagePaint") {
+                    match crate::texture::probe_image(&path, cancel)? {
+                        Some(probe) => probe,
+                        None => tools.probe_cancellable(&path, cancel)?,
+                    }
+                } else {
+                    tools.probe_cancellable(&path, cancel)?
+                };
+                if probe.version.as_ref() != Some(&version) {
+                    return Err("Media source changed before probing".into());
+                }
+                cache
+                    .0
+                    .retain(|(existing, kind), _| existing.path != version.path || *kind != image);
                 cache.0.insert(cache_key, probe.clone());
                 probe
             };

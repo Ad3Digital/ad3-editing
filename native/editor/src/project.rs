@@ -39,6 +39,8 @@ pub struct ProjectRenderer {
     motion: crate::motion::Motion,
     has_motion: bool,
     scenes: BTreeMap<String, SceneState>,
+    textures: Arc<crate::texture::TextureStore>,
+    cancel: Option<Arc<AtomicBool>>,
     offline: bool,
     cache: ProbeCache,
     pub project: PathBuf,
@@ -85,7 +87,7 @@ impl ProjectRenderer {
                 &document.source,
                 offline,
                 Some(document.module_sources.clone()),
-                cancel,
+                cancel.clone(),
             )?)
         };
         let mut renderer = Self {
@@ -94,6 +96,8 @@ impl ProjectRenderer {
             motion: Default::default(),
             has_motion: false,
             scenes: BTreeMap::new(),
+            textures: Arc::new(crate::texture::TextureStore::new(tools.clone())),
+            cancel,
             offline,
             cache: ProbeCache::default(),
             project: project.into(),
@@ -115,13 +119,19 @@ impl ProjectRenderer {
         Ok(renderer)
     }
     pub fn sample(&mut self, time: f64, playing: bool) -> Result<()> {
+        cancelled(self.cancel.as_deref())?;
         let authored = if let Some(live) = &mut self.live {
             live.sample_at_rate(time, playing, self.frame_rate)?
         } else {
             self.authored_root.clone()
         };
-        self.library =
-            MediaLibrary::load_cached(&authored, &self.project, &self.tools, &mut self.cache)?;
+        self.library = MediaLibrary::load_cached_cancellable(
+            &authored,
+            &self.project,
+            &self.tools,
+            &mut self.cache,
+            self.cancel.as_deref(),
+        )?;
         let timeline =
             Timeline::resolve_at_rate(&authored, &self.library.durations, self.frame_rate)?;
         self.scenes
@@ -213,6 +223,10 @@ impl ProjectRenderer {
                     self.has_motion,
                     background,
                     Some(state.canvas),
+                    Some(crate::compositor::MediaContext {
+                        library: &self.library,
+                        store: &self.textures,
+                    }),
                 )
             })();
             let frame = match result {
@@ -456,6 +470,46 @@ fn complete_frames(area: [f64; 2], fps: f64) -> Result<u64> {
 #[cfg(test)]
 mod tests {
     use super::complete_frames;
+    #[test]
+    fn invalid_media_clock_fails_during_pixels_and_recovers_without_remount() {
+        use super::*;
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let folder =
+            std::env::temp_dir().join(format!("ad3-media-clock-{}-{stamp}", std::process::id()));
+        fs::create_dir(&folder).unwrap();
+        image::RgbaImage::from_pixel(2, 2, image::Rgba([255, 0, 0, 255]))
+            .save(folder.join("pixel.png"))
+            .unwrap();
+        let doc=SourceDocument::parse(folder.join("index.tsx"),r#"export default <stage><scene id="s" active width={2} height={2} workarea={[0,1]}><image id="v" src="pixel.png" width={2} height={2}/></scene></stage>"#.into()).unwrap();
+        let tools = Tools {
+            ffmpeg: "missing-clock-ffmpeg".into(),
+            ffprobe: "missing-clock-ffprobe".into(),
+        };
+        let mut renderer = ProjectRenderer::new(&doc, &folder, tools.clone(), true).unwrap();
+        // Simulate unusable video metadata after the library phase. The source
+        // version remains valid, so the pixel request exercises clock validation.
+        renderer.root.children[0].children[0].tag = "video".into();
+        renderer.library.probes.get_mut("v").unwrap().still = false;
+        let invalid = renderer.current_frame_plan("s", 0.0, 30.0).unwrap();
+        assert!(
+            invalid
+                .frame(&tools, &folder)
+                .err()
+                .unwrap()
+                .contains("Invalid video source clock")
+        );
+        let recovered = renderer.frame_plan("s", 0.0, 30.0, false).unwrap();
+        assert!(recovered.is_native());
+        assert_eq!(
+            &recovered.frame(&tools, &folder).unwrap()[..4],
+            &[255, 0, 0, 255]
+        );
+        fs::remove_file(folder.join("pixel.png")).unwrap();
+        fs::remove_dir(folder).unwrap();
+    }
     #[test]
     fn quantized_workareas_count_frames_without_cancellation_at_late_scene_times() {
         for (fps, start, count) in [

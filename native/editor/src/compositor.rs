@@ -1,16 +1,29 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. https://mozilla.org/MPL/2.0/
-//! Native vector composition. The draw list is shared by preview and capture;
-//! FFmpeg is not involved in rasterizing these frames.
+//! Native CPU composition. Preview, capture and export share the draw list;
+//! FFmpeg supplies decoded video pixels, while Rust draws and combines them.
 use crate::{
     Result,
     document::Node,
     encoder::cancelled,
     geometry::{Frame, GroupChild, Mat2D, TransformValues, group_frame, is_culled},
+    media::MediaLibrary,
+    texture::{Fit, TextureFrame, TextureRequest, TextureStore},
     timing::{Timeline, round_frame},
 };
-use std::{collections::BTreeMap, sync::atomic::AtomicBool};
-use tiny_skia::{Color, FillRule, Mask, Paint, Path, PathBuilder, Pixmap, Rect, Transform};
+use std::{
+    collections::BTreeMap,
+    sync::{Arc, atomic::AtomicBool},
+};
+use tiny_skia::{
+    Color, FillRule, FilterQuality, Mask, Paint, Path, PathBuilder, Pattern, Pixmap, Rect,
+    SpreadMode, Transform,
+};
+
+pub(crate) struct MediaContext<'a> {
+    pub library: &'a MediaLibrary,
+    pub store: &'a Arc<TextureStore>,
+}
 
 #[derive(Clone, Copy, Default)]
 struct GeometryState {
@@ -39,9 +52,18 @@ struct Layer<'a> {
 struct Draw {
     path: Path,
     world: Mat2D,
-    rgb: u32,
+    ink: Ink,
     opacity: f64,
     clipped: bool,
+}
+enum Ink {
+    Solid(u32),
+    Media {
+        request: Box<TextureRequest>,
+        store: Arc<TextureStore>,
+        size: [f64; 2],
+        fit: Fit,
+    },
 }
 
 pub struct NativeFrame {
@@ -136,6 +158,16 @@ fn validate(node: &Node, root: bool) -> Result<()> {
             "cornerRadiusBottomLeft",
         ],
         "audio" => &["src"],
+        "image" | "video" => &[
+            "src",
+            "objectFit",
+            "fill",
+            "cornerRadius",
+            "cornerRadiusTopLeft",
+            "cornerRadiusTopRight",
+            "cornerRadiusBottomRight",
+            "cornerRadiusBottomLeft",
+        ],
         "group" | "sequence" => &[],
         tag => {
             return Err(format!(
@@ -163,14 +195,15 @@ fn validate(node: &Node, root: bool) -> Result<()> {
 
 impl Compositor {
     /// Selection of the vector path depends on every materialized node, including
-    /// hidden/offscreen ones. Remaining text/media projects use the existing path
-    /// until their native rasterizers are integrated.
+    /// hidden/offscreen ones. Projects containing other node types use the older
+    /// renderer, which has its own supported subset. Unsupported properties are
+    /// explicit planning errors in either backend; this is not a style fallback.
     pub fn supports(scene: &Node) -> bool {
         let mut pending = vec![scene];
         while let Some(node) = pending.pop() {
             if !matches!(
                 node.tag.as_str(),
-                "scene" | "rect" | "group" | "sequence" | "audio"
+                "scene" | "rect" | "group" | "sequence" | "audio" | "image" | "video"
             ) {
                 return false;
             }
@@ -201,6 +234,7 @@ impl Compositor {
             sizes_resolved_by_motion,
             background,
             None,
+            None,
         )
     }
     #[allow(clippy::too_many_arguments)]
@@ -213,6 +247,7 @@ impl Compositor {
         sizes_resolved_by_motion: bool,
         background: Option<u32>,
         canvas: Option<[f64; 2]>,
+        media: Option<MediaContext<'_>>,
     ) -> Result<NativeFrame> {
         if !time.is_finite() || !fps.is_finite() || !(0.0..=240.0).contains(&fps) || fps == 0.0 {
             return Err("Invalid native frame clock".into());
@@ -230,7 +265,7 @@ impl Compositor {
             };
             let group = matches!(node.tag.as_str(), "group" | "sequence");
             let defaults = match node.tag.as_str() {
-                "scene" => [1920.0, 1080.0],
+                "scene" | "image" | "video" => [1920.0, 1080.0],
                 "audio" => [500.0, 150.0],
                 _ => [100.0; 2],
             };
@@ -345,7 +380,10 @@ impl Compositor {
         for layer in &layers {
             if !layer.visible
                 || layer.culled
-                || !matches!(layer.node.tag.as_str(), "scene" | "rect")
+                || !matches!(
+                    layer.node.tag.as_str(),
+                    "scene" | "rect" | "image" | "video"
+                )
             {
                 continue;
             }
@@ -353,15 +391,63 @@ impl Compositor {
             let path = shape_path(layer.node, layer.state.frame.size)?;
             if let Some(fill) = layer.node.props.get("fill") {
                 let rgb = packed_color(fill)?;
-                if let Some(path) = path {
+                if let Some(path) = &path {
                     draws.push(Draw {
-                        path,
+                        path: path.clone(),
                         world: layer.world,
-                        rgb,
+                        ink: Ink::Solid(rgb),
                         opacity: layer.opacity,
                         clipped: layer.parent.is_some(),
                     });
                 }
+            }
+            if matches!(layer.node.tag.as_str(), "image" | "video")
+                && let Some(path) = path
+            {
+                let media = media
+                    .as_ref()
+                    .ok_or("Media composition needs its source library")?;
+                let probe = media
+                    .library
+                    .probes
+                    .get(&layer.node.id)
+                    .ok_or("Unprobed texture source")?
+                    .clone();
+                let source = media
+                    .library
+                    .sources
+                    .get(&layer.node.id)
+                    .ok_or("Unresolved texture source")?
+                    .clone();
+                let frame = if layer.node.tag == "image" {
+                    TextureFrame::Image
+                } else if probe.still {
+                    TextureFrame::Video(0.0)
+                } else {
+                    let span = timeline.get(&layer.node.id)?;
+                    TextureFrame::VideoClock {
+                        time,
+                        origin: span.origin,
+                        rate: span.playback_rate,
+                        fps,
+                    }
+                };
+                draws.push(Draw {
+                    path,
+                    world: layer.world,
+                    opacity: layer.opacity,
+                    clipped: layer.parent.is_some(),
+                    ink: Ink::Media {
+                        request: Box::new(TextureRequest {
+                            path: source,
+                            probe,
+                            frame,
+                        }),
+                        store: media.store.clone(),
+                        size: layer.state.frame.size,
+                        fit: Fit::from_prop(layer.node.string("objectFit")),
+                    },
+                });
             }
         }
         self.previous = layers
@@ -533,23 +619,87 @@ impl NativeFrame {
         }
         for draw in &self.draws {
             cancelled(cancel)?;
-            let mut paint = Paint::default();
-            paint.set_color(
-                Color::from_rgba(
-                    (draw.rgb >> 16) as u8 as f32 / 255.0,
-                    (draw.rgb >> 8) as u8 as f32 / 255.0,
-                    draw.rgb as u8 as f32 / 255.0,
-                    draw.opacity as f32,
-                )
-                .expect("Validated normalized color"),
-            );
-            pixels.fill_path(
-                &draw.path,
-                &paint,
-                FillRule::Winding,
-                raster_transform(draw.world.view(scale))?,
-                draw.clipped.then_some(&mask),
-            );
+            match &draw.ink {
+                Ink::Solid(rgb) => {
+                    let mut paint = Paint::default();
+                    paint.set_color(
+                        Color::from_rgba(
+                            (rgb >> 16) as u8 as f32 / 255.0,
+                            (rgb >> 8) as u8 as f32 / 255.0,
+                            *rgb as u8 as f32 / 255.0,
+                            draw.opacity as f32,
+                        )
+                        .expect("Validated normalized color"),
+                    );
+                    pixels.fill_path(
+                        &draw.path,
+                        &paint,
+                        FillRule::Winding,
+                        raster_transform(draw.world.view(scale))?,
+                        draw.clipped.then_some(&mask),
+                    );
+                }
+                Ink::Media {
+                    request,
+                    store,
+                    size,
+                    fit,
+                } => {
+                    let bitmap = store.frame(request, cancel)?;
+                    let [mut x, mut y, w, h] =
+                        fit.rectangle([bitmap.width() as f64, bitmap.height() as f64], *size);
+                    if w == 0.0 || h == 0.0 {
+                        continue;
+                    }
+                    // Canvas drawImage with a negative destination size grows
+                    // backwards without flipping source pixels.
+                    if w < 0.0 {
+                        x += w;
+                    }
+                    if h < 0.0 {
+                        y += h;
+                    }
+                    let local = Mat2D::translate(x, y).multiply(Mat2D::scale(
+                        w.abs() / bitmap.width() as f64,
+                        h.abs() / bitmap.height() as f64,
+                    ));
+                    let mut clip = if draw.clipped {
+                        mask.clone()
+                    } else {
+                        let mut full =
+                            Mask::new(width, height).ok_or("Cannot allocate media clip")?;
+                        full.data_mut().fill(255);
+                        full
+                    };
+                    clip.intersect_path(
+                        &draw.path,
+                        FillRule::Winding,
+                        true,
+                        raster_transform(draw.world.view(scale))?,
+                    );
+                    let paint = Paint {
+                        shader: Pattern::new(
+                            bitmap.as_ref().as_ref(),
+                            SpreadMode::Pad,
+                            FilterQuality::Bilinear,
+                            draw.opacity as f32,
+                            Transform::identity(),
+                        ),
+                        ..Paint::default()
+                    };
+                    let path = PathBuilder::from_rect(
+                        Rect::from_xywh(0.0, 0.0, bitmap.width() as f32, bitmap.height() as f32)
+                            .ok_or("Invalid bitmap bounds")?,
+                    );
+                    pixels.fill_path(
+                        &path,
+                        &paint,
+                        FillRule::Winding,
+                        raster_transform(draw.world.multiply(local).view(scale))?,
+                        Some(&clip),
+                    );
+                }
+            }
         }
         cancelled(cancel)?;
         Ok(pixels)
