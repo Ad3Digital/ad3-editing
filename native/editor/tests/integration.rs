@@ -14,6 +14,8 @@ mod inspect;
 mod modules;
 #[path = "motion.rs"]
 mod motion;
+#[path = "paints.rs"]
+mod paints;
 #[path = "reactivity.rs"]
 mod reactivity;
 #[path = "rendering.rs"]

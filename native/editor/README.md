@@ -17,14 +17,15 @@ cargo run --locked --manifest-path native/editor/Cargo.toml --bin dapi-rust -- -
 cargo run --locked --manifest-path native/editor/Cargo.toml --features desktop --bin ad3-editing -- /path/to/project
 ```
 
-Eight runnable projects are included: `examples/static` exercises source editing;
+Nine runnable projects are included: `examples/static` exercises source editing;
 `examples/modules` exercises imported components/JSON; `examples/reactive` animates
 rectangles and text through the native ticker, signals, `For` and `Show`;
 `examples/inspect` exposes editable controls from an imported component module;
 `examples/motion` combines slide/fade/text presets with an animated color track;
 `examples/vectors` exercises native rounded shapes, transforms and group opacity;
 `examples/media` combines native image/video composition with generated test assets;
-`examples/text` exercises wrapped text, variable font weights, italic ranges and rotation.
+`examples/text` exercises wrapped text, variable font weights, italic ranges and rotation;
+`examples/paints` exercises animated gradients, glyph outlines and screen blending.
 Pass the full path to a folder to the native executable.
 
 The desktop application opens an existing project folder or source entry, shows
@@ -93,6 +94,11 @@ Rendered media never overwrites an existing output or original footage.
   vertical baselines follow the existing text path. Text sizes update after
   transform traversal, preserving the next-frame pivot/group behavior. Rounded
   authored wrap widths stay separate from animated computed dimensions.
+- `paints.rs`: solid/linear/radial paint stacks, gradient stops, solid strokes and
+  all 16 existing blend modes. Styles share their holder's geometry and do not
+  enter the timeline or group bounds. Text ranges replace the corresponding
+  fill/stroke list; gradients span the whole text box across words. Shapes draw
+  strokes after fills; text completes its stroke pass before drawing fills.
 - `texture.rs`: Rust PNG/JPEG/WebP/GIF/BMP/TIFF decoding, EXIF orientation,
   premultiplied alpha and a shared 128 MiB/256-entry decoded texture LRU.
   FFmpeg supplies source video RGBA, including display rotation and normalization
@@ -163,7 +169,7 @@ this ledger is waived because a smaller example renders successfully.
 | --- | --- | --- |
 | Source/project model | Static TSX edits; native ES modules, reactive props, signals/effects, For/Index/Show and ticker; original file spans; live `@inspect` and imported initializer writeback | Remaining package/Solid/browser APIs, generation hooks, loop unrolling and general multi-file JSX edits; complete last-good-render behavior |
 | Timeline | Source/timeline clocks, workareas, cuts/trims/moves, nested rates, transport | Ripple Q/E, multi-selection, clipboard/grouping, transitions, keyframe tracks, all timeline gestures/colors/toggles and established constraints |
-| Graphics | Native transformed/rounded vectors, images, video and wrapped text with font/color ranges | GPU compositor, complete font fallback/scripts/emoji and synthetic styles, remaining transforms/constraints, masks, blend modes, gradients, paints, strokes, shadows, effects, full text styling, HTML, surfaces, WGSL and adjustment layers |
+| Graphics | Native transformed/rounded vectors, images, video, wrapped text/ranges, solid/gradient paint stacks, solid strokes and blend modes | GPU compositor, complete font fallback/scripts/emoji and synthetic styles, remaining transforms/constraints, masks, media/HTML/surface/shader paints, shadows, effects, remaining text styling, HTML, surfaces, WGSL and adjustment layers |
 | Audio | Offline retiming and Rust stereo mixing with per-frame reactive/preset/keyframe gain | Real-time output and seek/rate re-anchoring, solo/bus hierarchy, sample-accurate gain automation, syncTo and precise behavior across all cuts/rates |
 | Animation/captions | Native preset/keyframe sampling integrated with preview/export, including vector/media/text transforms | Blur/style rendering, sequence targeting, transition behavior, track editing UI, transcript parsing and every caption preset |
 | Media/assets | Rust raster image codecs/EXIF, FFprobe/video RGBA, linked YAML sources and bounded shared decoded texture cache | Hash/manifest lifecycle, import/relink/move/folders, SVG/remaining formats, color profiles/HDR, proxies and persistent decoders/cache tiers, VFR/container timestamp parity, frame directories, remote resolution/modifiers, transcripts |
@@ -247,6 +253,21 @@ The real CLI captured `examples/text` at two times and exported 48 H.264 frames
 at 960x540/24 fps (2 seconds), without warnings. Both PNG captures, the decoded
 first MP4 frame and the actual egui window were visually inspected. The UI error
 log was empty, and independent critical review approved this increment.
+
+The paint/stroke/blend increment passed 140 ordinary tests (45 unit and 95
+integration), all four real FFmpeg tests, Clippy with warnings denied for every
+desktop target, and the desktop build. Its 288 original-function gradient cases
+cover geometry and ordered stops; 63 Chromium Canvas cases check linear/radial
+gradients and all blend modes. Pixel comparisons allow two levels in premultiplied
+RGB and one alpha level, accounting for dithering/quantization near transparency.
+Eleven integration regressions cover paint order, range replacement, inherited
+blend/line/alpha state, aliases, animated scales, hidden stops, tiny strokes and text-box
+gradient coordinates. Three further unit tests cover node/depth budgets,
+pre-cancel history preservation and oversized raster-buffer rejection.
+The real CLI captured `examples/paints` at two times and exported 48 H.264 frames
+at 1024x576/24 fps (2 seconds), without warnings. PNGs, the decoded MP4 frame and
+the real egui window were visually inspected; the UI error log was empty.
+Independent critical review approved this increment after the complete checks.
 
 `@inspect` coverage includes semantic binding/shadowing, escaped identifiers,
 UTF-8 initializer spans, VM garbage collection/remounts, imported-module edits,
@@ -369,6 +390,26 @@ Color/corner keyframes preserve the original trait membership: a color track
 does not paint an unfilled rectangle, and mixed-corner fallbacks resolve before
 an animated uniform radius.
 
+Paint/stroke blending and opacity are inherited per draw. A `sourceOver` or
+unknown blend value removes the original trait and inherits the parent's mode.
+Invalid alpha assignments retain the current Canvas value; nonpositive stroke
+width/miter assignments retain the preceding line state. Text solid paint/stroke
+color and opacity read authored traits, as in the original text renderer;
+gradient stops/geometry and stroke width read animated values. This preserves
+the existing difference between text styles and shape styles. A hidden range
+does not suppress its intrinsic text styling, while a hidden paint is skipped.
+Gradient stops remain included even when their own `hidden` prop is true.
+
+Native planning limits each scene to 100000 nodes/128 levels and each frame to
+65536 draws, eight million styled path points and one million gradient stop
+applications. A holder accepts 1024 paints/strokes; a gradient accepts 4096 stops.
+Stroke width is limited to 8192 and miter ratio to one million. Planning checks
+cancellation before committing new geometry history. Large raster buffers use
+fallible reservation: at most 256 MiB for pixels and 64 MiB per clip mask. Media
+clipping combines one temporary mask with the scene mask in place. These bounds
+exclude decoded textures, fonts and the rasterizer's additional working storage;
+they do not guarantee recovery from every allocation inside dependencies.
+
 Text uses LTR Canvas paragraph context, as the current runtime does, and Unicode
 bidi runs within it. The bundled Inter font is pinned with its OFL license and
 hashes in `assets/fonts/`; system font availability and fallback ordering remain
@@ -379,8 +420,9 @@ weights outside 1..1000 and malformed/excessive font requests also fail instead
 of emulating Canvas's retained invalid-font assignment. Unhinted outline ink
 bounds and antialiasing can differ from Canvas, even when advances and font box
 metrics agree. An empty styled text uses finite zero geometry instead of the
-original non-finite empty-line result. Paint/stroke/shadow/effect text children
-still need their common rendering implementations.
+original non-finite empty-line result. Solid and gradient paints and solid strokes
+also apply to text ranges; shadow/effect and media/HTML/surface/shader paint
+children remain pending.
 Font files are copied into owned bytes, limited to 64 MiB per file; the cache
 holds at most 128 faces/256 MiB of source bytes, plus parser data. Shaped words
 use a 2048-entry/64 MiB cache and fallback results a 4096-entry/4 MiB text-key

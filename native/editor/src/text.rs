@@ -20,6 +20,8 @@ pub(crate) type PreparedTexts = BTreeMap<String, PreparedText>;
 pub(crate) struct Word {
     pub shaped: Arc<Shaped>,
     pub color: Option<u32>,
+    pub fills: Option<String>,
+    pub strokes: Option<String>,
     newline: bool,
 }
 pub(crate) struct PreparedText {
@@ -58,6 +60,8 @@ struct Style {
     color: Option<u32>,
     case: Case,
     baseline: Option<Baseline>,
+    fills: Option<String>,
+    strokes: Option<String>,
 }
 #[derive(Clone, Copy, Default)]
 enum Case {
@@ -95,6 +99,12 @@ fn baseline(value: Option<&str>) -> Option<Baseline> {
 }
 impl Style {
     fn apply(&mut self, node: &Node) {
+        if node.children.iter().any(|n| crate::paints::is_fill(&n.tag)) {
+            self.fills = Some(node.id.clone());
+        }
+        if node.children.iter().any(|n| n.tag == "stroke") {
+            self.strokes = Some(node.id.clone());
+        }
         if let Some(value) = node
             .string("fontFamily")
             .map(str::trim)
@@ -241,6 +251,8 @@ pub(crate) fn shape(
                 prepared.words.push(Word {
                     shaped,
                     color: style.color,
+                    fills: style.fills.clone(),
+                    strokes: style.strokes.clone(),
                     newline: parts.peek().is_some(),
                 });
             }

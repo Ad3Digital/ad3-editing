@@ -8,6 +8,7 @@ use crate::{
     encoder::cancelled,
     geometry::{Frame, GroupChild, Mat2D, TransformValues, group_frame, is_culled},
     media::MediaLibrary,
+    paints::{self, Gradient, LineStyle},
     texture::{Fit, TextureFrame, TextureRequest, TextureStore},
     timing::{Timeline, round_frame},
 };
@@ -16,8 +17,8 @@ use std::{
     sync::{Arc, atomic::AtomicBool},
 };
 use tiny_skia::{
-    Color, FillRule, FilterQuality, Mask, Paint, Path, PathBuilder, Pattern, Pixmap, Rect,
-    SpreadMode, Transform,
+    BlendMode, Color, FillRule, FilterQuality, Mask, Paint, Path, PathBuilder, Pattern, Pixmap,
+    Rect, SpreadMode, Stroke, Transform,
 };
 
 #[derive(Debug)]
@@ -81,17 +82,25 @@ struct Layer<'a> {
     visible: bool,
     opacity: f64,
     culled: bool,
+    blend: BlendMode,
+    line: LineStyle,
 }
 
 struct Draw {
-    path: Path,
+    path: Arc<Path>,
     world: Mat2D,
     ink: Ink,
     opacity: f64,
     clipped: bool,
+    blend: BlendMode,
+    stroke: Option<Stroke>,
 }
 enum Ink {
     Solid(u32),
+    Gradient {
+        gradient: Arc<Gradient>,
+        origin: [f64; 2],
+    },
     Media {
         request: Box<TextureRequest>,
         store: Arc<TextureStore>,
@@ -166,6 +175,7 @@ fn validate(node: &Node, root: bool) -> Result<()> {
         "scaleX",
         "scaleY",
         "opacity",
+        "blendMode",
         "selected",
         "expanded",
         "clipHeight",
@@ -177,6 +187,7 @@ fn validate(node: &Node, root: bool) -> Result<()> {
             "active",
             "workarea",
             "fill",
+            "color",
             "cornerRadius",
             "cornerRadiusTopLeft",
             "cornerRadiusTopRight",
@@ -185,6 +196,7 @@ fn validate(node: &Node, root: bool) -> Result<()> {
         ],
         "rect" => &[
             "fill",
+            "color",
             "cornerRadius",
             "cornerRadiusTopLeft",
             "cornerRadiusTopRight",
@@ -209,6 +221,7 @@ fn validate(node: &Node, root: bool) -> Result<()> {
             "src",
             "objectFit",
             "fill",
+            "color",
             "cornerRadius",
             "cornerRadiusTopLeft",
             "cornerRadiusTopRight",
@@ -216,6 +229,10 @@ fn validate(node: &Node, root: bool) -> Result<()> {
             "cornerRadiusBottomLeft",
         ],
         "group" | "sequence" => &[],
+        "solidPaint" => &["color", "fill"],
+        "linearGradientPaint" | "radialGradientPaint" => &[],
+        "colorStop" => &["color", "fill", "offset"],
+        "stroke" => &["color", "fill", "join", "cap", "miterLimit"],
         tag => {
             return Err(format!(
                 "{}: native vector rendering of <{tag}> is not ported yet",
@@ -240,6 +257,160 @@ fn validate(node: &Node, root: bool) -> Result<()> {
     Ok(())
 }
 
+fn checked_nodes<'a>(
+    root: &'a Node,
+    cancel: Option<&AtomicBool>,
+) -> std::result::Result<Vec<&'a Node>, FrameError> {
+    let mut nodes = Vec::new();
+    let mut pending = vec![(root, 0usize)];
+    while let Some((node, depth)) = pending.pop() {
+        cancelled(cancel).map_err(FrameError::transient)?;
+        if depth > 128 || nodes.len() + pending.len() + node.children.len() + 1 > 100_000 {
+            return Err("Native scene exceeds 100000 nodes or 128 levels".into());
+        }
+        nodes.push(node);
+        pending.extend(node.children.iter().map(|n| (n, depth + 1)));
+    }
+    Ok(nodes)
+}
+fn validate_children(
+    scene: &Node,
+    cancel: Option<&AtomicBool>,
+) -> std::result::Result<(), FrameError> {
+    let mut pending = vec![(scene, None::<&Node>)];
+    while let Some((node, parent)) = pending.pop() {
+        cancelled(cancel).map_err(FrameError::transient)?;
+        validate(node, parent.is_none())?;
+        let valid = match node.tag.as_str() {
+            "textRange" => parent.is_some_and(|p| p.tag == "text"),
+            "colorStop" => parent.is_some_and(|p| {
+                matches!(
+                    p.tag.as_str(),
+                    "linearGradientPaint" | "radialGradientPaint"
+                )
+            }),
+            tag if paints::is_fill(tag) || tag == "stroke" => parent.is_some_and(|p| {
+                matches!(
+                    p.tag.as_str(),
+                    "scene" | "rect" | "image" | "video" | "text" | "textRange"
+                )
+            }),
+            _ => parent.is_none_or(|p| !paints::is_style(&p.tag)),
+        };
+        if !valid {
+            return Err(format!("{}: invalid parent for <{}>", node.id, node.tag).into());
+        }
+        if matches!(node.tag.as_str(), "solidPaint" | "stroke" | "colorStop")
+            && !node.children.is_empty()
+        {
+            return Err(
+                format!("{}: this paint/style cannot have render children", node.id).into(),
+            );
+        }
+        if node
+            .children
+            .iter()
+            .filter(|n| paints::is_fill(&n.tag) || n.tag == "stroke")
+            .count()
+            > 1024
+        {
+            return Err("A holder accepts at most 1024 native paints/strokes".into());
+        }
+        pending.extend(node.children.iter().map(|n| (n, Some(node))));
+    }
+    Ok(())
+}
+
+struct Brushes<'a> {
+    original: BTreeMap<&'a str, &'a Node>,
+    gradients: BTreeMap<String, Arc<Gradient>>,
+    points: usize,
+    stops: usize,
+}
+impl Brushes<'_> {
+    fn authored<'a>(&'a self, node: &'a Node) -> &'a Node {
+        self.original.get(node.id.as_str()).copied().unwrap_or(node)
+    }
+    fn ink(&mut self, node: &Node, size: [f64; 2], origin: [f64; 2], text: bool) -> Result<Ink> {
+        if matches!(node.tag.as_str(), "solidPaint" | "stroke") {
+            Ok(Ink::Solid(paints::color(if text {
+                self.authored(node)
+            } else {
+                node
+            })))
+        } else {
+            if !self.gradients.contains_key(&node.id) {
+                let gradient = Gradient::from_node(node, self.authored(node), size)?;
+                self.gradients.insert(node.id.clone(), Arc::new(gradient));
+            }
+            self.stops = self
+                .stops
+                .saturating_add(self.gradients[&node.id].stops.len());
+            if self.stops > 1_000_000 {
+                return Err("Native frame exceeds one million gradient stop applications".into());
+            }
+            Ok(Ink::Gradient {
+                gradient: self.gradients[&node.id].clone(),
+                origin,
+            })
+        }
+    }
+}
+fn push_draw(draws: &mut Vec<Draw>, draw: Draw) -> Result<()> {
+    if draws.len() >= 65536 {
+        return Err("Native frame exceeds 65536 draws".into());
+    }
+    draws.push(draw);
+    Ok(())
+}
+#[allow(clippy::too_many_arguments)]
+fn draw_style(
+    draws: &mut Vec<Draw>,
+    brushes: &mut Brushes<'_>,
+    layer: &Layer<'_>,
+    node: &Node,
+    path: Option<&Arc<Path>>,
+    origin: [f64; 2],
+    text: bool,
+    line: &mut LineStyle,
+    current_alpha: &mut f64,
+) -> Result<()> {
+    if node.flag("hidden") {
+        return Ok(());
+    }
+    let stroke = if node.tag == "stroke" {
+        Some(line.apply(node)?)
+    } else {
+        None
+    };
+    let own = paints::number(
+        if text { brushes.authored(node) } else { node },
+        "opacity",
+        1.0,
+    );
+    *current_alpha = paints::assigned_alpha(*current_alpha, layer.opacity * own);
+    if let Some(path) = path {
+        brushes.points = brushes.points.saturating_add(path.points().len());
+        if brushes.points > 8_000_000 {
+            return Err("Native frame exceeds eight million styled path points".into());
+        }
+        let ink = brushes.ink(node, layer.state.frame.size, origin, text)?;
+        push_draw(
+            draws,
+            Draw {
+                path: path.clone(),
+                world: layer.world.multiply(Mat2D::translate(origin[0], origin[1])),
+                ink,
+                opacity: *current_alpha,
+                clipped: layer.parent.is_some(),
+                blend: paints::blend(node, layer.blend),
+                stroke,
+            },
+        )?;
+    }
+    Ok(())
+}
+
 impl Compositor {
     /// Selection of the vector path depends on every materialized node, including
     /// hidden/offscreen ones. Projects containing other node types use the older
@@ -259,6 +430,11 @@ impl Compositor {
                     | "video"
                     | "text"
                     | "textRange"
+                    | "solidPaint"
+                    | "linearGradientPaint"
+                    | "radialGradientPaint"
+                    | "colorStop"
+                    | "stroke"
             ) {
                 return false;
             }
@@ -281,8 +457,10 @@ impl Compositor {
         sizes_resolved_by_motion: bool,
         background: Option<u32>,
     ) -> Result<NativeFrame> {
+        checked_nodes(scene, None).map_err(|e| e.message)?;
         let mut texts = crate::text::prepare(scene, scene, &Default::default());
         self.frame_on_canvas(
+            scene,
             scene,
             timeline,
             time,
@@ -301,6 +479,7 @@ impl Compositor {
     pub(crate) fn frame_on_canvas(
         &mut self,
         scene: &Node,
+        authored: &Node,
         timeline: &Timeline,
         time: f64,
         fps: f64,
@@ -316,19 +495,28 @@ impl Compositor {
             return Err("Invalid native frame clock".into());
         }
         let mut layers: Vec<Layer<'_>> = Vec::new();
+        cancelled(cancel).map_err(FrameError::transient)?;
+        let original_nodes = checked_nodes(authored, cancel)?
+            .into_iter()
+            .map(|n| (n.id.as_str(), n))
+            .collect::<BTreeMap<_, _>>();
+        let mut brushes = Brushes {
+            original: original_nodes,
+            gradients: BTreeMap::new(),
+            points: 0,
+            stops: 0,
+        };
+        let sampled_nodes = checked_nodes(scene, cancel)?
+            .into_iter()
+            .map(|n| (n.id.as_str(), n))
+            .collect::<BTreeMap<_, _>>();
+        validate_children(scene, cancel)?;
         let mut pending: Vec<(&Node, Option<usize>)> = vec![(scene, None)];
         let global_frame = round_frame(time * fps);
         while let Some((node, parent)) = pending.pop() {
+            cancelled(cancel).map_err(FrameError::transient)?;
             validate(node, parent.is_none())?;
-            if node.tag == "textRange" {
-                if parent.is_none_or(|p| layers[p].node.tag != "text") || !node.children.is_empty()
-                {
-                    return Err(format!(
-                        "{}: textRange needs a text parent and supported style children",
-                        node.id
-                    )
-                    .into());
-                }
+            if paints::is_style(&node.tag) {
                 continue;
             }
             let index = layers.len();
@@ -436,6 +624,8 @@ impl Compositor {
                 visible,
                 opacity: 1.0,
                 culled: false,
+                blend: BlendMode::SourceOver,
+                line: LineStyle::default(),
             });
             if let Some(parent) = parent {
                 layers[parent].children.push(index);
@@ -447,6 +637,7 @@ impl Compositor {
         // Match the original parent-first traversal: a group's children still
         // carry their previous local matrices when its box is recomputed.
         for index in 0..layers.len() {
+            cancelled(cancel).map_err(FrameError::transient)?;
             let parent = layers[index].parent;
             if layers[index].node.tag == "sequence"
                 && let Some(parent) = parent
@@ -485,13 +676,23 @@ impl Compositor {
             layers[index].culled = culled;
             layers[index].opacity = opacity;
             layers[index].visible = visible;
+            layers[index].blend = paints::blend(
+                layers[index].node,
+                parent.map_or(BlendMode::SourceOver, |p| layers[p].blend),
+            );
             raster_transform(world)?;
         }
         let mut draws = Vec::new();
         let mut text_work = crate::text::TextWork::default();
         fonts.begin_frame();
         let clip = shape_path(scene, layers[0].state.frame.size)?;
-        for layer in &mut layers {
+        for index in 0..layers.len() {
+            cancelled(cancel).map_err(FrameError::transient)?;
+            let inherited_line = layers[index]
+                .parent
+                .map_or_else(LineStyle::default, |p| layers[p].line.clone());
+            let layer = &mut layers[index];
+            layer.line = inherited_line.clone();
             if !layer.visible
                 || layer.culled
                 || !matches!(
@@ -514,38 +715,103 @@ impl Compositor {
                 // Render-time measurement changes Computed size after this
                 // frame's transforms and parent-first group bounds were made.
                 layer.state.frame.size = layout.size;
-                for token in layout.tokens {
+                let paths = layout
+                    .tokens
+                    .iter()
+                    .map(|token| {
+                        prepared.words[token.piece]
+                            .shaped
+                            .path
+                            .clone()
+                            .map(Arc::new)
+                    })
+                    .collect::<Vec<_>>();
+                let mut line = inherited_line.clone();
+                let mut current_alpha = layer.opacity;
+                // Canvas completes every word's stroke pass before any fills.
+                for (token, path) in layout.tokens.iter().zip(&paths) {
+                    cancelled(cancel).map_err(FrameError::transient)?;
                     let word = &prepared.words[token.piece];
-                    if let (Some(path), Some(color)) = (&word.shaped.path, word.color) {
-                        draws.push(Draw {
-                            path: path.clone(),
-                            world: layer
-                                .world
-                                .multiply(Mat2D::translate(token.x as f64, token.y as f64)),
-                            ink: Ink::Solid(color),
-                            opacity: layer.opacity,
-                            clipped: layer.parent.is_some(),
-                        });
+                    if let Some(holder) =
+                        word.strokes.as_deref().and_then(|id| sampled_nodes.get(id))
+                    {
+                        for stroke in holder.children.iter().filter(|n| n.tag == "stroke") {
+                            draw_style(
+                                &mut draws,
+                                &mut brushes,
+                                layer,
+                                stroke,
+                                path.as_ref(),
+                                [token.x as f64, token.y as f64],
+                                true,
+                                &mut line,
+                                &mut current_alpha,
+                            )?;
+                        }
+                    }
+                }
+                current_alpha = layer.opacity;
+                for (token, path) in layout.tokens.iter().zip(&paths) {
+                    cancelled(cancel).map_err(FrameError::transient)?;
+                    let word = &prepared.words[token.piece];
+                    if let Some(color) = word.color {
+                        current_alpha = layer.opacity;
+                        if let Some(path) = path {
+                            push_draw(
+                                &mut draws,
+                                Draw {
+                                    path: path.clone(),
+                                    world: layer
+                                        .world
+                                        .multiply(Mat2D::translate(token.x as f64, token.y as f64)),
+                                    ink: Ink::Solid(color),
+                                    opacity: layer.opacity,
+                                    clipped: layer.parent.is_some(),
+                                    blend: layer.blend,
+                                    stroke: None,
+                                },
+                            )?;
+                        }
+                    }
+                    if let Some(holder) = word.fills.as_deref().and_then(|id| sampled_nodes.get(id))
+                    {
+                        for fill in holder.children.iter().filter(|n| paints::is_fill(&n.tag)) {
+                            draw_style(
+                                &mut draws,
+                                &mut brushes,
+                                layer,
+                                fill,
+                                path.as_ref(),
+                                [token.x as f64, token.y as f64],
+                                true,
+                                &mut line,
+                                &mut current_alpha,
+                            )?;
+                        }
                     }
                 }
                 continue;
             }
             // Validate shape values even when unpainted.
-            let path = shape_path(layer.node, layer.state.frame.size)?;
-            if let Some(fill) = layer.node.props.get("fill") {
-                let rgb = packed_color(fill)?;
-                if let Some(path) = &path {
-                    draws.push(Draw {
+            let path = shape_path(layer.node, layer.state.frame.size)?.map(Arc::new);
+            if let Some(rgb) = crate::text::node_color(layer.node)
+                && let Some(path) = &path
+            {
+                push_draw(
+                    &mut draws,
+                    Draw {
                         path: path.clone(),
                         world: layer.world,
                         ink: Ink::Solid(rgb),
                         opacity: layer.opacity,
                         clipped: layer.parent.is_some(),
-                    });
-                }
+                        blend: layer.blend,
+                        stroke: None,
+                    },
+                )?;
             }
             if matches!(layer.node.tag.as_str(), "image" | "video")
-                && let Some(path) = path
+                && let Some(path) = &path
             {
                 let media = media
                     .as_ref()
@@ -575,28 +841,59 @@ impl Compositor {
                         fps,
                     }
                 };
-                draws.push(Draw {
-                    path,
-                    world: layer.world,
-                    opacity: layer.opacity,
-                    clipped: layer.parent.is_some(),
-                    ink: Ink::Media {
-                        request: Box::new(TextureRequest {
-                            path: source,
-                            probe,
-                            frame,
-                        }),
-                        store: media.store.clone(),
-                        size: layer.state.frame.size,
-                        fit: Fit::from_prop(layer.node.string("objectFit")),
+                push_draw(
+                    &mut draws,
+                    Draw {
+                        path: path.clone(),
+                        world: layer.world,
+                        opacity: layer.opacity,
+                        clipped: layer.parent.is_some(),
+                        blend: layer.blend,
+                        stroke: None,
+                        ink: Ink::Media {
+                            request: Box::new(TextureRequest {
+                                path: source,
+                                probe,
+                                frame,
+                            }),
+                            store: media.store.clone(),
+                            size: layer.state.frame.size,
+                            fit: Fit::from_prop(layer.node.string("objectFit")),
+                        },
                     },
-                });
+                )?;
             }
+            let mut line = inherited_line;
+            for style in layer
+                .node
+                .children
+                .iter()
+                .filter(|n| paints::is_fill(&n.tag))
+                .chain(layer.node.children.iter().filter(|n| n.tag == "stroke"))
+            {
+                cancelled(cancel).map_err(FrameError::transient)?;
+                let mut opacity = layer.opacity;
+                draw_style(
+                    &mut draws,
+                    &mut brushes,
+                    layer,
+                    style,
+                    path.as_ref(),
+                    [0.0; 2],
+                    false,
+                    &mut line,
+                    &mut opacity,
+                )?;
+            }
+            layer.line = line;
         }
-        self.previous = layers
-            .iter()
-            .map(|layer| (layer.node.id.clone(), layer.state))
-            .collect();
+        let mut previous = BTreeMap::new();
+        for layer in &layers {
+            cancelled(cancel).map_err(FrameError::transient)?;
+            previous.insert(layer.node.id.clone(), layer.state);
+        }
+        cancelled(cancel).map_err(FrameError::transient)?;
+        self.previous = previous;
         self.scene = scene.id.clone();
         Ok(NativeFrame {
             width,
@@ -727,6 +1024,27 @@ fn corner(path: &mut PathBuilder, center: [f32; 2], radius: f32, start: f64) {
     }
 }
 
+fn raster_bytes(len: usize) -> Result<Vec<u8>> {
+    if len > 256 * 1024 * 1024 {
+        return Err("Native raster buffer exceeds 256 MiB".into());
+    }
+    let mut bytes = Vec::new();
+    bytes
+        .try_reserve_exact(len)
+        .map_err(|_| "Cannot allocate native raster buffer")?;
+    bytes.resize(len, 0);
+    Ok(bytes)
+}
+fn raster_mask(width: u32, height: u32) -> Result<Mask> {
+    let size = tiny_skia::IntSize::from_wh(width, height).ok_or("Invalid native mask size")?;
+    let len = (width as usize)
+        .checked_mul(height as usize)
+        .ok_or("Native mask size overflows")?;
+    if len > 64 * 1024 * 1024 {
+        return Err("Native mask exceeds 64 MiB".into());
+    }
+    Mask::from_vec(raster_bytes(len)?, size).ok_or_else(|| "Invalid native mask storage".into())
+}
 impl NativeFrame {
     pub(crate) fn resize_output(&mut self, height: u32) -> Result<()> {
         dimension(height as f64)?;
@@ -741,7 +1059,10 @@ impl NativeFrame {
         cancelled(cancel)?;
         dimension(width as f64)?;
         dimension(height as f64)?;
-        let mut pixels = Pixmap::new(width, height).ok_or("Cannot allocate native frame")?;
+        let size = tiny_skia::IntSize::from_wh(width, height).ok_or("Invalid native canvas")?;
+        let mut pixels =
+            Pixmap::from_vec(raster_bytes(width as usize * height as usize * 4)?, size)
+                .ok_or("Invalid native frame storage")?;
         if let Some(rgb) = self.background {
             pixels.fill(Color::from_rgba8(
                 (rgb >> 16) as u8,
@@ -756,31 +1077,46 @@ impl NativeFrame {
             round_frame(height as f64 * 1e6 / self.canvas[1]) / 1e6
         };
         let transform = raster_transform(Mat2D::scale(scale, scale))?;
-        let mut mask = Mask::new(width, height).ok_or("Cannot allocate native scene clip")?;
+        let mut mask = raster_mask(width, height)?;
         if let Some(clip) = &self.clip {
             mask.fill_path(clip, FillRule::Winding, true, transform);
         }
         for draw in &self.draws {
             cancelled(cancel)?;
             match &draw.ink {
-                Ink::Solid(rgb) => {
-                    let mut paint = Paint::default();
-                    paint.set_color(
-                        Color::from_rgba(
-                            (rgb >> 16) as u8 as f32 / 255.0,
-                            (rgb >> 8) as u8 as f32 / 255.0,
-                            *rgb as u8 as f32 / 255.0,
-                            draw.opacity as f32,
-                        )
-                        .expect("Validated normalized color"),
-                    );
-                    pixels.fill_path(
-                        &draw.path,
-                        &paint,
-                        FillRule::Winding,
-                        raster_transform(draw.world.view(scale))?,
-                        draw.clipped.then_some(&mask),
-                    );
+                Ink::Solid(_) | Ink::Gradient { .. } => {
+                    let shader = match &draw.ink {
+                        Ink::Solid(rgb) => Some(paints::solid_shader(*rgb, draw.opacity)),
+                        Ink::Gradient { gradient, origin } => {
+                            gradient.shader(draw.opacity, *origin)?
+                        }
+                        _ => unreachable!(),
+                    };
+                    let Some(shader) = shader else { continue };
+                    let paint = Paint {
+                        shader,
+                        blend_mode: draw.blend,
+                        force_hq_pipeline: draw.blend != BlendMode::SourceOver
+                            || matches!(&draw.ink, Ink::Gradient { .. }),
+                        ..Paint::default()
+                    };
+                    if let Some(stroke) = &draw.stroke {
+                        pixels.stroke_path(
+                            &draw.path,
+                            &paint,
+                            stroke,
+                            raster_transform(draw.world.view(scale))?,
+                            draw.clipped.then_some(&mask),
+                        );
+                    } else {
+                        pixels.fill_path(
+                            &draw.path,
+                            &paint,
+                            FillRule::Winding,
+                            raster_transform(draw.world.view(scale))?,
+                            draw.clipped.then_some(&mask),
+                        );
+                    }
                 }
                 Ink::Media {
                     request,
@@ -806,21 +1142,32 @@ impl NativeFrame {
                         w.abs() / bitmap.width() as f64,
                         h.abs() / bitmap.height() as f64,
                     ));
-                    let mut clip = if draw.clipped {
-                        mask.clone()
-                    } else {
-                        let mut full =
-                            Mask::new(width, height).ok_or("Cannot allocate media clip")?;
-                        full.data_mut().fill(255);
-                        full
-                    };
-                    clip.intersect_path(
+                    // Fill the media mask directly, then intersect in place.
+                    // Mask::clone/intersect_path allocate infallibly and would
+                    // need an additional full-size temporary mask.
+                    let mut clip = raster_mask(width, height)?;
+                    clip.fill_path(
                         &draw.path,
                         FillRule::Winding,
                         true,
                         raster_transform(draw.world.view(scale))?,
                     );
+                    if draw.clipped {
+                        for (part, scene) in clip
+                            .data_mut()
+                            .chunks_mut(65536)
+                            .zip(mask.data().chunks(65536))
+                        {
+                            cancelled(cancel)?;
+                            for (a, b) in part.iter_mut().zip(scene) {
+                                let product = u32::from(*a) * u32::from(*b) + 128;
+                                *a = (((product >> 8) + product) >> 8) as u8;
+                            }
+                        }
+                    }
                     let paint = Paint {
+                        blend_mode: draw.blend,
+                        force_hq_pipeline: true,
                         shader: Pattern::new(
                             bitmap.as_ref().as_ref(),
                             SpreadMode::Pad,
@@ -875,6 +1222,75 @@ impl NativeFrame {
 mod text_geometry_tests {
     use super::*;
     #[test]
+    fn raster_buffers_reject_excessive_sizes_before_allocation() {
+        assert!(raster_bytes(usize::MAX).is_err());
+        assert!(raster_mask(8193, 8192).is_err());
+        assert_eq!(raster_bytes(16).unwrap(), vec![0; 16]);
+        assert_eq!(raster_mask(4, 4).unwrap().data(), &[0; 16]);
+    }
+    #[test]
+    fn nontext_frame_cancellation_is_transient_and_does_not_commit_history() {
+        let doc=crate::source::SourceDocument::parse("cancel-paints.tsx".into(),"export default <stage><scene id=\"s\" width={40} height={40}><rect id=\"r\" width={20} height={20}><solidPaint color=\"red\"/></rect></scene></stage>".into()).unwrap();
+        let scene = doc.root.find("s").unwrap();
+        let timeline = Timeline::resolve(&doc.root, &Default::default()).unwrap();
+        let mut compositor = Compositor::default();
+        let mut texts = crate::text::prepare(scene, scene, &Default::default());
+        let cancel = AtomicBool::new(true);
+        let error = compositor
+            .frame_on_canvas(
+                scene,
+                scene,
+                &timeline,
+                0.0,
+                30.0,
+                false,
+                None,
+                None,
+                None,
+                &mut texts,
+                &mut Default::default(),
+                Some(&cancel),
+            )
+            .err()
+            .unwrap();
+        assert!(error.transient);
+        assert!(compositor.previous.is_empty());
+        assert!(compositor.scene.is_empty());
+        compositor
+            .frame(scene, &timeline, 0.0, 30.0, false, None)
+            .unwrap();
+        assert_eq!(compositor.previous.len(), 2);
+    }
+    #[test]
+    fn native_scene_node_and_depth_budgets_also_cover_nondrawing_nodes() {
+        let doc = crate::source::SourceDocument::parse(
+            "bounds.tsx".into(),
+            "export default <stage><scene id=\"s\"><group/></scene></stage>".into(),
+        )
+        .unwrap();
+        let mut scene = doc.root.find("s").unwrap().clone();
+        scene.children = vec![scene.children[0].clone(); 100_000];
+        assert!(
+            checked_nodes(&scene, None)
+                .err()
+                .unwrap()
+                .message
+                .contains("100000")
+        );
+        scene.children.clear();
+        for _ in 0..129 {
+            let child = scene.clone();
+            scene.children = vec![child];
+        }
+        assert!(
+            checked_nodes(&scene, None)
+                .err()
+                .unwrap()
+                .message
+                .contains("128")
+        );
+    }
+    #[test]
     fn adding_the_first_size_axis_starts_the_other_axis_at_trait_default_zero() {
         let doc=crate::source::SourceDocument::parse("size.tsx".into(),"export default <stage><scene id=\"s\" width={240} height={160}><text id=\"t\" x={40} y={40} color=\"red\" fontSize={32} rotation={30}>Hello</text></scene></stage>".into()).unwrap();
         let mut root = doc.root;
@@ -913,6 +1329,7 @@ mod text_geometry_tests {
         let mut compositor = Compositor::default();
         compositor
             .frame_on_canvas(
+                scene,
                 scene,
                 &timeline,
                 0.0,

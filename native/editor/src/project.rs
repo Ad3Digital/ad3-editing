@@ -234,6 +234,9 @@ impl ProjectRenderer {
                 };
                 compositor.frame_on_canvas(
                     node,
+                    self.current_authored
+                        .find(scene)
+                        .ok_or("Missing authored scene")?,
                     &self.timeline,
                     time,
                     fps,

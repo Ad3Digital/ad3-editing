@@ -154,6 +154,12 @@ impl Motion {
             }
         }
         let mut numbers = BTreeMap::<String, f64>::new();
+        if crate::paints::is_fill(&original.tag) {
+            let [x, y] = crate::paints::base_scale(original);
+            output.props.remove("scale");
+            output.props.insert("scaleX".into(), x.into());
+            output.props.insert("scaleY".into(), y.into());
+        }
         // The runtime mirrors uniform scale only on the enclosing geometry,
         // group or adjustment layer, never on a nested paint/style target.
         let mut uniform = original.is_timed() && original.props.contains_key("scale");
@@ -268,7 +274,12 @@ impl Motion {
         if vector {
             // Tracks update Computed stores, not trait membership. Without
             // Color or MixedCornerRadius these values do not become ink.
-            if !original.props.contains_key("fill") {
+            let color = crate::text::node_color(original);
+            output.props.remove("fill");
+            output.props.remove("color");
+            if let Some(color) = color {
+                output.props.insert("fill".into(), color.into());
+            } else {
                 numbers.remove("color");
             }
             if !mixed {
@@ -276,6 +287,12 @@ impl Motion {
                     numbers.remove(key);
                 }
             }
+        }
+        if matches!(original.tag.as_str(), "solidPaint" | "stroke" | "colorStop") {
+            let color = crate::text::node_color(original).unwrap_or(0);
+            output.props.remove("fill");
+            output.props.remove("color");
+            output.props.insert("color".into(), color.into());
         }
         if matches!(original.tag.as_str(), "text" | "textRange") {
             let color = crate::text::node_color(original);

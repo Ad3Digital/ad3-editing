@@ -17,6 +17,7 @@ pub mod jsx;
 mod materialize;
 pub mod media;
 pub mod motion;
+mod paints;
 pub mod project;
 pub mod props;
 pub mod reactive;
