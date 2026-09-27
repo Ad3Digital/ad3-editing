@@ -3,6 +3,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 use ad3_editor::{
     Result,
+    inspect::Control,
     media::{MediaLibrary, Tools},
     project::ProjectRenderer,
     source::{History, SourceDocument},
@@ -26,6 +27,7 @@ struct Snapshot {
     document: SourceDocument,
     timeline: Timeline,
     project: PathBuf,
+    controls: Vec<Control>,
 }
 impl Snapshot {
     fn load(path: &Path, tools: &Tools) -> Result<Self> {
@@ -44,10 +46,12 @@ impl Snapshot {
     fn from_document(document: SourceDocument, project: PathBuf, tools: &Tools) -> Result<Self> {
         let library = MediaLibrary::load(&document.root, &project, tools)?;
         let timeline = Timeline::resolve(&document.root, &library.durations)?;
+        let controls = document.controls()?;
         Ok(Self {
             document,
             timeline,
             project,
+            controls,
         })
     }
 }
@@ -56,6 +60,7 @@ struct FrameRequest {
     generation: u64,
     time: f64,
     playing: bool,
+    controls: Vec<(PathBuf, String, serde_json::Value)>,
 }
 struct FrameReply {
     generation: u64,
@@ -83,6 +88,7 @@ struct Editor {
     selected: String,
     property: String,
     value: String,
+    controls_draft: Vec<Control>,
     status: String,
     texture: Option<egui::TextureHandle>,
     frames: mpsc::Receiver<FrameReply>,
@@ -128,6 +134,9 @@ impl Editor {
                         mounted = Some((snapshot.clone(), renderer));
                     }
                     let renderer = &mut mounted.as_mut().unwrap().1;
+                    for (file, name, value) in request.controls {
+                        renderer.set_inspect(&file, &name, value)?;
+                    }
                     let mut plan = renderer.frame_plan(
                         &snapshot.timeline.active,
                         request.time,
@@ -163,6 +172,7 @@ impl Editor {
             selected: String::new(),
             property: "volume".into(),
             value: "0".into(),
+            controls_draft: Vec::new(),
             status: "Abra a pasta de um projeto AD3.".into(),
             texture: None,
             frames: result_rx,
@@ -233,6 +243,7 @@ impl Editor {
             );
             current.looping = previous.looping;
         }
+        self.controls_draft = snapshot.controls.clone();
         self.snapshot = Some(Arc::new(snapshot));
     }
 
@@ -345,7 +356,9 @@ impl Editor {
                             self.replace_snapshot(snapshot);
                             self.selected.clear();
                             self.texture = None;
-                            self.status = if self
+                            self.status = if !self.controls_draft.is_empty() {
+                                "Projeto aberto. Use os controles para ajustar a composição.".into()
+                            } else if self
                                 .snapshot
                                 .as_ref()
                                 .is_some_and(|snapshot| snapshot.document.module_sources.is_empty())
@@ -383,7 +396,6 @@ impl Editor {
                         ))
                     }
                     Err(error) => {
-                        self.texture = None;
                         self.status = error;
                         if let Some(t) = &mut self.transport {
                             t.playing = false;
@@ -416,6 +428,17 @@ impl Editor {
                     generation: self.generation,
                     time,
                     playing: transport.playing,
+                    controls: self
+                        .controls_draft
+                        .iter()
+                        .map(|control| {
+                            (
+                                control.declaration.file.clone(),
+                                control.declaration.name.clone(),
+                                control.value.clone(),
+                            )
+                        })
+                        .collect(),
                 })
                 .is_ok()
             {
@@ -620,7 +643,120 @@ impl Editor {
             });
     }
 
+    fn project_controls(&mut self, ui: &mut egui::Ui) {
+        if self.controls_draft.is_empty() {
+            return;
+        }
+        ui.heading("Controles do projeto");
+        let mut changed = false;
+        let mut commit = None;
+        egui::ScrollArea::vertical()
+            .id_salt("project-controls")
+            .max_height(400.0)
+            .show(ui, |ui| {
+                for control in &mut self.controls_draft {
+                    let declaration = &control.declaration;
+                    ui.push_id((&declaration.file, &declaration.name), |ui| {
+                        if !control.group.is_empty() {
+                            ui.small(control.group.join(" / "));
+                        }
+                        ui.label(&control.label);
+                        match declaration.kind.as_str() {
+                            "number" => {
+                                let mut number = control.value.as_f64().unwrap_or_default();
+                                let mut input = egui::DragValue::new(&mut number)
+                                    .speed(declaration.step.unwrap_or(1.0).abs().max(0.001));
+                                let min = declaration.min.unwrap_or(f64::NEG_INFINITY);
+                                let max = declaration.max.unwrap_or(f64::INFINITY);
+                                if min <= max {
+                                    input = input.range(min..=max);
+                                }
+                                if ui.add(input).changed() && number.is_finite() {
+                                    control.value = serde_json::json!(number);
+                                    changed = true;
+                                }
+                            }
+                            "boolean" => {
+                                let mut value = control.value.as_bool().unwrap_or(false);
+                                if ui.checkbox(&mut value, "Ativo").changed() {
+                                    control.value = value.into();
+                                    changed = true;
+                                }
+                            }
+                            "select" => {
+                                let mut value =
+                                    control.value.as_str().unwrap_or_default().to_owned();
+                                egui::ComboBox::from_id_salt("value")
+                                    .selected_text(&value)
+                                    .show_ui(ui, |ui| {
+                                        for option in &declaration.options {
+                                            if ui
+                                                .selectable_value(
+                                                    &mut value,
+                                                    option.clone(),
+                                                    option,
+                                                )
+                                                .changed()
+                                            {
+                                                changed = true;
+                                            }
+                                        }
+                                    });
+                                control.value = value.into();
+                            }
+                            _ => {
+                                let mut value =
+                                    control.value.as_str().unwrap_or_default().to_owned();
+                                if ui.text_edit_singleline(&mut value).changed() {
+                                    control.value = value.into();
+                                    changed = true;
+                                }
+                            }
+                        }
+                        if control.value != control.committed {
+                            ui.horizontal(|ui| {
+                                if ui.button("Salvar").clicked() {
+                                    commit = Some((
+                                        declaration.file.clone(),
+                                        declaration.name.clone(),
+                                        control.value.clone(),
+                                    ));
+                                }
+                                if ui.button("Restaurar").clicked() {
+                                    control.value = control.committed.clone();
+                                    changed = true;
+                                }
+                            });
+                        }
+                        ui.separator();
+                    });
+                }
+            });
+        if changed {
+            self.invalidate();
+        }
+        if let Some((file, name, value)) = commit
+            && let Some(snapshot) = &self.snapshot
+        {
+            let drafts = self.controls_draft.clone();
+            let next = snapshot.document.set_control(&file, &name, value);
+            self.commit(next);
+            for control in &mut self.controls_draft {
+                if (control.declaration.file != file || control.declaration.name != name)
+                    && let Some(previous) = drafts.iter().find(|old| {
+                        old.declaration.file == control.declaration.file
+                            && old.declaration.name == control.declaration.name
+                            && old.value != old.committed
+                    })
+                {
+                    control.value = previous.value.clone();
+                }
+            }
+        }
+    }
+
     fn inspector(&mut self, ui: &mut egui::Ui) {
+        self.project_controls(ui);
         let Some(snapshot) = self.snapshot.clone() else {
             return;
         };

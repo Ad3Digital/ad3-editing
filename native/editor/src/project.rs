@@ -127,6 +127,12 @@ impl ProjectRenderer {
             Some([time, time + 1.0 / fps]),
         )
     }
+    pub fn set_inspect(&mut self, file: &Path, name: &str, value: serde_json::Value) -> Result<()> {
+        self.live
+            .as_mut()
+            .ok_or("This project has no live controls")?
+            .set_inspect(file, name, value, false)
+    }
     pub fn warnings(&self) -> Vec<String> {
         self.live
             .as_ref()

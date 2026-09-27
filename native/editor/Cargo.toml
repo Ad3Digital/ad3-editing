@@ -2,6 +2,7 @@
 name = "ad3-editor"
 version = "0.1.0"
 edition = "2024"
+autotests = false
 license = "MPL-2.0"
 description = "Native Rust implementation of the AD3 Editing document and editor"
 
@@ -11,11 +12,17 @@ name = "ad3_editor"
 [[bin]]
 name = "dapi-rust"
 path = "src/main.rs"
+test = false
 
 [[bin]]
 name = "ad3-editing"
 path = "src/desktop.rs"
 required-features = ["desktop"]
+test = false
+
+[[test]]
+name = "integration"
+path = "tests/integration.rs"
 
 [features]
 desktop = ["dep:eframe", "dep:image"]
@@ -42,3 +49,8 @@ image = { version = "0.25", optional = true, default-features = false, features 
 [profile.release]
 lto = true
 strip = true
+
+# Keep dependency caches and development assertions while reducing the editor's
+# own debug data. Dependencies may still contribute symbols to Windows PDBs.
+[profile.dev.package.ad3-editor]
+debug = 0

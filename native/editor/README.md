@@ -17,9 +17,10 @@ cargo run --locked --manifest-path native/editor/Cargo.toml --bin dapi-rust -- -
 cargo run --locked --manifest-path native/editor/Cargo.toml --features desktop --bin ad3-editing -- /path/to/project
 ```
 
-Three runnable projects are included: `examples/static` exercises source editing;
+Four runnable projects are included: `examples/static` exercises source editing;
 `examples/modules` exercises imported components/JSON; `examples/reactive` animates
-rectangles and text through the native ticker, signals, `For` and `Show`.
+rectangles and text through the native ticker, signals, `For` and `Show`;
+`examples/inspect` exposes editable controls from an imported component module.
 Pass the full path to a folder to the native executable.
 
 The desktop application opens an existing project folder or source entry, shows
@@ -54,6 +55,11 @@ Rendered media never overwrites an existing output or original footage.
   batching, cleanup scopes, `createRoot`, `onMount`, `untrack`, `mergeProps`,
   `splitProps`, `children`, keyed `For`, positional `Index`, `Show`, and `useTicker`.
   Offline holds are bounded to 30 seconds and can be cancelled during mounting.
+- `inspect.rs`, `source_inspect.rs`: binding-aware `@inspect` compilation, live
+  signals, typed control metadata and literal initializer edits in the original
+  imported module. The desktop previews changes and offers Save/Restore; saving
+  checks every opened module for external changes and atomically replaces one
+  file under the project writer lock. Undo/redo retains the whole source snapshot.
 - `project.rs`, `encoder.rs`, `audio.rs`: shared preview/capture lifecycle,
   fresh offline mounts using the opened module snapshot, frame-by-frame reactive
   export, bounded encoder pipe, progress, and a 48 kHz stereo mixer in Rust.
@@ -73,7 +79,9 @@ Rendered media never overwrites an existing output or original footage.
 
 The static reader preserves source spans for editing. When a project needs
 module execution, the native evaluator opens it for inspection/rendering; source
-edits are refused until multi-file source mapping and instance unrolling exist.
+general JSX instance edits are refused until multi-file source mapping and
+instance unrolling exist. Annotated `@inspect` variables can already be changed
+in the inspector or through `controls`/`control` CLI commands.
 The `solid-js` exports listed above are implemented in Rust. Other Solid APIs
 (including stores, resources, contexts, `Switch`/`Match`) are still pending.
 Drawing callbacks, browser/HTML APIs, timers/fetch, asset-generation hooks,
@@ -98,7 +106,7 @@ this ledger is waived because a smaller example renders successfully.
 
 | Area | Current implementation | Required before replacement |
 | --- | --- | --- |
-| Source/project model | Static TSX edits; native ES modules, reactive props, signals/effects, For/Index/Show and ticker; original file spans | Remaining package/Solid/browser APIs, `@inspect`, generation hooks, loop unrolling and multi-file edits; last-good-render behavior |
+| Source/project model | Static TSX edits; native ES modules, reactive props, signals/effects, For/Index/Show and ticker; original file spans; live `@inspect` and imported initializer writeback | Remaining package/Solid/browser APIs, generation hooks, loop unrolling and general multi-file JSX edits; complete last-good-render behavior |
 | Timeline | Source/timeline clocks, workareas, cuts/trims/moves, nested rates, transport | Ripple Q/E, multi-selection, clipboard/grouping, transitions, keyframe tracks, all timeline gestures/colors/toggles and established constraints |
 | Graphics | Static media, rects and basic unwrapped text | GPU compositor; every transform, masks, blend modes, gradients, paints, strokes, shadows, effects, wrapped/styled text, HTML, surfaces, WGSL and adjustment layers |
 | Audio | Offline retiming and Rust stereo mixing with per-frame reactive gain | Real-time output and seek/rate re-anchoring, solo/bus hierarchy, gain/keyframes, syncTo and precise behavior across all cuts/rates |
@@ -120,7 +128,7 @@ its host/evaluator in Rust is compatible with a Rust application.
 ```sh
 cargo fmt --manifest-path native/editor/Cargo.toml -- --check
 cargo test --locked --manifest-path native/editor/Cargo.toml
-cargo test --locked --manifest-path native/editor/Cargo.toml --test rendering -- --ignored
+cargo test --locked --manifest-path native/editor/Cargo.toml --test integration rendering:: -- --ignored
 cargo build --locked --manifest-path native/editor/Cargo.toml --features desktop
 ```
 
@@ -134,6 +142,42 @@ modules, JavaScript text coercion, atomic save, validated undo/redo and external
 edit conflicts. A debug framebuffer smoke test also opened the native editor and
 captured the real egui window. These are gates for
 the implemented subset; they do **not** prove complete editor parity.
+
+`@inspect` coverage includes semantic binding/shadowing, escaped identifiers,
+UTF-8 initializer spans, VM garbage collection/remounts, imported-module edits,
+whole-graph conflict detection and undo/redo. Windows save tests cover creation
+time/named streams, zero-byte originals, locked files, concurrent replacement,
+late writes through displaced handles and exclusive backup disposal. A real CLI
+smoke changed two imported initializers, checked all other source bytes and
+captured the result; the native UI displayed those controls and the same frame.
+
+Integration modules share one test executable to avoid linking the VM multiple
+times on Windows. On a memory-constrained build machine, use `CARGO_BUILD_JOBS=2`.
+The development profile omits debug symbols for the editor package only, keeping
+assertions and overflow checks enabled. To debug the editor with symbols, pass
+`--config 'profile.dev.package.ad3-editor.debug=2'` to Cargo. Dependencies retain
+their normal profile, avoiding a full cache rebuild when changing this setting.
+Dependency symbols can still produce Windows PDB files; this setting does not
+disable all symbol linking.
+For a faster local Windows UI iteration without a PDB, use
+`cargo rustc --locked --manifest-path native/editor/Cargo.toml --features desktop --bin ad3-editing -- -C link-arg=/DEBUG:NONE`.
+This explicit linker override leaves cached dependency compilation intact; omit
+it when a Windows debugging session needs the PDB.
+Source saves preserve Windows metadata through
+[ReplaceFileW](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-replacefilew),
+retaining a recoverable backup when replacement cannot complete.
+If an external editor changes the target between the preflight check and Windows
+replacement, the displaced source is retained and the save reports a conflict
+with its backup path; reload and reconcile the two versions before continuing.
+Verification and backup deletion hold one exclusive Windows file handle, so an
+outside writer with a still-open handle also causes retention. Recovery after a
+failed replacement always retains the original backup, even after restoring the
+target name. Conflict recovery is explicit; it never overwrites a newer target.
+Unix saves
+preserve permission bits and refuse ownership changes; concurrent external
+replacement guarantees, broader Unix ACL/xattr
+and packaging verification remains pending. Native numeric controls currently
+require finite values, as does the materialized composition data model.
 
 Module evaluation tests cover typed function components, map/conditionals,
 fragments, JSON, installed ESM packages, exact export conditions, reexports,

@@ -187,11 +187,12 @@ pub(crate) fn publish(source: &Path, output: &Path, cancel: Option<&AtomicBool>)
     })();
     drop(destination);
     if let Err(original) = &result
-        && let Err(error) = crate::render::remove_owned_file(output) {
-            return Err(format!(
-                "{original}; could not remove incomplete output {}: {error}",
-                output.display()
-            ));
+        && let Err(error) = crate::render::remove_owned_file(output)
+    {
+        return Err(format!(
+            "{original}; could not remove incomplete output {}: {error}",
+            output.display()
+        ));
     }
     result
 }

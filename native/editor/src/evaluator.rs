@@ -65,6 +65,7 @@ fn transpile(path: &Path, source: &str) -> Result<String> {
         return Err("Module exceeds the 16 MiB source limit".into());
     }
     let lowered = crate::jsx::lower(path, source)?;
+    let lowered = crate::inspect::compile(path, &lowered)?;
     let source = lowered.as_str();
     let allocator = Allocator::default();
     let source_type = SourceType::from_path(path).map_err(|e| e.to_string())?;
@@ -505,6 +506,11 @@ fn install_hosts(loader: &Loader, context: &mut Context) -> JsResult<()> {
     }
     let jsx = ObjectInitializer::new(context)
         .function(
+            NativeFunction::from_fn_ptr(crate::inspect::host),
+            js_string!("__inspect"),
+            2,
+        )
+        .function(
             NativeFunction::from_fn_ptr(reactive::use_ticker),
             js_string!("useTicker"),
             0,
@@ -596,6 +602,7 @@ impl LiveProject {
             .set_loop_iteration_limit(1_000_000);
         context.runtime_limits_mut().set_recursion_limit(128);
         let host = reactive::install(&mut context, offline);
+        crate::inspect::install(&mut context);
         install_hosts(&loader, &mut context).map_err(|e| e.to_string())?;
         let module = loader
             .compile(path, source.into(), &mut context)
@@ -719,6 +726,25 @@ impl LiveProject {
             }
         }
         Err("Project did not stabilize after 100 render passes".into())
+    }
+
+    pub fn inspect_controls(&mut self) -> Result<Vec<crate::inspect::Control>> {
+        crate::stack::runtime(|| {
+            crate::inspect::controls(&mut self.context).map_err(|e| e.to_string())
+        })
+    }
+    pub fn set_inspect(
+        &mut self,
+        file: &Path,
+        name: &str,
+        value: Value,
+        commit: bool,
+    ) -> Result<()> {
+        crate::stack::runtime(|| {
+            crate::inspect::set(file, name, value, commit, &mut self.context)
+                .map_err(|e| e.to_string())?;
+            self.settle()
+        })
     }
 
     pub fn sources(&self) -> BTreeMap<PathBuf, String> {

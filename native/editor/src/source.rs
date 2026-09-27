@@ -333,15 +333,22 @@ fn parse_children(
 #[derive(Clone, Debug)]
 pub struct SourceDocument {
     pub path: PathBuf,
+    pub project_root: PathBuf,
     pub source: String,
     pub root: Node,
-    /// Nonempty for evaluated module graphs. Source mapping/unrolling is pending,
-    /// so these documents can be inspected/rendered but cannot yet be edited here.
+    /// Frozen source modules. Literal @inspect edits are supported; generated
+    /// JSX instance writeback still requires source mapping and unrolling.
     pub module_sources: BTreeMap<PathBuf, String>,
 }
 
 impl SourceDocument {
     pub fn parse(path: PathBuf, source: String) -> Result<Self> {
+        if source.contains("@inspect") && !crate::inspect::bindings(&path, &source)?.is_empty() {
+            return Err("@inspect variables require the live native evaluator".into());
+        }
+        let absolute = std::path::absolute(&path).map_err(|e| e.to_string())?;
+        let parent = absolute.parent().ok_or("Source has no parent directory")?;
+        let project_root = fs::canonicalize(parent).unwrap_or_else(|_| parent.into());
         let allocator = Allocator::default();
         let parsed = Parser::new(&allocator, &source, SourceType::tsx()).parse();
         if !parsed.diagnostics.is_empty() {
@@ -415,6 +422,7 @@ impl SourceDocument {
         drop(parsed);
         Ok(Self {
             path,
+            project_root,
             source,
             root,
             module_sources: BTreeMap::new(),
@@ -444,19 +452,27 @@ impl SourceDocument {
                 .ok_or_else(|| format!("No project entry in {}", project.display()))?
         };
         let path = fs::canonicalize(&path).map_err(|e| e.to_string())?;
-        if project.is_dir() {
-            let root = fs::canonicalize(project).map_err(|e| e.to_string())?;
-            if !path.starts_with(root) {
-                return Err("Project entry must stay inside the project directory".into());
-            }
+        let project_root = if project.is_dir() {
+            fs::canonicalize(project).map_err(|e| e.to_string())?
+        } else {
+            path.parent()
+                .ok_or("Source has no parent directory")?
+                .into()
+        };
+        if !path.starts_with(&project_root) {
+            return Err("Project entry must stay inside the project directory".into());
         }
         let source = fs::read_to_string(&path).map_err(|e| e.to_string())?;
         match Self::parse(path.clone(), source.clone()) {
-            Ok(document) => Ok(document),
+            Ok(mut document) => {
+                document.project_root = project_root;
+                Ok(document)
+            }
             Err(_) => {
                 let evaluation = crate::evaluator::evaluate(&path, &source)?;
                 Ok(Self {
                     path,
+                    project_root,
                     source,
                     root: evaluation.root,
                     module_sources: evaluation.sources,
@@ -718,7 +734,9 @@ impl SourceDocument {
     }
     fn rewrite(&self, patches: Vec<Replacement>) -> Result<Self> {
         self.ensure_editable()?;
-        Self::parse(self.path.clone(), apply(&self.source, patches)?)
+        let mut next = Self::parse(self.path.clone(), apply(&self.source, patches)?)?;
+        next.project_root = self.project_root.clone();
+        Ok(next)
     }
 
     pub fn ensure_editable(&self) -> Result<()> {
@@ -731,13 +749,35 @@ impl SourceDocument {
     /// Native writers serialize through an OS lock; source comparison also
     /// detects saves by the existing editor or an external text editor.
     pub fn save_over(&self, expected: &Self) -> Result<()> {
-        self.ensure_editable()?;
-        expected.ensure_editable()?;
-        if self.path != expected.path {
+        if self.path != expected.path || self.project_root != expected.project_root {
             return Err("Source save target changed".into());
         }
-        let parent = self.path.parent().ok_or("Source has no parent directory")?;
-        let state = parent.join(".diffusion");
+        let snapshot = |document: &Self| -> Result<BTreeMap<PathBuf, String>> {
+            if document.module_sources.is_empty() {
+                return Ok(BTreeMap::from([(
+                    document.path.clone(),
+                    document.source.clone(),
+                )]));
+            }
+            if document.module_sources.get(&document.path) != Some(&document.source) {
+                return Err("Inconsistent entry source snapshot".into());
+            }
+            Ok(document.module_sources.clone())
+        };
+        let before = snapshot(expected)?;
+        let after = snapshot(self)?;
+        if before.keys().ne(after.keys()) {
+            return Err("Source save cannot change the module graph".into());
+        }
+        let changes = after
+            .iter()
+            .filter(|(path, value)| before.get(*path) != Some(*value))
+            .collect::<Vec<_>>();
+        if changes.len() > 1 {
+            return Err("A native source transaction currently writes one module at a time".into());
+        }
+        let root = fs::canonicalize(&self.project_root).map_err(|e| e.to_string())?;
+        let state = root.join(".diffusion");
         fs::create_dir_all(&state).map_err(|e| e.to_string())?;
         let lock = OpenOptions::new()
             .read(true)
@@ -747,9 +787,18 @@ impl SourceDocument {
             .open(state.join("native-source.lock"))
             .map_err(|e| e.to_string())?;
         lock.lock().map_err(|e| e.to_string())?;
-        if fs::read_to_string(&self.path).map_err(|e| e.to_string())? != expected.source {
-            return Err("Project changed on disk. Reload before applying this edit; no source was overwritten.".into());
+        for (path, source) in &before {
+            if fs::read_to_string(path).map_err(|e| e.to_string())? != *source {
+                return Err(format!(
+                    "Project changed on disk: {}. Reload before applying this edit; no source was overwritten.",
+                    path.display()
+                ));
+            }
         }
+        let Some((target, source)) = changes.first().copied() else {
+            return Ok(());
+        };
+        let canonical = crate::atomic_file::source_target(&root, target)?;
         let suffix = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|e| e.to_string())?
@@ -761,11 +810,11 @@ impl SourceDocument {
                 .create_new(true)
                 .open(&temp)
                 .map_err(|e| e.to_string())?;
-            file.write_all(self.source.as_bytes())
+            file.write_all(source.as_bytes())
                 .and_then(|_| file.sync_all())
                 .map_err(|e| e.to_string())?;
             drop(file);
-            fs::rename(&temp, &self.path).map_err(|e| e.to_string())
+            crate::atomic_file::replace(&temp, &canonical, before[target].as_bytes())
         })();
         if result.is_err() {
             let _ = fs::remove_file(&temp);

@@ -13,6 +13,8 @@ use std::{env, path::Path};
 const HELP: &str = "AD3 Editing — native Rust CLI (migration in progress)
 
   dapi-rust inspect <project>                   Read the JSX document as JSON
+  dapi-rust controls <project>                  List @inspect variables
+  dapi-rust control <project> <file> <name> <json>  Set an @inspect initializer
   dapi-rust context <project>                   Resolve sources and timeline
   dapi-rust check <project>                     Check timing and sequence overlaps
   dapi-rust set <project> <id> <prop> <json>     Edit one JSX property
@@ -56,7 +58,15 @@ fn run(args: &[String]) -> Result<Value> {
             "sourceEditable": document.module_sources.is_empty(),
             "modules": document.module_sources.keys().collect::<Vec<_>>() }));
     }
+    if action == "controls" && rest.is_empty() {
+        return Ok(json!({"controls": document.controls()?}));
+    }
     let next = match (action.as_str(), rest) {
+        ("control", [file, name, value]) => Some(document.set_control(
+            Path::new(file),
+            name,
+            serde_json::from_str(value).map_err(|e| e.to_string())?,
+        )?),
         ("set", [id, name, value]) => Some(
             document.set(
                 id,
