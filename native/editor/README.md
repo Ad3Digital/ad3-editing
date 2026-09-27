@@ -285,6 +285,13 @@ On Antonio's Windows machine, use the existing toolchain under
 `D:/Tools/ad3-rust`, with `CARGO_HOME=D:/Tools/ad3-rust/cargo` and
 `RUSTUP_HOME=D:/Tools/ad3-rust/rustup`. Set `TEMP`/`TMP` to `D:/tmp` for local test
 fixtures. These are machine-local build settings, not required paths for users.
+For continued development on this machine, set
+`CARGO_TARGET_DIR=E:/AD3_BuildCache/ad3-editor-20260927` to use the prepared SSD
+build cache. The source checkout stays in `D:/projects/ad3-editing`. The cache
+was copied with preserved timestamps, its main binary/library hashes were
+verified and Cargo successfully reused it. Use the compiler, linker and
+dependency profiles shown above. With this setting, run the resulting binaries
+from `CARGO_TARGET_DIR/debug`.
 
 References for dependencies: [Oxc](https://docs.rs/oxc_parser/0.149.0/oxc_parser/),
 [eframe](https://docs.rs/eframe/0.36.2/eframe/),
