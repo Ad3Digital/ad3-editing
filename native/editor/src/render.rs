@@ -383,21 +383,7 @@ impl RenderPlan {
     }
 
     fn prepare(&self, project: &Path) -> Result<JobDirectory> {
-        let stamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_err(|e| e.to_string())?
-            .as_nanos();
-        let parent = std::path::absolute(project)
-            .map_err(|e| e.to_string())?
-            .join(".diffusion")
-            .join("native-render");
-        fs::create_dir_all(&parent).map_err(|e| e.to_string())?;
-        let path = parent.join(format!("{}-{stamp}", std::process::id()));
-        fs::create_dir(&path).map_err(|e| e.to_string())?;
-        let mut directory = JobDirectory {
-            path,
-            files: Vec::new(),
-        };
+        let mut directory = JobDirectory::new(project)?;
         directory.write("graph.txt", &self.graph)?;
         for (index, text) in self.text_files.iter().enumerate() {
             directory.write(&format!("text-{index}.txt"), text)?;
@@ -516,6 +502,15 @@ impl RenderPlan {
     }
 
     pub fn frame(&self, tools: &Tools, project: &Path) -> Result<Vec<u8>> {
+        self.frame_cancellable(tools, project, None)
+    }
+
+    pub fn frame_cancellable(
+        &self,
+        tools: &Tools,
+        project: &Path,
+        cancel: Option<&AtomicBool>,
+    ) -> Result<Vec<u8>> {
         let directory = self.prepare(project)?;
         let mut command = self.command(tools, &directory);
         command.args([
@@ -541,7 +536,7 @@ impl RenderPlan {
                 if cfg!(windows) { "NUL" } else { "/dev/null" },
             ]);
         }
-        let output = checked_output(&mut command)?;
+        let output = checked_output_cancellable(&mut command, cancel, Duration::from_secs(120))?;
         if output.stdout.len() != self.width as usize * self.height as usize * 4 {
             return Err("Incomplete composed frame".into());
         }
@@ -574,7 +569,7 @@ impl RenderPlan {
     }
 }
 
-fn tempo_filters(mut rate: f64) -> String {
+pub(crate) fn tempo_filters(mut rate: f64) -> String {
     let mut filters = Vec::new();
     while rate > 2.0 {
         filters.push("atempo=2".into());
@@ -588,11 +583,33 @@ fn tempo_filters(mut rate: f64) -> String {
     filters.join(",")
 }
 
-struct JobDirectory {
-    path: PathBuf,
+pub(crate) struct JobDirectory {
+    pub path: PathBuf,
     files: Vec<PathBuf>,
 }
 impl JobDirectory {
+    pub fn new(project: &Path) -> Result<Self> {
+        let stamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map_err(|e| e.to_string())?
+            .as_nanos();
+        let parent = std::path::absolute(project)
+            .map_err(|e| e.to_string())?
+            .join(".diffusion")
+            .join("native-render");
+        fs::create_dir_all(&parent).map_err(|e| e.to_string())?;
+        let path = parent.join(format!("{}-{stamp}", std::process::id()));
+        fs::create_dir(&path).map_err(|e| e.to_string())?;
+        Ok(Self {
+            path,
+            files: Vec::new(),
+        })
+    }
+    pub fn file(&mut self, name: &str) -> PathBuf {
+        let path = self.path.join(name);
+        self.files.push(path.clone());
+        path
+    }
     fn write(&mut self, name: &str, text: &str) -> Result<()> {
         let path = self.path.join(name);
         self.files.push(path.clone());
@@ -602,8 +619,32 @@ impl JobDirectory {
 impl Drop for JobDirectory {
     fn drop(&mut self) {
         for file in &self.files {
-            let _ = fs::remove_file(file);
+            if let Err(error) = remove_owned_file(file) {
+                eprintln!(
+                    "Could not remove native render temporary file {}: {error}",
+                    file.display()
+                );
+            }
         }
-        let _ = fs::remove_dir(&self.path);
+        if let Err(error) = fs::remove_dir(&self.path)
+            && error.kind() != std::io::ErrorKind::NotFound
+        {
+            eprintln!(
+                "Could not remove native render job directory {}: {error}",
+                self.path.display()
+            );
+        }
     }
+}
+
+pub(crate) fn remove_owned_file(path: &Path) -> std::io::Result<()> {
+    for attempt in 0..3 {
+        match fs::remove_file(path) {
+            Ok(()) => return Ok(()),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+            Err(error) if attempt == 2 => return Err(error),
+            Err(_) => std::thread::sleep(Duration::from_millis(25)),
+        }
+    }
+    unreachable!()
 }

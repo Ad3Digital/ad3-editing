@@ -27,10 +27,12 @@ oxc_allocator = "0.149"
 oxc_ast = "0.149"
 oxc_parser = "0.149"
 oxc_span = "0.149"
+oxc_ast_visit = "0.149"
 oxc_codegen = "0.149"
 oxc_semantic = "0.149"
 oxc_transformer = "0.149"
 boa_engine = { version = "0.22.0", default-features = false, features = ["float16", "xsum"] }
+stacker = "0.1.25"
 serde_yaml = "0.9"
 html-escape = "0.2"
 dragonbox_ecma = { version = "0.1", features = ["ecma"] }

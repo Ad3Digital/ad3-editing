@@ -3,7 +3,7 @@
 use ad3_editor::{
     Result,
     media::{MediaLibrary, Tools},
-    render::RenderPlan,
+    project::ProjectRenderer,
     source::SourceDocument,
     timing::{Timeline, parse_time},
 };
@@ -27,7 +27,7 @@ const HELP: &str = "AD3 Editing — native Rust CLI (migration in progress)
 
 Time accepts seconds, 45f (at 30 fps), MM:SS or HH:MM:SS.
 Projects use their existing package.json main or index.tsx.
-ES module projects can be rendered; reactive host modules remain pending.
+TSX modules and the native signal/ticker host are supported; migration is ongoing.
 FFmpeg/FFprobe use PATH or AD3_FFMPEG_PATH / AD3_FFPROBE_PATH.
 ";
 
@@ -90,17 +90,17 @@ fn run(args: &[String]) -> Result<Value> {
                 .transpose()
                 .map_err(|_| "Invalid FPS")?
                 .unwrap_or(30.0);
-            let plan = RenderPlan::build(
-                &document.root,
-                &timeline,
-                &library,
-                &timeline.active,
+            let report = ProjectRenderer::export(
+                &document,
+                project,
+                tools,
+                Path::new(output),
                 fps,
                 None,
+                |_, _| {},
             )?;
-            plan.export(&tools, project, Path::new(output))?;
             Ok(
-                json!({"path": output, "width": plan.width, "height": plan.height, "duration": plan.duration, "fps": plan.fps}),
+                json!({"path":output,"width":report.width,"height":report.height,"duration":report.duration,"workareaDuration":report.workarea_duration,"videoDuration":report.video_duration,"fps":report.fps,"frames":report.frames,"warnings":report.warnings}),
             )
         }
         ("capture", [scene, at, output]) => {
@@ -110,16 +110,12 @@ fn run(args: &[String]) -> Result<Value> {
             if relative_time < 0.0 || time >= area[1] {
                 return Err("Capture time lies outside the workarea".into());
             }
-            let plan = RenderPlan::build(
-                &document.root,
-                &timeline,
-                &library,
-                scene,
-                30.0,
-                Some([time, time + 1.0 / 30.0]),
-            )?;
-            plan.capture(&tools, project, Path::new(output))?;
-            Ok(json!({"path": output, "time": relative_time, "sceneTime": time}))
+            let mut renderer = ProjectRenderer::new(&document, project, tools, true)?;
+            let plan = renderer.frame_plan(scene, time, 30.0, false)?;
+            plan.capture(&renderer.tools, project, Path::new(output))?;
+            Ok(
+                json!({"path": output, "time": relative_time, "sceneTime": time,"warnings":renderer.warnings()}),
+            )
         }
         ("context", []) => {
             Ok(json!({"projectDir": project, "entry": document.path, "timeline": timeline}))

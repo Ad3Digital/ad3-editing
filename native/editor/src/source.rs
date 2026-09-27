@@ -254,6 +254,8 @@ fn parse_element(element: &JSXElement<'_>, env: &Environment, serial: &mut usize
         text: String::new(),
         children: Vec::new(),
         location: Location {
+            file: None,
+            spread: false,
             element: range(element.span),
             name_end: name.span.end as usize,
             attributes,

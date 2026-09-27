@@ -1,9 +1,9 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. https://mozilla.org/MPL/2.0/
 use crate::Result;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
-use std::{collections::BTreeMap, ops::Range};
+use std::{collections::BTreeMap, ops::Range, path::PathBuf};
 
 pub const TAGS: &[&str] = &[
     "stage",
@@ -37,8 +37,12 @@ pub const TAGS: &[&str] = &[
     "surface",
 ];
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Location {
+    #[serde(default)]
+    pub file: Option<PathBuf>,
+    #[serde(default)]
+    pub spread: bool,
     pub element: Range<usize>,
     pub name_end: usize,
     pub attributes: BTreeMap<String, Range<usize>>,

@@ -2,17 +2,15 @@
 // License, v. 2.0. https://mozilla.org/MPL/2.0/
 //! Native ECMAScript module evaluation. Oxc removes TS/JSX and Boa executes
 //! user-authored code. No Node process, Electron, package installation or network.
-use crate::{
-    Result,
-    document::{Location, Node, TAGS},
-};
+use crate::reactive;
+use crate::{Result, document::Node};
 use boa_engine::{
     Context, JsNativeError, JsResult, JsValue, Module, NativeFunction, Source,
     builtins::promise::PromiseState,
     job::{Job, JobExecutor, SimpleJobExecutor},
     js_string,
     module::{ModuleLoader, ModuleRequest, Referrer},
-    object::{JsObject, ObjectInitializer, builtins::JsArray},
+    object::{JsObject, ObjectInitializer},
     property::Attribute,
 };
 use oxc_allocator::Allocator;
@@ -20,11 +18,11 @@ use oxc_codegen::Codegen;
 use oxc_parser::Parser;
 use oxc_semantic::SemanticBuilder;
 use oxc_span::SourceType;
-use oxc_transformer::{JsxRuntime, TransformOptions, Transformer};
+use oxc_transformer::{TransformOptions, Transformer};
 use serde_json::{Map, Value};
 use std::{
     cell::{Cell, RefCell},
-    collections::{BTreeMap, BTreeSet},
+    collections::BTreeMap,
     fs,
     path::{Path, PathBuf},
     rc::Rc,
@@ -66,6 +64,8 @@ fn transpile(path: &Path, source: &str) -> Result<String> {
     if source.len() as u64 > MAX_SOURCE {
         return Err("Module exceeds the 16 MiB source limit".into());
     }
+    let lowered = crate::jsx::lower(path, source)?;
+    let source = lowered.as_str();
     let allocator = Allocator::default();
     let source_type = SourceType::from_path(path).map_err(|e| e.to_string())?;
     let parsed = Parser::new(&allocator, source, source_type).parse();
@@ -80,10 +80,6 @@ fn transpile(path: &Path, source: &str) -> Result<String> {
         return Err(format!("{}: {:?}", path.display(), semantic.diagnostics));
     }
     let mut options = TransformOptions::default();
-    options.jsx.runtime = JsxRuntime::Classic;
-    options.jsx.pragma = Some("__ad3Jsx".into());
-    options.jsx.pragma_frag = Some("__ad3Fragment".into());
-    options.jsx.development = false;
     options.typescript.jsx_pragma = "__ad3Jsx".into();
     options.typescript.jsx_pragma_frag = "__ad3Fragment".into();
     options.typescript.only_remove_type_imports = true;
@@ -248,6 +244,8 @@ fn resolve(specifier: &str, referrer: &Path) -> Result<PathBuf> {
 struct Loader {
     modules: RefCell<BTreeMap<PathBuf, Module>>,
     sources: RefCell<BTreeMap<PathBuf, String>>,
+    hosts: RefCell<BTreeMap<String, Module>>,
+    frozen: Option<BTreeMap<PathBuf, String>>,
 }
 
 impl Loader {
@@ -285,6 +283,13 @@ impl ModuleLoader for Loader {
         request: ModuleRequest,
         context: &RefCell<&mut Context>,
     ) -> JsResult<Module> {
+        let specifier = request.specifier().to_std_string_escaped();
+        if let Some(module) = self.hosts.borrow().get(&specifier) {
+            if !request.attributes().is_empty() {
+                return Err(error("Host modules do not accept import attributes"));
+            }
+            return Ok(module.clone());
+        }
         let referrer = referrer
             .path()
             .ok_or_else(|| error("A module import requires a source path"))?;
@@ -303,117 +308,18 @@ impl ModuleLoader for Loader {
         if let Some(module) = self.modules.borrow().get(&path) {
             return Ok(module.clone());
         }
-        let source = read(&path).map_err(error)?;
+        let source = if let Some(frozen) = &self.frozen {
+            frozen.get(&path).cloned().ok_or_else(|| {
+                error(format!(
+                    "Module is missing from the frozen project snapshot: {}",
+                    path.display()
+                ))
+            })?
+        } else {
+            read(&path).map_err(error)?
+        };
         self.compile(path, source, &mut context.borrow_mut())
     }
-}
-
-fn jsx(_: &JsValue, arguments: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
-    let tag = arguments
-        .first()
-        .ok_or_else(|| error("JSX tag is missing"))?;
-    let props = arguments
-        .get(1)
-        .and_then(JsValue::as_object)
-        .unwrap_or_else(|| ObjectInitializer::new(context).build());
-    let children = &arguments[arguments.len().min(2)..];
-    if tag.is_null() {
-        return Ok(JsArray::from_iter(children.iter().cloned(), context).into());
-    }
-    if let Some(component) = tag.as_callable() {
-        if !children.is_empty() {
-            let value = if children.len() == 1 {
-                children[0].clone()
-            } else {
-                JsArray::from_iter(children.iter().cloned(), context).into()
-            };
-            props.set(js_string!("children"), value, true, context)?;
-        }
-        return component.call(&JsValue::undefined(), &[props.into()], context);
-    }
-    let name = tag
-        .as_string()
-        .ok_or_else(|| error("JSX tag must be a component or intrinsic"))?
-        .to_std_string_escaped();
-    if !TAGS.contains(&name.as_str()) {
-        return Err(error(format!(
-            "<{name}> needs the native HTML host, which is still being ported"
-        )));
-    }
-    let children = if children.is_empty() {
-        vec![props.get(js_string!("children"), context)?]
-    } else {
-        children.to_vec()
-    };
-    let children = JsArray::from_iter(children, context);
-    Ok(ObjectInitializer::new(context)
-        .property(js_string!("tag"), tag.clone(), Attribute::all())
-        .property(js_string!("props"), props, Attribute::all())
-        .property(js_string!("children"), children, Attribute::all())
-        .build()
-        .into())
-}
-
-fn node(value: &Value, serial: &mut usize, ids: &mut BTreeSet<String>) -> Result<Node> {
-    *serial += 1;
-    if *serial > MAX_NODES {
-        return Err("Project exceeds the 100,000 node limit".into());
-    }
-    let tag = value["tag"]
-        .as_str()
-        .filter(|tag| TAGS.contains(tag))
-        .ok_or("Component returned an invalid composition node")?
-        .to_owned();
-    let mut props = value["props"].as_object().cloned().unwrap_or_default();
-    props.remove("children");
-    let id = match props.get("id") {
-        Some(Value::String(id)) if !id.trim().is_empty() => id.clone(),
-        Some(_) => return Err("Node id must be a nonempty string".into()),
-        None => format!("native-eval-{serial}"),
-    };
-    if !ids.insert(id.clone()) {
-        return Err(format!(
-            "Duplicate id {id:?}; generated instances must currently have distinct ids"
-        ));
-    }
-    let mut result = Node {
-        id,
-        tag,
-        props,
-        text: String::new(),
-        children: Vec::new(),
-        location: Location::default(),
-    };
-    append(&value["children"], &mut result, serial, ids)?;
-    if !result.text.trim().is_empty() && !matches!(result.tag.as_str(), "text" | "textRange") {
-        return Err(format!(
-            "Text is only valid inside <text> / <textRange>, found in <{}>",
-            result.tag
-        ));
-    }
-    Ok(result)
-}
-
-fn append(
-    value: &Value,
-    parent: &mut Node,
-    serial: &mut usize,
-    ids: &mut BTreeSet<String>,
-) -> Result<()> {
-    match value {
-        Value::Null | Value::Bool(_) => (),
-        Value::String(text) => parent.text.push_str(text),
-        Value::Number(number) => parent.text.push_str(
-            dragonbox_ecma::Buffer::new().format(number.as_f64().ok_or("Invalid number")?),
-        ),
-        Value::Array(values) => {
-            for value in values {
-                append(value, parent, serial, ids)?;
-            }
-        }
-        Value::Object(_) => parent.children.push(node(value, serial, ids)?),
-    }
-    Ok(())
 }
 
 pub struct Evaluation {
@@ -424,7 +330,7 @@ pub struct Evaluation {
 // Do not use JSON.stringify/toJSON: those can silently erase functions and
 // change the composition. Read each data property once and reject unsupported
 // native-host callbacks and cycles before a renderer receives a partial tree.
-fn snapshot_json(
+pub(crate) fn snapshot_json(
     value: &JsValue,
     context: &mut Context,
     ancestors: &mut Vec<JsObject>,
@@ -504,71 +410,337 @@ fn snapshot_json(
     Ok(result)
 }
 
-pub fn evaluate(path: &Path, source: &str) -> Result<Evaluation> {
-    let path = fs::canonicalize(path)
-        .or_else(|_| std::path::absolute(path))
-        .map_err(|e| e.to_string())?;
-    let loader = Rc::new(Loader::default());
-    let mut context = Context::builder()
-        .module_loader(loader.clone())
-        .job_executor(Rc::new(Jobs::default()))
-        .can_block(false)
-        .build()
-        .map_err(|e| e.to_string())?;
-    context
-        .runtime_limits_mut()
-        .set_loop_iteration_limit(1_000_000);
-    context.runtime_limits_mut().set_recursion_limit(128);
-    context
-        .register_global_builtin_callable(
-            js_string!("__ad3Jsx"),
-            2,
-            NativeFunction::from_fn_ptr(jsx),
-        )
-        .map_err(|e| e.to_string())?;
-    context
-        .register_global_property(
-            js_string!("__ad3Fragment"),
-            JsValue::null(),
-            Attribute::empty(),
-        )
-        .map_err(|e| e.to_string())?;
-    let module = loader
-        .compile(path, source.into(), &mut context)
-        .map_err(|e| e.to_string())?;
-    let promise = module.load_link_evaluate(&mut context);
-    context.run_jobs().map_err(|e| e.to_string())?;
-    match promise.state() {
-        PromiseState::Fulfilled(_) => (),
-        PromiseState::Rejected(reason) => {
-            return Err(reason
-                .to_string(&mut context)
-                .map_err(|e| e.to_string())?
-                .to_std_string_escaped());
-        }
-        PromiseState::Pending => {
-            return Err(
-                "Module evaluation did not settle; asynchronous host work is not ported yet".into(),
-            );
-        }
-    }
-    let exported = module
-        .namespace(&mut context)
-        .get(js_string!("default"), &mut context)
-        .map_err(|e| e.to_string())?;
-    let rendered = if let Some(component) = exported.as_callable() {
-        component
-            .call(&JsValue::undefined(), &[], &mut context)
-            .map_err(|e| e.to_string())?
-    } else {
-        exported
+/// A project module graph and reactive owner tree, kept alive across frames.
+/// Boa executes author code in-process; all editor host behavior is Rust.
+pub struct LiveProject {
+    context: Context,
+    loader: Rc<Loader>,
+    jobs: Rc<Jobs>,
+    host: reactive::Host,
+    rendered: JsValue,
+    last_time: Option<f64>,
+    pub warnings: Vec<String>,
+    cancel: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
+}
+
+// Authoring helper follows packages/jsx/src/time.ts, including parseFloat's
+// permissive trailing text. CLI timing validation remains intentionally strict.
+fn parse_time_api(_: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
+    let Some(value) = args.first() else {
+        return Ok(JsValue::undefined());
     };
-    let value = snapshot_json(&rendered, &mut context, &mut Vec::new(), &mut 0)
-        .map_err(|e| e.to_string())?;
-    let root = node(&value, &mut 0, &mut BTreeSet::new())?;
-    if root.tag != "stage" {
-        return Err("Project must return a <stage>".into());
+    let finite = |number: f64| {
+        if number.is_finite() {
+            JsValue::from(number)
+        } else {
+            JsValue::undefined()
+        }
+    };
+    if let Some(number) = value.as_number() {
+        return Ok(finite(number));
     }
-    let sources = loader.sources.borrow().clone();
-    Ok(Evaluation { root, sources })
+    let Some(text) = value.as_string() else {
+        return Ok(JsValue::undefined());
+    };
+    let text = text.to_std_string_escaped();
+    let text = text.trim();
+    if text.is_empty() {
+        return Ok(JsValue::undefined());
+    }
+    if text.ends_with(['f', 'F']) {
+        let body = &text[..text.len() - 1];
+        let unsigned = body.strip_prefix('-').unwrap_or(body);
+        let parts = unsigned.split('.').collect::<Vec<_>>();
+        if parts.len() <= 2
+            && parts
+                .iter()
+                .all(|part| !part.is_empty() && part.bytes().all(|b| b.is_ascii_digit()))
+        {
+            return Ok(finite(body.parse::<f64>().unwrap_or(f64::NAN) / 30.0));
+        }
+    }
+    if text.contains(':') {
+        let negative = text.starts_with('-');
+        let parts = text
+            .strip_prefix('-')
+            .unwrap_or(text)
+            .split(':')
+            .collect::<Vec<_>>();
+        if !(2..=3).contains(&parts.len()) {
+            return Ok(JsValue::undefined());
+        }
+        let mut seconds = 0.0;
+        for part in parts {
+            seconds = seconds * 60.0 + JsValue::from(js_string!(part)).to_number(context)?;
+        }
+        return Ok(finite(if negative { -seconds } else { seconds }));
+    }
+    let parse = context
+        .global_object()
+        .get(js_string!("parseFloat"), context)?;
+    let value = reactive::callable(Some(&parse))?.call(
+        &JsValue::undefined(),
+        &[js_string!(text).into()],
+        context,
+    )?;
+    Ok(finite(value.to_number(context)?))
+}
+
+fn install_hosts(loader: &Loader, context: &mut Context) -> JsResult<()> {
+    let solid = ObjectInitializer::new(context).build();
+    for (name, callback) in reactive::SOLID_FUNCTIONS
+        .iter()
+        .chain(crate::control::FUNCTIONS)
+        .copied()
+        .chain([
+            (
+                "mergeProps",
+                crate::props::merge as boa_engine::native_function::NativeFunctionPointer,
+            ),
+            ("splitProps", crate::props::split),
+        ])
+    {
+        let function = reactive::function(context, NativeFunction::from_fn_ptr(callback), 1);
+        solid.set(js_string!(name), function, true, context)?;
+    }
+    let jsx = ObjectInitializer::new(context)
+        .function(
+            NativeFunction::from_fn_ptr(reactive::use_ticker),
+            js_string!("useTicker"),
+            0,
+        )
+        .function(
+            NativeFunction::from_fn_ptr(parse_time_api),
+            js_string!("parseTime"),
+            1,
+        )
+        .property(js_string!("TIME_FPS"), 30, Attribute::empty())
+        .build();
+    for (specifier, global, object) in [
+        ("solid-js", "__ad3Solid", solid),
+        ("@diffusionstudio/jsx", "__ad3Authoring", jsx),
+    ] {
+        let keys = object.own_property_keys(context)?;
+        context.register_global_property(js_string!(global), object, Attribute::empty())?;
+        let code = keys
+            .into_iter()
+            .map(|key| format!("export const {key} = {global}.{key};"))
+            .collect::<String>();
+        let module = Module::parse(Source::from_bytes(&code), None, context)?;
+        loader.hosts.borrow_mut().insert(specifier.into(), module);
+    }
+    for (name, callback) in [
+        (
+            "__ad3Jsx",
+            crate::materialize::jsx as boa_engine::native_function::NativeFunctionPointer,
+        ),
+        ("__ad3Dynamic", crate::materialize::dynamic),
+        ("__ad3MergeProps", crate::props::merge),
+    ] {
+        context.register_global_builtin_callable(
+            js_string!(name),
+            4,
+            NativeFunction::from_fn_ptr(callback),
+        )?;
+    }
+    Ok(())
+}
+
+impl LiveProject {
+    pub fn mount(path: &Path, source: &str, offline: bool) -> Result<Self> {
+        Self::mount_frozen(path, source, offline, None)
+    }
+
+    pub fn mount_frozen(
+        path: &Path,
+        source: &str,
+        offline: bool,
+        frozen: Option<BTreeMap<PathBuf, String>>,
+    ) -> Result<Self> {
+        Self::mount_frozen_cancellable(path, source, offline, frozen, None)
+    }
+
+    pub fn mount_frozen_cancellable(
+        path: &Path,
+        source: &str,
+        offline: bool,
+        frozen: Option<BTreeMap<PathBuf, String>>,
+        cancel: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
+    ) -> Result<Self> {
+        crate::stack::runtime(|| Self::mount_inner(path, source, offline, frozen, cancel))
+    }
+    fn mount_inner(
+        path: &Path,
+        source: &str,
+        offline: bool,
+        frozen: Option<BTreeMap<PathBuf, String>>,
+        cancel: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
+    ) -> Result<Self> {
+        crate::encoder::cancelled(cancel.as_deref())?;
+        let path = fs::canonicalize(path)
+            .or_else(|_| std::path::absolute(path))
+            .map_err(|e| e.to_string())?;
+        let loader = Rc::new(Loader {
+            frozen,
+            ..Loader::default()
+        });
+        let jobs = Rc::new(Jobs::default());
+        let mut context = Context::builder()
+            .module_loader(loader.clone())
+            .job_executor(jobs.clone())
+            .can_block(false)
+            .build()
+            .map_err(|e| e.to_string())?;
+        context
+            .runtime_limits_mut()
+            .set_loop_iteration_limit(1_000_000);
+        context.runtime_limits_mut().set_recursion_limit(128);
+        let host = reactive::install(&mut context, offline);
+        install_hosts(&loader, &mut context).map_err(|e| e.to_string())?;
+        let module = loader
+            .compile(path, source.into(), &mut context)
+            .map_err(|e| e.to_string())?;
+        let promise = module.load_link_evaluate(&mut context);
+        context.run_jobs().map_err(|e| e.to_string())?;
+        match promise.state() {
+            PromiseState::Fulfilled(_) => (),
+            PromiseState::Rejected(reason) => {
+                return Err(reason
+                    .to_string(&mut context)
+                    .map_err(|e| e.to_string())?
+                    .to_std_string_escaped());
+            }
+            PromiseState::Pending => {
+                return Err(
+                    "Module evaluation did not settle; asynchronous host work is not ported yet"
+                        .into(),
+                );
+            }
+        }
+        let exported = module
+            .namespace(&mut context)
+            .get(js_string!("default"), &mut context)
+            .map_err(|e| e.to_string())?;
+        host.borrow_mut().mounted = true;
+        // Construct the owner now so even a failed component mount runs cleanup.
+        let mut project = Self {
+            context,
+            loader,
+            jobs,
+            host,
+            rendered: JsValue::undefined(),
+            last_time: None,
+            warnings: Vec::new(),
+            cancel,
+        };
+        project.rendered = if let Some(component) = exported.as_callable() {
+            component
+                .call(&JsValue::undefined(), &[], &mut project.context)
+                .map_err(|e| e.to_string())?
+        } else {
+            exported
+        };
+        project.rendered =
+            crate::control::children_value(project.rendered.clone(), &mut project.context)
+                .map_err(|e| e.to_string())?;
+        crate::materialize::root(&project.rendered, &mut project.context)
+            .map_err(|e| e.to_string())?;
+        reactive::finish_mount(&mut project.context).map_err(|e| e.to_string())?;
+        project.settle()?;
+        Ok(project)
+    }
+
+    fn settle(&mut self) -> Result<()> {
+        use std::time::{Duration, Instant};
+        let started = Instant::now();
+        loop {
+            crate::encoder::cancelled(self.cancel.as_deref())?;
+            self.context.run_jobs().map_err(|e| e.to_string())?;
+            reactive::flush(&mut self.context).map_err(|e| e.to_string())?;
+            let holds = std::mem::take(&mut self.host.borrow_mut().holds);
+            if holds.is_empty() {
+                break;
+            }
+            let mut pending = Vec::new();
+            for hold in holds {
+                match hold.state() {
+                    PromiseState::Fulfilled(_) => (),
+                    PromiseState::Rejected(reason) => self.warnings.push(format!(
+                        "Ticker hold rejected: {}",
+                        reason
+                            .to_string(&mut self.context)
+                            .map_err(|e| e.to_string())?
+                            .to_std_string_escaped()
+                    )),
+                    PromiseState::Pending => pending.push(hold),
+                }
+            }
+            if started.elapsed() >= Duration::from_secs(30) {
+                if !pending.is_empty() {
+                    self.warnings.push(format!(
+                        "{} ticker hold(s) timed out after 30 seconds",
+                        pending.len()
+                    ));
+                }
+                break;
+            }
+            self.host.borrow_mut().holds.extend(pending);
+            if !self.host.borrow().holds.is_empty() {
+                std::thread::sleep(Duration::from_millis(1));
+            }
+        }
+        Ok(())
+    }
+
+    pub fn sample(&mut self, time: f64, playing: bool) -> Result<Node> {
+        self.sample_at_rate(time, playing, 30.0)
+    }
+    pub fn sample_at_rate(&mut self, time: f64, playing: bool, fps: f64) -> Result<Node> {
+        crate::stack::runtime(|| self.sample_inner(time, playing, fps))
+    }
+    fn sample_inner(&mut self, time: f64, playing: bool, fps: f64) -> Result<Node> {
+        if !fps.is_finite() || fps <= 0.0 || fps > 240.0 {
+            return Err("FPS must be in (0, 240]".into());
+        }
+        self.jobs.count.set(0);
+        self.jobs.exhausted.set(false);
+        let delta = self.last_time.map_or(0.0, |previous| time - previous);
+        reactive::tick_at_rate(time, delta, playing, fps, &mut self.context)
+            .map_err(|e| e.to_string())?;
+        self.last_time = Some(time);
+        for _ in 0..100 {
+            self.settle()?;
+            let revision = self.host.borrow().revision;
+            let root = crate::materialize::root(&self.rendered, &mut self.context)
+                .map_err(|e| e.to_string())?;
+            self.settle()?;
+            if revision == self.host.borrow().revision {
+                return Ok(root);
+            }
+        }
+        Err("Project did not stabilize after 100 render passes".into())
+    }
+
+    pub fn sources(&self) -> BTreeMap<PathBuf, String> {
+        self.loader.sources.borrow().clone()
+    }
+    pub fn uses_ticker(&self) -> bool {
+        self.host.borrow().uses_ticker()
+    }
+}
+
+impl Drop for LiveProject {
+    fn drop(&mut self) {
+        let root = self.host.borrow().root;
+        let _ = reactive::dispose_owner(root, &mut self.context);
+    }
+}
+
+pub fn evaluate(path: &Path, source: &str) -> Result<Evaluation> {
+    let mut project = LiveProject::mount(path, source, false)?;
+    let root = project.sample(0.0, false)?;
+    Ok(Evaluation {
+        root,
+        sources: project.sources(),
+    })
 }

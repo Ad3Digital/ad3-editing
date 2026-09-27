@@ -133,7 +133,7 @@ fn opens_relative_modules_json_reexports_and_installed_esm_packages() {
 fn rejects_unported_hosts_callbacks_duplicate_ids_and_cycles() {
     for (source, message) in [
         (
-            "import {createSignal} from 'solid-js'; export default () => <stage/>;",
+            "import {createStore} from 'solid-js/store'; export default () => <stage/>;",
             "reactive host",
         ),
         (

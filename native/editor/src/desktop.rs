@@ -4,7 +4,7 @@
 use ad3_editor::{
     Result,
     media::{MediaLibrary, Tools},
-    render::RenderPlan,
+    project::ProjectRenderer,
     source::{History, SourceDocument},
     timing::Timeline,
     transport::Transport,
@@ -24,7 +24,6 @@ use std::{
 #[derive(Clone)]
 struct Snapshot {
     document: SourceDocument,
-    library: MediaLibrary,
     timeline: Timeline,
     project: PathBuf,
 }
@@ -47,7 +46,6 @@ impl Snapshot {
         let timeline = Timeline::resolve(&document.root, &library.durations)?;
         Ok(Self {
             document,
-            library,
             timeline,
             project,
         })
@@ -57,6 +55,7 @@ struct FrameRequest {
     snapshot: Arc<Snapshot>,
     generation: u64,
     time: f64,
+    playing: bool,
 }
 struct FrameReply {
     generation: u64,
@@ -65,6 +64,7 @@ struct FrameReply {
 enum Event {
     Opened(Box<Result<Snapshot>>),
     Exported(Result<PathBuf>),
+    ExportProgress(u64, u64),
 }
 
 #[cfg(debug_assertions)]
@@ -111,16 +111,28 @@ impl Editor {
         let repaint = context.egui_ctx.clone();
         thread::spawn(move || {
             let tools = Tools::default();
+            let mut mounted: Option<(Arc<Snapshot>, ProjectRenderer)> = None;
             while let Ok(request) = rx.recv() {
                 let snapshot = &request.snapshot;
                 let result = (|| {
-                    let mut plan = RenderPlan::build(
-                        &snapshot.document.root,
-                        &snapshot.timeline,
-                        &snapshot.library,
+                    if !mounted
+                        .as_ref()
+                        .is_some_and(|(current, _)| Arc::ptr_eq(current, snapshot))
+                    {
+                        let renderer = ProjectRenderer::new(
+                            &snapshot.document,
+                            &snapshot.project,
+                            tools.clone(),
+                            false,
+                        )?;
+                        mounted = Some((snapshot.clone(), renderer));
+                    }
+                    let renderer = &mut mounted.as_mut().unwrap().1;
+                    let mut plan = renderer.frame_plan(
                         &snapshot.timeline.active,
+                        request.time,
                         30.0,
-                        Some([request.time, request.time + 1.0 / 30.0]),
+                        request.playing,
                     )?;
                     plan.resize_output(360)?;
                     let bytes = plan.frame(&tools, &snapshot.project)?;
@@ -295,19 +307,17 @@ impl Editor {
         self.status = "Exportando…".into();
         self.export_job = Some(thread::spawn(move || {
             let result = (|| {
-                let plan = RenderPlan::build(
-                    &snapshot.document.root,
-                    &snapshot.timeline,
-                    &snapshot.library,
-                    &snapshot.timeline.active,
-                    30.0,
-                    None,
-                )?;
-                plan.export_cancellable(
-                    &Tools::default(),
+                ProjectRenderer::export(
+                    &snapshot.document,
                     &snapshot.project,
+                    Tools::default(),
                     &destination,
-                    Some(&cancel),
+                    30.0,
+                    Some(cancel.clone()),
+                    |frame, total| {
+                        let _ = tx.send(Event::ExportProgress(frame, total));
+                        context.request_repaint();
+                    },
                 )?;
                 Ok(destination)
             })();
@@ -319,6 +329,9 @@ impl Editor {
     fn poll(&mut self, context: &egui::Context) {
         while let Ok(event) = self.events.try_recv() {
             match event {
+                Event::ExportProgress(frame, total) => {
+                    self.status = format!("Exportando: {frame}/{total} frames")
+                }
                 Event::Opened(result) => {
                     self.loading = false;
                     match *result {
@@ -402,6 +415,7 @@ impl Editor {
                     snapshot: snapshot.clone(),
                     generation: self.generation,
                     time,
+                    playing: transport.playing,
                 })
                 .is_ok()
             {

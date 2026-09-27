@@ -2,6 +2,7 @@
 // License, v. 2.0. https://mozilla.org/MPL/2.0/
 use ad3_editor::{
     media::{MediaLibrary, Tools, checked_output, checked_output_cancellable, command},
+    project::ProjectRenderer,
     render::RenderPlan,
     source::SourceDocument,
     timing::Timeline,
@@ -221,6 +222,202 @@ fn native_export_preserves_trims_speed_audio_workarea_and_composition() {
             .unwrap()
             .to_string_lossy()
             .starts_with("ad3-rust-render-")
+    );
+    fs::remove_dir_all(absolute).unwrap();
+}
+
+#[test]
+#[ignore = "requires installed FFmpeg and FFprobe; run with --ignored"]
+fn reactive_export_advances_video_and_mixes_dynamic_gain_with_frozen_modules() {
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let folder = std::env::temp_dir().join(format!(
+        "ad3-rust-reactive-render-{}-{stamp}",
+        std::process::id()
+    ));
+    fs::create_dir(&folder).unwrap();
+    let tools = Tools::default();
+    checked_output(
+        command(&tools.ffmpeg)
+            .args([
+                "-v",
+                "error",
+                "-n",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=440:sample_rate=48000:duration=2",
+                "-c:a",
+                "pcm_s16le",
+            ])
+            .arg(folder.join("tone.wav")),
+    )
+    .unwrap();
+    let source = r#"
+        import {useTicker} from '@diffusionstudio/jsx';
+        import {color} from './palette';
+        export default ()=>{
+            const t=useTicker();
+            return <stage><scene id="s" active width={160} height={90} fill="black" workarea={[0.2,1.2]}>
+                <rect id="moving" width={20} height={20} x={t.time()<0.7?0:100} fill={t.playing()?color:'green'} end={2}/>
+                <audio id="tone" src="tone.wav" volume={t.time()<0.7?0:-12} end={2}/>
+            </scene></stage>;
+        }
+    "#;
+    fs::write(folder.join("index.tsx"), source).unwrap();
+    fs::write(folder.join("palette.ts"), "export const color='red';").unwrap();
+    let document = SourceDocument::open(&folder).unwrap();
+    fs::write(folder.join("palette.ts"), "export const color='blue';").unwrap();
+    let output = folder.join("reactive.mp4");
+    let mut frames = Vec::new();
+    let report = ProjectRenderer::export(
+        &document,
+        &folder,
+        tools.clone(),
+        &output,
+        10.0,
+        None,
+        |frame, total| frames.push((frame, total)),
+    )
+    .unwrap();
+    assert_eq!(report.frames, 10);
+    assert_eq!(frames.last(), Some(&(10, 10)));
+    assert!(report.warnings.is_empty());
+    let probe = tools.probe(&output).unwrap();
+    assert_eq!(
+        (probe.width, probe.height, probe.frame_rate, probe.has_audio),
+        (160, 90, 10.0, true)
+    );
+    assert!((probe.duration.unwrap() - 1.0).abs() < 0.03);
+    let first = tools.rgba(&output, 0.0, 160, 90).unwrap();
+    let later = tools.rgba(&output, 0.6, 160, 90).unwrap();
+    let repeated = folder.join("repeated.mp4");
+    ProjectRenderer::export(
+        &document,
+        &folder,
+        tools.clone(),
+        &repeated,
+        10.0,
+        None,
+        |_, _| {},
+    )
+    .unwrap();
+    assert_eq!(
+        first,
+        tools.rgba(&repeated, 0.0, 160, 90).unwrap(),
+        "A second export must mount fresh state"
+    );
+    let left = (5 * 160 + 5) * 4;
+    let right = (5 * 160 + 105) * 4;
+    assert!(
+        first[left] > 180 && first[left + 2] < 30,
+        "Frozen palette must stay red"
+    );
+    assert!(
+        later[left] < 30 && later[right] > 180,
+        "Ticker must move the rectangle"
+    );
+    let pcm = checked_output(
+        command(&tools.ffmpeg)
+            .args(["-v", "error", "-i"])
+            .arg(&output)
+            .args(["-map", "0:a:0", "-ac", "1", "-f", "f32le", "pipe:1"]),
+    )
+    .unwrap()
+    .stdout;
+    let samples = pcm
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|bytes| f32::from_le_bytes(*bytes) as f64)
+        .collect::<Vec<_>>();
+    let rms = |range: std::ops::Range<usize>| {
+        (samples[range.clone()].iter().map(|v| v * v).sum::<f64>() / range.len() as f64).sqrt()
+    };
+    let loud = rms(4800..14400);
+    let quiet = rms(33600..43200);
+    assert!(
+        (quiet / loud - 10_f64.powf(-12.0 / 20.0)).abs() < 0.04,
+        "Gain ratio {}",
+        quiet / loud
+    );
+    let cancel = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let cancelled = folder.join("cancelled.mp4");
+    let error = ProjectRenderer::export(
+        &document,
+        &folder,
+        tools.clone(),
+        &cancelled,
+        10.0,
+        Some(cancel.clone()),
+        |frame, _| {
+            if frame == 1 {
+                cancel.store(true, std::sync::atomic::Ordering::Relaxed);
+            }
+        },
+    )
+    .unwrap_err();
+    assert!(error.contains("cancelled"), "{error}");
+    assert!(!cancelled.exists());
+    assert_eq!(
+        fs::read_dir(folder.join(".diffusion/native-render"))
+            .unwrap()
+            .count(),
+        0
+    );
+    let before = fs::read(&output).unwrap();
+    assert!(
+        ProjectRenderer::export(
+            &document,
+            &folder,
+            tools.clone(),
+            &output,
+            10.0,
+            None,
+            |_, _| {}
+        )
+        .is_err()
+    );
+    assert_eq!(fs::read(&output).unwrap(), before);
+    // Existing encoder contract floors complete frames. At 24 fps this
+    // 1/15-second workarea contains one complete frame, reported as 1/24 s.
+    let short = source.replace("[0.2,1.2]", "[0,2/30]").replace(
+        "<audio id=\"tone\" src=\"tone.wav\" volume={t.time()<0.7?0:-12} end={2}/>",
+        "",
+    );
+    fs::write(folder.join("short.tsx"), short).unwrap();
+    let short_doc = SourceDocument::open(&folder.join("short.tsx")).unwrap();
+    let fractional = folder.join("fractional.mp4");
+    let short_report = ProjectRenderer::export(
+        &short_doc,
+        &folder,
+        tools.clone(),
+        &fractional,
+        24.0,
+        None,
+        |_, _| {},
+    )
+    .unwrap();
+    assert_eq!(short_report.frames, 1);
+    assert!((short_report.duration - 1.0 / 24.0).abs() < 1e-8);
+    assert!((short_report.workarea_duration - 2.0 / 30.0).abs() < 1e-8);
+    assert!(
+        (tools.probe(&fractional).unwrap().duration.unwrap() - short_report.duration).abs() < 0.002
+    );
+    assert_eq!(
+        fs::read_to_string(folder.join("index.tsx")).unwrap(),
+        source
+    );
+    let absolute = fs::canonicalize(&folder).unwrap();
+    assert!(absolute.starts_with(fs::canonicalize(std::env::temp_dir()).unwrap()));
+    assert!(
+        absolute
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .starts_with("ad3-rust-reactive-render-")
     );
     fs::remove_dir_all(absolute).unwrap();
 }

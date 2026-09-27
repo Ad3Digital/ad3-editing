@@ -17,9 +17,10 @@ cargo run --locked --manifest-path native/editor/Cargo.toml --bin dapi-rust -- -
 cargo run --locked --manifest-path native/editor/Cargo.toml --features desktop --bin ad3-editing -- /path/to/project
 ```
 
-Two small runnable projects are included: `examples/static` exercises source
-editing; `examples/modules` exercises components, imported JSON and generated
-rectangles. Pass the full path to either folder to the native executable.
+Three runnable projects are included: `examples/static` exercises source editing;
+`examples/modules` exercises imported components/JSON; `examples/reactive` animates
+rectangles and text through the native ticker, signals, `For` and `Show`.
+Pass the full path to a folder to the native executable.
 
 The desktop application opens an existing project folder or source entry, shows
 its scene and timeline, selects clips, edits properties, moves/cuts/deletes clips,
@@ -41,11 +42,23 @@ Rendered media never overwrites an existing output or original footage.
   atomic source replacement. Unrelated source bytes stay unchanged.
 - `document.rs`: authored node tree including every existing composition tag;
   original property values and source addresses.
-- `evaluator.rs`: Rust-hosted ECMAScript modules using Boa and Oxc. Non-reactive
-  function components, expressions, arrays, fragments, relative TS/JS imports,
+- `evaluator.rs`: persistent Rust-hosted ECMAScript modules using Boa and Oxc.
+  Function components, expressions, arrays, fragments, relative TS/JS imports,
   JSON modules, reexports, top-level await and installed ESM packages with exact
   `exports` entries can materialize a composition. No package is installed by the
   application and no Node/Electron process participates.
+- `jsx.rs`, `props.rs`, `materialize.rs`: native JSX lowering with lazy props,
+  reactive spreads/children and original file/attribute byte spans. Materializing
+  a frame preserves mounted components and produces an independent Rust tree.
+- `reactive.rs`, `control.rs`: Rust signals, memos, effect dependency tracking,
+  batching, cleanup scopes, `createRoot`, `onMount`, `untrack`, `mergeProps`,
+  `splitProps`, `children`, keyed `For`, positional `Index`, `Show`, and `useTicker`.
+  Offline holds are bounded to 30 seconds and can be cancelled during mounting.
+- `project.rs`, `encoder.rs`, `audio.rs`: shared preview/capture lifecycle,
+  fresh offline mounts using the opened module snapshot, frame-by-frame reactive
+  export, bounded encoder pipe, progress, and a 48 kHz stereo mixer in Rust.
+  FFmpeg decodes and time-stretches sources once per path/rate; Rust applies clip
+  windows, source clocks, reactive gain and summation at sample boundaries.
 - `timing.rs`: 30 fps authoring time, source trims, both out-edge caps, natural
   source durations, nested clocks, container spans/clipping, workareas and dB buses.
 - `transport.rs`: seeks, J/K/L shuttle tiers, looping and decoder generations.
@@ -61,8 +74,11 @@ Rendered media never overwrites an existing output or original footage.
 The static reader preserves source spans for editing. When a project needs
 module execution, the native evaluator opens it for inspection/rendering; source
 edits are refused until multi-file source mapping and instance unrolling exist.
-Solid host modules, drawing callbacks, CommonJS, package export wildcards/arrays and
-browser remapping tables remain unsupported. Functions in composition properties,
+The `solid-js` exports listed above are implemented in Rust. Other Solid APIs
+(including stores, resources, contexts, `Switch`/`Match`) are still pending.
+Drawing callbacks, browser/HTML APIs, timers/fetch, asset-generation hooks,
+CommonJS, package export wildcards/arrays and browser remapping remain unsupported.
+Functions in composition properties,
 duplicate IDs and cyclic data fail explicitly. Rendering also rejects properties
 and node kinds that are not implemented. A successful parse/evaluation is not a
 claim of rendering parity.
@@ -82,16 +98,16 @@ this ledger is waived because a smaller example renders successfully.
 
 | Area | Current implementation | Required before replacement |
 | --- | --- | --- |
-| Source/project model | Static TSX span edits; native non-reactive ES module evaluation and components | Complete package resolution, Solid signals/control flow, hooks/tickers, `@inspect`, loop unrolling and multi-file edits; last-good-render behavior |
+| Source/project model | Static TSX edits; native ES modules, reactive props, signals/effects, For/Index/Show and ticker; original file spans | Remaining package/Solid/browser APIs, `@inspect`, generation hooks, loop unrolling and multi-file edits; last-good-render behavior |
 | Timeline | Source/timeline clocks, workareas, cuts/trims/moves, nested rates, transport | Ripple Q/E, multi-selection, clipboard/grouping, transitions, keyframe tracks, all timeline gestures/colors/toggles and established constraints |
 | Graphics | Static media, rects and basic unwrapped text | GPU compositor; every transform, masks, blend modes, gradients, paints, strokes, shadows, effects, wrapped/styled text, HTML, surfaces, WGSL and adjustment layers |
-| Audio | Offline retiming, gain and mixing | Real-time output and seek/rate re-anchoring, solo/bus hierarchy, gain/keyframes, syncTo and precise behavior across all cuts/rates |
+| Audio | Offline retiming and Rust stereo mixing with per-frame reactive gain | Real-time output and seek/rate re-anchoring, solo/bus hierarchy, gain/keyframes, syncTo and precise behavior across all cuts/rates |
 | Animation/captions | Authored data retained | Easing, preset animations, keyframes, transitions, transcript parsing and every caption preset |
 | Media/assets | Local FFprobe and linked YAML sources | Hash/manifest lifecycle, import/relink/move/folders, proxies and bounded caches, frame directories, remote resolution/modifiers, transcripts |
 | CLI/IPC | Native explicit-project commands | Existing dapi flags/output/contracts, open/context IPC, logs, fonts, screenshots, filmstrips/contact sheets and all applicable local commands |
 | HyperFrames | Existing separate package untouched | Rust save/template/preview/render/cancel engine, project isolation, immutable outputs and linked timeline updates |
 | Desktop | Basic native editor | All inspector/canvas interactions, shortcuts, native pickers/menus, project dashboard/create/rename/duplicate, watcher/reload, session persistence, accessible UI QA |
-| Export | Opaque H.264/AAC MP4, PNG capture and cancellation | All current containers/codecs, alpha/sequences, frame-exact animation/audio, progress and complete error recovery, high resolution and fractional fps comparisons |
+| Export | H.264/AAC MP4, reactive frame sampling, progress/cancellation and fresh mounts; PNG capture | All current containers/codecs, alpha/sequences, complete animation/audio parity and error recovery, high resolution and broader fractional fps comparisons |
 | Delivery | Local Cargo crate | Windows/macOS builds and packaging, bundled native tools/fonts/licenses, install/launch/upgrade checks and removal of Electron/Node/TypeScript application dependency |
 
 Project format migration and authoring API compatibility must be addressed by
@@ -108,9 +124,10 @@ cargo test --locked --manifest-path native/editor/Cargo.toml --test rendering --
 cargo build --locked --manifest-path native/editor/Cargo.toml --features desktop
 ```
 
-The explicit FFmpeg integration test creates its own video/audio fixture. It
-checks workarea duration, dimensions/fps, source motion, the overlaid color,
-audible dB gain, capture, cancellation/reaping, temporary-file cleanup, missing
+The explicit FFmpeg integration tests create their own video/audio fixtures. They
+check workarea duration, dimensions/fps, source motion, the overlaid color,
+audible dB gain, reactive movement/gain, frozen imports, repeated exports,
+complete-frame durations, capture, cancellation/reaping, temporary-file cleanup, missing
 streams and refusal to overwrite. Source tests cover UTF-8 and
 comments, split/trim at altered rate, inherited timing/gain, unsupported dynamic
 modules, JavaScript text coercion, atomic save, validated undo/redo and external
@@ -121,8 +138,19 @@ the implemented subset; they do **not** prove complete editor parity.
 Module evaluation tests cover typed function components, map/conditionals,
 fragments, JSON, installed ESM packages, exact export conditions, reexports,
 top-level await, edit refusal, optional undefined data normalization, unsupported
-host callbacks and bounded loop/job
-execution. These do not verify reactive lifecycle parity.
+host callbacks and bounded loop/job execution. Reactive tests cover batching,
+memo equality and pull order, conditional dependencies, nested cleanup, list
+identity/reordering, Show lifetime, mount ordering, ticker boundaries, optional
+children props, offline holds/cancellation, and independent samples.
+
+The export clock follows the existing encoder: it writes complete frames
+(`floor(workarea duration * output FPS)`). The report distinguishes the authored
+workarea duration from the video duration; audio covers the workarea at 48 kHz.
+`playing()` is true in exports. The ticker's frame accessor uses the output FPS
+in exports and 30 fps in the editor/capture, matching the current engine behavior.
+Reactive export currently composes one CPU frame per FFmpeg invocation; native
+GPU rendering and persistent decoders remain pending. Decoded audio is held in
+job-owned temporary files, with a limit of 128 distinct source/rate variants.
 
 The current renderer caps one job at a 24-hour workarea and applies a 24-hour
 process timeout. Probe/capture processes have a 120-second timeout.
@@ -130,6 +158,10 @@ The evaluator limits modules (512), each source (16 MiB), loop iterations
 (1,000,000), asynchronous jobs (10,000), call recursion (128), and output tree
 size/depth. It is a local project runtime, not a security boundary for untrusted
 code or a general browser implementation.
+The VM and recursive host updates use [stacker](https://docs.rs/stacker/0.1.25/stacker/)
+to grow the stack on the same thread when necessary, including the smaller
+Windows main stack. A regression test mounts the full animated example on a
+256 KiB thread stack and samples/disposes it there.
 
 On Antonio's Windows machine, use the existing toolchain under
 `D:/Tools/ad3-rust`, with `CARGO_HOME=D:/Tools/ad3-rust/cargo` and

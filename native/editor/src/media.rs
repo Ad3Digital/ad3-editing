@@ -297,8 +297,20 @@ pub struct MediaLibrary {
     pub durations: BTreeMap<String, f64>,
 }
 
+#[derive(Default)]
+pub struct ProbeCache(BTreeMap<(PathBuf, u64, Option<std::time::SystemTime>), Probe>);
+
 impl MediaLibrary {
     pub fn load(root: &Node, project: &Path, tools: &Tools) -> Result<Self> {
+        Self::load_cached(root, project, tools, &mut ProbeCache::default())
+    }
+
+    pub fn load_cached(
+        root: &Node,
+        project: &Path,
+        tools: &Tools,
+        cache: &mut ProbeCache,
+    ) -> Result<Self> {
         let manifest = project.join("assets.yml");
         let manifest: Value = if manifest.is_file() {
             if fs::metadata(&manifest).map_err(|e| e.to_string())?.len() > 16 * 1024 * 1024 {
@@ -314,7 +326,6 @@ impl MediaLibrary {
             probes: BTreeMap::new(),
             durations: BTreeMap::new(),
         };
-        let mut cache = BTreeMap::new();
         for node in root.nodes() {
             if !matches!(
                 node.tag.as_str(),
@@ -351,11 +362,14 @@ impl MediaLibrary {
             if !path.is_file() {
                 return Err(format!("{}: source not found: {}", node.id, path.display()));
             }
-            let probe = if let Some(probe) = cache.get(&path) {
+            let metadata = fs::metadata(&path).map_err(|error| error.to_string())?;
+            let cache_key = (path.clone(), metadata.len(), metadata.modified().ok());
+            let probe = if let Some(probe) = cache.0.get(&cache_key) {
                 Probe::clone(probe)
             } else {
                 let probe = tools.probe(&path)?;
-                cache.insert(path.clone(), probe.clone());
+                cache.0.retain(|(existing, _, _), _| *existing != path);
+                cache.0.insert(cache_key, probe.clone());
                 probe
             };
             if node.tag == "audio" && !probe.has_audio {
