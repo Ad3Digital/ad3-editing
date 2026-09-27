@@ -8,6 +8,7 @@ pub mod document;
 pub mod easing;
 mod encoder;
 pub mod evaluator;
+pub mod geometry;
 pub mod inspect;
 pub mod jsx;
 mod materialize;

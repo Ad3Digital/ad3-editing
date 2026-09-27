@@ -70,6 +70,12 @@ Rendered media never overwrites an existing output or original footage.
   trims, both out-edge caps, natural source durations, nested clocks, container
   spans/clipping, workareas and dB buses. The original fallback is 480 frames.
 - `transport.rs`: seeks, J/K/L shuttle tiers, looping and decoder generations.
+- `geometry.rs`: native affine matrices, resolved local transforms, world/group
+  bounds, camera resolution, inherited culling and point/quad selection kernels.
+  Original-function reference fixtures cover rotation, simultaneous shear, flips,
+  default/explicit anchors, singular matrices, group exclusions and selection
+  boundaries. This is a building block: scene traversal and integration with the
+  renderer/desktop are still pending, so it does not enable transformed output yet.
 - `media.rs`: local probing, linked asset resolution, video frames and waveform.
 - `render.rs`: local static scene composition, rectangles, basic unwrapped text,
   video/image fitting, stacking, opacity, trimmed/rate-adjusted audio, mixing,
@@ -180,6 +186,17 @@ development-only `tests/reference/generate-motion.mjs` regenerates these fixture
 from the original TS implementation and installed anime.js/colord; it requires
 Node 24 and the repository's development dependencies. Adapted algorithms retain
 their MIT notices under `licenses/`.
+
+Geometry has 180 transform/camera/culling cases, 45 group cases and 36 quad
+comparisons from the original math, transform and interaction functions, plus
+explicit singular/anchor/edge tests. Its development-only generator requires
+Node 24 and records hashes of the original sources with normalized line endings.
+Regenerate with `node native/editor/tests/reference/generate-geometry.mjs` from
+the repository root. Before accepting changes to those originals or this port,
+run `node native/editor/tests/reference/generate-geometry.mjs --check`: it executes
+the original functions again and compares both results and source hashes with
+the committed fixture. The ordinary Rust tests consume that snapshot offline;
+they do not themselves check for changes to the TypeScript originals.
 
 For compatibility reviews, follow the whole source path: public JSX props in
 `packages/reconciler/src/document.ts`, then their runtime consumer. The Rust

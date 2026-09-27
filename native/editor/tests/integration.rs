@@ -2,6 +2,8 @@
 // separate test executables is unnecessarily expensive on Windows.
 #[path = "editing.rs"]
 mod editing;
+#[path = "geometry.rs"]
+mod geometry;
 #[path = "inspect.rs"]
 mod inspect;
 #[path = "modules.rs"]
