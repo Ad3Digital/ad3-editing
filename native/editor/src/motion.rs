@@ -114,6 +114,43 @@ impl Motion {
             location: original.location.clone(),
             children: Vec::with_capacity(original.children.len()),
         };
+        // Size reaches Computed through resizeEntity/propagateSize, rounded
+        // before motion. Width/height keyframes may then assign fractional sizes.
+        if matches!(
+            original.tag.as_str(),
+            "scene" | "rect" | "image" | "video" | "audio" | "adjustmentLayer" | "html" | "surface"
+        ) {
+            for property in ["width", "height"] {
+                if let Some(value) = output
+                    .props
+                    .get(property)
+                    .and_then(Value::as_f64)
+                    .filter(|v| v.is_finite())
+                {
+                    output
+                        .props
+                        .insert(property.into(), crate::timing::round_frame(value).into());
+                }
+            }
+        }
+        let corners = [
+            "cornerRadiusTopLeft",
+            "cornerRadiusTopRight",
+            "cornerRadiusBottomRight",
+            "cornerRadiusBottomLeft",
+        ];
+        let vector = matches!(original.tag.as_str(), "rect" | "scene");
+        let mixed = corners.iter().any(|key| original.props.contains_key(*key));
+        if vector && mixed {
+            // MixedCornerRadius is established from authored props, before
+            // motion. An animated uniform radius cannot change its fallbacks.
+            let uniform = original.number("cornerRadius", 0.0)?;
+            for key in corners {
+                output
+                    .props
+                    .insert(key.into(), original.number(key, uniform)?.into());
+            }
+        }
         let mut numbers = BTreeMap::<String, f64>::new();
         // The runtime mirrors uniform scale only on the enclosing geometry,
         // group or adjustment layer, never on a nested paint/style target.
@@ -225,6 +262,18 @@ impl Motion {
             numbers.insert("scaleX".into(), x);
             numbers.insert("scaleY".into(), x);
             output.props.remove("scale");
+        }
+        if vector {
+            // Tracks update Computed stores, not trait membership. Without
+            // Color or MixedCornerRadius these values do not become ink.
+            if !original.props.contains_key("fill") {
+                numbers.remove("color");
+            }
+            if !mixed {
+                for key in corners {
+                    numbers.remove(key);
+                }
+            }
         }
         Self::write_values(&mut output, &numbers)?;
         for child in &original.children {

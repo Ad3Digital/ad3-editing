@@ -3,6 +3,7 @@
 mod atomic_file;
 mod audio;
 pub mod color;
+pub mod compositor;
 mod control;
 pub mod document;
 pub mod easing;

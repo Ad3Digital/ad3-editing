@@ -168,7 +168,7 @@ fn local_motion_clock_obeys_source_trim_rate_and_fitted_group_bounds() {
 #[test]
 fn nested_style_tracks_share_holder_clock_color_channels_and_uniform_scale_rules() {
     let root = tree(
-        r#"<rect id="r" start={1} end={4} scale={2}>
+        r#"<rect id="r" start={1} end={4} scale={2} fill="red">
       <keyframeTrack property="scaleY"><keyframe value={9}/></keyframeTrack>
       <keyframeTrack property="color"><keyframe value="red"/><keyframe time={1} value="blue"/></keyframeTrack>
       <solidPaint id="p" color="red"><keyframeTrack property="color"><keyframe value="red"/><keyframe time={1} value="blue"/></keyframeTrack></solidPaint>

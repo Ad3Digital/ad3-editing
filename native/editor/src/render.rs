@@ -26,6 +26,7 @@ pub struct RenderPlan {
     pub inputs: Vec<OsString>,
     pub has_audio: bool,
     text_files: Vec<String>,
+    native: Option<crate::compositor::NativeFrame>,
 }
 
 fn dimension(n: f64) -> Result<u32> {
@@ -106,13 +107,37 @@ fn supported(node: &Node) -> Result<()> {
 }
 
 impl RenderPlan {
-    /// Scale after composition so authored coordinates remain in scene pixels.
+    pub(crate) fn native_frame(frame: crate::compositor::NativeFrame, fps: f64) -> Self {
+        Self {
+            width: frame.width,
+            height: frame.height,
+            duration: 1.0 / fps,
+            fps,
+            graph: String::new(),
+            inputs: Vec::new(),
+            has_audio: false,
+            text_files: Vec::new(),
+            native: Some(frame),
+        }
+    }
+    pub fn is_native(&self) -> bool {
+        self.native.is_some()
+    }
+    /// Scale output without changing authored scene coordinates. Native drawing
+    /// uses the original image encoder's uniform resolution; rounding the canvas
+    /// width does not stretch the scene to a different aspect ratio.
     pub fn resize_output(&mut self, height: u32) -> Result<()> {
+        dimension(f64::from(height))?;
+        if let Some(frame) = &mut self.native {
+            frame.resize_output(height)?;
+            self.width = frame.width;
+            self.height = frame.height;
+            return Ok(());
+        }
         let width = dimension(
             (f64::from(self.width) * f64::from(height) / f64::from(self.height) / 2.0).round()
                 * 2.0,
         )?;
-        dimension(f64::from(height))?;
         let intermediate = format!("unscaled{}", self.graph.len());
         self.graph = self.graph.replace("[vout]", &format!("[{intermediate}]"));
         self.graph += &format!(";[{intermediate}]scale={width}:{height}[vout]");
@@ -168,6 +193,7 @@ impl RenderPlan {
             inputs: Vec::new(),
             has_audio: false,
             text_files: Vec::new(),
+            native: None,
         };
         let mut visual = 0;
         let mut input = 0;
@@ -435,6 +461,32 @@ impl RenderPlan {
         if !self.width.is_multiple_of(2) || !self.height.is_multiple_of(2) {
             return Err("H.264 export requires even dimensions".into());
         }
+        if self.native.is_some() {
+            crate::encoder::cancelled(cancel)?;
+            if (self.duration - 1.0 / self.fps).abs() > 1e-9 {
+                return Err(
+                    "A native frame plan exports one frame; use ProjectRenderer for a workarea"
+                        .into(),
+                );
+            }
+            let mut directory = JobDirectory::new(project)?;
+            let temporary = directory.file("native-frame.mp4");
+            let mut encoder = crate::encoder::Encoder::start(
+                tools,
+                self.width,
+                self.height,
+                self.fps,
+                &temporary,
+                &mut directory,
+            )?;
+            encoder.send(
+                self.export_frame_cancellable(tools, project, cancel)?,
+                cancel,
+            )?;
+            encoder.finish(cancel)?;
+            drop(encoder);
+            return crate::encoder::publish(&temporary, &output, cancel);
+        }
         let mut directory = self.prepare(project)?;
         let temp = directory.path.join("render.mp4");
         directory.files.push(temp.clone());
@@ -514,6 +566,9 @@ impl RenderPlan {
         project: &Path,
         cancel: Option<&AtomicBool>,
     ) -> Result<Vec<u8>> {
+        if let Some(native) = &self.native {
+            return native.rgba(self.width, self.height, false, cancel);
+        }
         let directory = self.prepare(project)?;
         let mut command = self.command(tools, &directory);
         command.args([
@@ -546,11 +601,42 @@ impl RenderPlan {
         Ok(output.stdout)
     }
 
+    pub(crate) fn export_frame_cancellable(
+        &self,
+        tools: &Tools,
+        project: &Path,
+        cancel: Option<&AtomicBool>,
+    ) -> Result<Vec<u8>> {
+        if let Some(native) = &self.native {
+            native.rgba(self.width, self.height, true, cancel)
+        } else {
+            self.frame_cancellable(tools, project, cancel)
+        }
+    }
+
     pub fn capture(&self, tools: &Tools, project: &Path, output: &Path) -> Result<()> {
         if output.extension().and_then(|e| e.to_str()) != Some("png") {
             return Err("Capture destination must be .png".into());
         }
         let output = std::path::absolute(output).map_err(|e| e.to_string())?;
+        if let Some(native) = &self.native {
+            let png = native
+                .pixmap(self.width, self.height, None)?
+                .encode_png()
+                .map_err(|e| e.to_string())?;
+            let mut directory = JobDirectory::new(project)?;
+            let temporary = directory.file("capture.png");
+            let mut file = fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&temporary)
+                .map_err(|e| e.to_string())?;
+            file.write_all(&png)
+                .and_then(|_| file.sync_all())
+                .map_err(|e| e.to_string())?;
+            drop(file);
+            return crate::encoder::publish(&temporary, &output, None);
+        }
         let directory = self.prepare(project)?;
         let mut command = self.command(tools, &directory);
         command

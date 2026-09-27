@@ -15,6 +15,7 @@ use crate::{
 };
 use serde::Serialize;
 use std::{
+    collections::BTreeMap,
     fs,
     io::Write,
     path::{Path, PathBuf},
@@ -22,11 +23,23 @@ use std::{
     time::Duration,
 };
 
+enum SceneBackend {
+    Native(crate::compositor::Compositor),
+    Legacy,
+    Blocked(String),
+}
+struct SceneState {
+    // The capture engine allocates its canvas before per-frame motion.
+    canvas: [f64; 2],
+    backend: Option<SceneBackend>,
+}
 pub struct ProjectRenderer {
     live: Option<LiveProject>,
     authored_root: Node,
     motion: crate::motion::Motion,
     has_motion: bool,
+    scenes: BTreeMap<String, SceneState>,
+    offline: bool,
     cache: ProbeCache,
     pub project: PathBuf,
     pub root: Node,
@@ -80,6 +93,8 @@ impl ProjectRenderer {
             authored_root: document.root.clone(),
             motion: Default::default(),
             has_motion: false,
+            scenes: BTreeMap::new(),
+            offline,
             cache: ProbeCache::default(),
             project: project.into(),
             root: document.root.clone(),
@@ -109,6 +124,24 @@ impl ProjectRenderer {
             MediaLibrary::load_cached(&authored, &self.project, &self.tools, &mut self.cache)?;
         let timeline =
             Timeline::resolve_at_rate(&authored, &self.library.durations, self.frame_rate)?;
+        self.scenes
+            .retain(|id, _| timeline.workareas.contains_key(id));
+        for id in timeline.workareas.keys() {
+            if !self.scenes.contains_key(id) {
+                let scene = authored.find(id).ok_or("Scene missing from document")?;
+                let canvas = [
+                    crate::timing::round_frame(scene.number("width", 1920.0)?),
+                    crate::timing::round_frame(scene.number("height", 1080.0)?),
+                ];
+                self.scenes.insert(
+                    id.clone(),
+                    SceneState {
+                        canvas,
+                        backend: None,
+                    },
+                );
+            }
+        }
         self.has_motion = crate::motion::has_motion(&authored);
         self.root = if self.has_motion {
             self.motion
@@ -134,20 +167,81 @@ impl ProjectRenderer {
         self.sample(time, playing)?;
         self.current_frame_plan(scene, time, fps)
     }
-    fn current_frame_plan(&self, scene: &str, time: f64, fps: f64) -> Result<RenderPlan> {
+    fn current_frame_plan(&mut self, scene: &str, time: f64, fps: f64) -> Result<RenderPlan> {
+        let node = self
+            .root
+            .find(scene)
+            .filter(|node| node.tag == "scene")
+            .ok_or("No active scene")?;
+        let supported = crate::compositor::Compositor::supports(node);
+        let state = self
+            .scenes
+            .get_mut(scene)
+            .ok_or("Scene has no capture state")?;
+        let backend = state.backend.get_or_insert_with(|| {
+            if supported {
+                SceneBackend::Native(Default::default())
+            } else {
+                SceneBackend::Legacy
+            }
+        });
+        if matches!(backend, SceneBackend::Native(_)) && !supported {
+            *backend=SceneBackend::Blocked("Scene added unsupported nodes after native vector rendering began; switching compositors during a render requires reopening the project".into());
+        }
+        if let SceneBackend::Blocked(error) = backend {
+            return Err(error.clone());
+        }
+        if let SceneBackend::Native(compositor) = backend {
+            let result = (|| {
+                let background = if self.offline {
+                    None
+                } else {
+                    Some(
+                        self.root
+                            .props
+                            .get("background")
+                            .map(crate::compositor::packed_color)
+                            .transpose()?
+                            .unwrap_or(0),
+                    )
+                };
+                compositor.frame_on_canvas(
+                    node,
+                    &self.timeline,
+                    time,
+                    fps,
+                    self.has_motion,
+                    background,
+                    Some(state.canvas),
+                )
+            })();
+            let frame = match result {
+                Ok(frame) => frame,
+                Err(error) => {
+                    // Planning errors describe input/feature incompatibility.
+                    // Pixel allocation, cancellation and file/codec errors are
+                    // handled later, outside this state transition.
+                    let error = format!("{error}; scene rendering requires reopening the project");
+                    *backend = SceneBackend::Blocked(error.clone());
+                    return Err(error);
+                }
+            };
+            return Ok(RenderPlan::native_frame(frame, fps));
+        }
         // A preview/capture only needs pixels. Sound is rendered by the mixer.
         let mut silent = self.timeline.clone();
         for span in silent.spans.values_mut() {
             span.muted = true;
         }
-        RenderPlan::build(
+        let plan = RenderPlan::build(
             &self.root,
             &silent,
             &self.library,
             scene,
             fps,
             Some([time, time + 1.0 / fps]),
-        )
+        )?;
+        Ok(plan)
     }
     pub fn set_inspect(&mut self, file: &Path, name: &str, value: serde_json::Value) -> Result<()> {
         self.live
@@ -193,14 +287,6 @@ impl ProjectRenderer {
             .ok_or("No active scene workarea")?;
         renderer.frame_rate = fps;
         renderer.sample(area[0], true)?;
-        let plan = RenderPlan::build(
-            &renderer.root,
-            &renderer.timeline,
-            &renderer.library,
-            &scene,
-            fps,
-            Some(area),
-        )?;
         // The capture world already quantized both endpoints to output frames.
         // Subtract their integer frame indices: subtracting seconds first can
         // lose a whole frame through cancellation at large scene times.
@@ -208,21 +294,36 @@ impl ProjectRenderer {
         if frames == 0 {
             return Err("Workarea is shorter than one complete frame at the selected FPS".into());
         }
+        let duration = area[1] - area[0];
+        if duration > 24.0 * 3600.0 {
+            return Err("Native render workarea exceeds the current 24-hour job limit".into());
+        }
+        let plan = renderer.current_frame_plan(&scene, area[0], fps)?;
+        let (width, height) = (plan.width, plan.height);
         let video_duration = frames as f64 / fps;
         let mut report = ExportReport {
             width: plan.width,
             height: plan.height,
-            duration: plan.duration,
+            duration,
             fps,
             frames,
             warnings: Vec::new(),
-            workarea_duration: plan.duration,
+            workarea_duration: duration,
             video_duration,
         };
-        if !renderer.has_motion
+        if !plan.is_native()
+            && !renderer.has_motion
             && !renderer.live.as_ref().is_some_and(LiveProject::uses_ticker)
-            && (video_duration - plan.duration).abs() < 1e-9
+            && (video_duration - duration).abs() < 1e-9
         {
+            let plan = RenderPlan::build(
+                &renderer.root,
+                &renderer.timeline,
+                &renderer.library,
+                &scene,
+                fps,
+                Some(area),
+            )?;
             plan.export_cancellable(&renderer.tools, project, &output, cancel)?;
             progress(frames, frames);
         } else {
@@ -249,18 +350,20 @@ impl ProjectRenderer {
             )?;
             let samples = (frames as f64 * SAMPLE_RATE / fps).ceil() as u64;
             let mut first_sample = 0;
+            let mut first_plan = Some(plan);
             for frame in 0..frames {
                 cancelled(cancel)?;
                 let time = area[0] + frame as f64 / fps;
                 let frame_plan = if frame == 0 {
-                    renderer.current_frame_plan(&scene, time, fps)?
+                    first_plan.take().expect("First frame plan")
                 } else {
                     renderer.frame_plan(&scene, time, fps, true)?
                 };
-                if frame_plan.width != plan.width || frame_plan.height != plan.height {
+                if frame_plan.width != width || frame_plan.height != height {
                     return Err("Scene dimensions changed during export".into());
                 }
-                let bytes = frame_plan.frame_cancellable(&renderer.tools, project, cancel)?;
+                let bytes =
+                    frame_plan.export_frame_cancellable(&renderer.tools, project, cancel)?;
                 encoder.send(bytes, cancel)?;
                 let last_sample = if frame + 1 == frames {
                     samples

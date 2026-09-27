@@ -17,11 +17,12 @@ cargo run --locked --manifest-path native/editor/Cargo.toml --bin dapi-rust -- -
 cargo run --locked --manifest-path native/editor/Cargo.toml --features desktop --bin ad3-editing -- /path/to/project
 ```
 
-Five runnable projects are included: `examples/static` exercises source editing;
+Six runnable projects are included: `examples/static` exercises source editing;
 `examples/modules` exercises imported components/JSON; `examples/reactive` animates
 rectangles and text through the native ticker, signals, `For` and `Show`;
 `examples/inspect` exposes editable controls from an imported component module;
-`examples/motion` combines slide/fade/text presets with an animated color track.
+`examples/motion` combines slide/fade/text presets with an animated color track;
+`examples/vectors` exercises native rounded shapes, transforms and group opacity.
 Pass the full path to a folder to the native executable.
 
 The desktop application opens an existing project folder or source entry, shows
@@ -74,10 +75,17 @@ Rendered media never overwrites an existing output or original footage.
   bounds, camera resolution, inherited culling and point/quad selection kernels.
   Original-function reference fixtures cover rotation, simultaneous shear, flips,
   default/explicit anchors, singular matrices, group exclusions and selection
-  boundaries. This is a building block: scene traversal and integration with the
-  renderer/desktop are still pending, so it does not enable transformed output yet.
+  boundaries. The vector compositor now uses these kernels for scene traversal.
+- `compositor.rs`: native CPU vector rasterization with tiny-skia for scenes made
+  of rectangles, groups, sequences and audio nodes. Shared preview/capture/export
+  draw lists apply position/offset, rotation, uniform/axis scale, inherited opacity,
+  rounded corners and scene clipping. Group bounds follow the original parent-first
+  traversal using previous child transforms. Offline frames/PNG preserve alpha;
+  H.264 frames explicitly composite over black. Realtime scene previews use the
+  stage background. Vector frames do not invoke FFmpeg to draw pixels.
 - `media.rs`: local probing, linked asset resolution, video frames and waveform.
-- `render.rs`: local static scene composition, rectangles, basic unwrapped text,
+- `render.rs`: shared frame/output interface and the existing FFmpeg composition
+  path for projects containing media or text: rectangles, basic unwrapped text,
   video/image fitting, stacking, opacity, trimmed/rate-adjusted audio, mixing,
   workarea MP4 export and PNG/RGBA capture.
 - `color.rs`: original packed-RGB parsing, its 43 named colors, RGB/HSL syntax,
@@ -92,13 +100,16 @@ Rendered media never overwrites an existing output or original footage.
   inherited style clocks and uniform-scale rules. Sampling derives a new tree
   from authored values each frame, so reverse seeks do not accumulate changes.
   Preview/export integrate leaf/group fade/slide, text reveals/scramble and supported
-  position/color/opacity/gain tracks. Transform/blur presets and style targets
+  position/color/opacity/gain tracks. Vector-only scenes also render grow/shrink,
+  spin/twist and numeric transform/size/corner tracks. Blur presets and style targets
   still require their pending graphics implementations; unsupported render
   properties fail explicitly. Group opacity inherits per draw, as in the original
   Canvas renderer, including retention of inherited alpha when a computed
   assignment is outside [0,1], following the
   [Canvas contract](https://html.spec.whatwg.org/multipage/canvas.html#dom-context-2d-globalalpha).
-  Width/height rendering still requires integers.
+  Authored primitive sizes round before motion; vector leaf size keyframes may
+  produce fractional dimensions. The native canvas is allocated before motion,
+  with dimensions rounded independently to even pixels as in the original encoder.
 - `main.rs`: JSON CLI for inspection, context, structural checks, source edits,
   media inspection, capture and export; no running Electron application required.
 - `desktop.rs`: native egui canvas preview, timeline, inspector, source editing,
@@ -135,9 +146,9 @@ this ledger is waived because a smaller example renders successfully.
 | --- | --- | --- |
 | Source/project model | Static TSX edits; native ES modules, reactive props, signals/effects, For/Index/Show and ticker; original file spans; live `@inspect` and imported initializer writeback | Remaining package/Solid/browser APIs, generation hooks, loop unrolling and general multi-file JSX edits; complete last-good-render behavior |
 | Timeline | Source/timeline clocks, workareas, cuts/trims/moves, nested rates, transport | Ripple Q/E, multi-selection, clipboard/grouping, transitions, keyframe tracks, all timeline gestures/colors/toggles and established constraints |
-| Graphics | Static media, rects and basic unwrapped text | GPU compositor; every transform, masks, blend modes, gradients, paints, strokes, shadows, effects, wrapped/styled text, HTML, surfaces, WGSL and adjustment layers |
+| Graphics | Native transformed/rounded vector scenes; static media and basic unwrapped text through FFmpeg | Unified native media/text drawing, GPU compositor, remaining transforms/constraints, masks, blend modes, gradients, paints, strokes, shadows, effects, wrapped/styled text, HTML, surfaces, WGSL and adjustment layers |
 | Audio | Offline retiming and Rust stereo mixing with per-frame reactive/preset/keyframe gain | Real-time output and seek/rate re-anchoring, solo/bus hierarchy, sample-accurate gain automation, syncTo and precise behavior across all cuts/rates |
-| Animation/captions | Native preset/keyframe sampling integrated with preview/export for supported render properties | Transform/blur/style rendering, sequence targeting, transition behavior, track editing UI, transcript parsing and every caption preset |
+| Animation/captions | Native preset/keyframe sampling integrated with preview/export, including vector transforms | Transform rendering for media/text, blur/style rendering, sequence targeting, transition behavior, track editing UI, transcript parsing and every caption preset |
 | Media/assets | Local FFprobe and linked YAML sources | Hash/manifest lifecycle, import/relink/move/folders, proxies and bounded caches, frame directories, remote resolution/modifiers, transcripts |
 | CLI/IPC | Native explicit-project commands | Existing dapi flags/output/contracts, open/context IPC, logs, fonts, screenshots, filmstrips/contact sheets and all applicable local commands |
 | HyperFrames | Existing separate package untouched | Rust save/template/preview/render/cancel engine, project isolation, immutable outputs and linked timeline updates |
@@ -169,6 +180,15 @@ modules, JavaScript text coercion, atomic save, validated undo/redo and external
 edit conflicts. A debug framebuffer smoke test also opened the native editor and
 captured the real egui window. These are gates for
 the implemented subset; they do **not** prove complete editor parity.
+
+The vector stage passed 79 ordinary tests and all three FFmpeg integration tests,
+Clippy for every target with desktop enabled, and the desktop build. Fourteen
+vector regressions cover transforms, parent-first group history, scene switching,
+incompatible reactive nodes/properties, cancellation, per-draw alpha, rounded
+clipping, odd/fractional dimensions, repeated resizing and exclusive PNG output.
+A real CLI run captured `examples/vectors` with deliberately unavailable codec
+executables, then exported and probed 72 H.264 frames at 960x540/24 fps (3 seconds).
+Its PNG, decoded MP4 frame and actual egui window were visually inspected.
 
 `@inspect` coverage includes semantic binding/shadowing, escaped identifiers,
 UTF-8 initializer spans, VM garbage collection/remounts, imported-module edits,
@@ -263,9 +283,27 @@ count at 48 kHz. The report distinguishes the authored
 workarea duration from the video duration; audio covers the workarea at 48 kHz.
 `playing()` is true in exports. The ticker's frame accessor uses the output FPS
 in exports and 30 fps in the editor/capture, matching the current engine behavior.
-Reactive export currently composes one CPU frame per FFmpeg invocation; native
+Vector-only export rasterizes each frame in Rust and streams it to one encoder.
+Media/text export still composes one CPU frame per FFmpeg invocation; native
 GPU rendering and persistent decoders remain pending. Decoded audio is held in
 job-owned temporary files, with a limit of 128 distinct source/rate variants.
+
+The vector compositor chooses a backend from all materialized node types on the
+first frame, including hidden nodes, and retains it and geometry history per scene.
+Mixed media/text scenes retain the older renderer and its transform restrictions.
+A vector scene with incompatible nodes, properties or planning data stays stopped
+until the project is reopened; cancellation during pixel rendering remains
+recoverable. Seamless media/text transitions await unified native drawing.
+Nested scenes, masks, aspect constraints and negative-size rounded shapes fail
+explicitly. Rounded corners use a fine cubic approximation;
+browser Canvas antialiasing is not assumed byte-identical. Preview currently
+shows the normalized scene, rather than a complete stage/camera editing view.
+Output resizing keeps the original image encoder's uniform resolution even
+when rounding canvas dimensions leaves a partial edge pixel or crops a fraction
+of one. Repeated resizes derive their ratio from the original scene dimensions.
+Color/corner keyframes preserve the original trait membership: a color track
+does not paint an unfilled rectangle, and mixed-corner fallbacks resolve before
+an animated uniform radius.
 
 Native exports also cap absolute workarea endpoint indices at 2^40 frames, leaving
 precision headroom for conversion between frame indices and seconds. This is
@@ -295,5 +333,6 @@ from `CARGO_TARGET_DIR/debug`.
 
 References for dependencies: [Oxc](https://docs.rs/oxc_parser/0.149.0/oxc_parser/),
 [eframe](https://docs.rs/eframe/0.36.2/eframe/),
+[tiny-skia](https://docs.rs/tiny-skia/0.12.0/tiny_skia/),
 [Boa](https://boajs.dev/docs/intro),
 [FFmpeg](https://ffmpeg.org/ffmpeg.html).

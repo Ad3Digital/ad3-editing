@@ -45,6 +45,7 @@ html-escape = "0.2"
 dragonbox_ecma = { version = "0.1", features = ["ecma"] }
 eframe = { version = "0.36.2", optional = true, default-features = false, features = ["default_fonts", "glow", "accesskit", "x11", "wayland"] }
 image = { version = "0.25", optional = true, default-features = false, features = ["png"] }
+tiny-skia = "0.12"
 
 [profile.release]
 lto = true

@@ -1,5 +1,7 @@
 // Keep one integration executable: linking the same VM/GUI dependencies into
 // separate test executables is unnecessarily expensive on Windows.
+#[path = "compositor.rs"]
+mod compositor;
 #[path = "editing.rs"]
 mod editing;
 #[path = "geometry.rs"]
