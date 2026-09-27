@@ -24,6 +24,9 @@ use std::{
 
 pub struct ProjectRenderer {
     live: Option<LiveProject>,
+    authored_root: Node,
+    motion: crate::motion::Motion,
+    has_motion: bool,
     cache: ProbeCache,
     pub project: PathBuf,
     pub root: Node,
@@ -51,13 +54,14 @@ impl ProjectRenderer {
         tools: Tools,
         offline: bool,
     ) -> Result<Self> {
-        Self::new_cancellable(document, project, tools, offline, None)
+        Self::new_cancellable(document, project, tools, offline, 30.0, None)
     }
     fn new_cancellable(
         document: &SourceDocument,
         project: &Path,
         tools: Tools,
         offline: bool,
+        fps: f64,
         cancel: Option<Arc<AtomicBool>>,
     ) -> Result<Self> {
         let live = if document.module_sources.is_empty() {
@@ -73,6 +77,9 @@ impl ProjectRenderer {
         };
         let mut renderer = Self {
             live,
+            authored_root: document.root.clone(),
+            motion: Default::default(),
+            has_motion: false,
             cache: ProbeCache::default(),
             project: project.into(),
             root: document.root.clone(),
@@ -87,18 +94,33 @@ impl ProjectRenderer {
                 active: String::new(),
             },
             tools,
-            frame_rate: 30.0,
+            frame_rate: fps,
         };
         renderer.sample(0.0, false)?;
         Ok(renderer)
     }
     pub fn sample(&mut self, time: f64, playing: bool) -> Result<()> {
-        if let Some(live) = &mut self.live {
-            self.root = live.sample_at_rate(time, playing, self.frame_rate)?;
-        }
+        let authored = if let Some(live) = &mut self.live {
+            live.sample_at_rate(time, playing, self.frame_rate)?
+        } else {
+            self.authored_root.clone()
+        };
         self.library =
-            MediaLibrary::load_cached(&self.root, &self.project, &self.tools, &mut self.cache)?;
-        self.timeline = Timeline::resolve(&self.root, &self.library.durations)?;
+            MediaLibrary::load_cached(&authored, &self.project, &self.tools, &mut self.cache)?;
+        let timeline =
+            Timeline::resolve_at_rate(&authored, &self.library.durations, self.frame_rate)?;
+        self.has_motion = crate::motion::has_motion(&authored);
+        self.root = if self.has_motion {
+            self.motion
+                .sample(&authored, &timeline, time, self.frame_rate)?
+        } else {
+            authored
+        };
+        self.timeline = if self.has_motion {
+            Timeline::resolve_at_rate(&self.root, &self.library.durations, self.frame_rate)?
+        } else {
+            timeline
+        };
         Ok(())
     }
     pub fn frame_plan(
@@ -162,7 +184,7 @@ impl ProjectRenderer {
             return Err("Export destination directory does not exist".into());
         }
         let mut renderer =
-            Self::new_cancellable(document, project, tools, true, cancel_token.clone())?;
+            Self::new_cancellable(document, project, tools, true, fps, cancel_token.clone())?;
         let scene = renderer.timeline.active.clone();
         let area = *renderer
             .timeline
@@ -195,7 +217,8 @@ impl ProjectRenderer {
             workarea_duration: plan.duration,
             video_duration,
         };
-        if !renderer.live.as_ref().is_some_and(LiveProject::uses_ticker)
+        if !renderer.has_motion
+            && !renderer.live.as_ref().is_some_and(LiveProject::uses_ticker)
             && (video_duration - plan.duration).abs() < 1e-9
         {
             plan.export_cancellable(&renderer.tools, project, &output, cancel)?;

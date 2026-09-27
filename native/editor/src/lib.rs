@@ -12,6 +12,7 @@ pub mod inspect;
 pub mod jsx;
 mod materialize;
 pub mod media;
+pub mod motion;
 pub mod project;
 pub mod props;
 pub mod reactive;

@@ -11,7 +11,20 @@ pub const DEFAULT_DURATION: f64 = 16.0;
 
 /// Match JavaScript's frame rounding, including negative half-frame values.
 pub fn snap(seconds: f64) -> f64 {
-    (seconds * TIME_FPS + 0.5).floor() / TIME_FPS
+    snap_at_rate(seconds, TIME_FPS)
+}
+
+pub(crate) fn round_frame(value: f64) -> f64 {
+    let floor = value.floor();
+    if value - floor >= 0.5 {
+        floor + 1.0
+    } else {
+        floor
+    }
+}
+
+fn snap_at_rate(seconds: f64, fps: f64) -> f64 {
+    round_frame(seconds * fps) / fps
 }
 
 pub fn parse_time(value: &str) -> Result<f64> {
@@ -110,6 +123,21 @@ pub struct Timeline {
 impl Timeline {
     /// Durations are keyed by node id, in seconds at the source's natural speed.
     pub fn resolve(stage: &Node, durations: &BTreeMap<String, f64>) -> Result<Self> {
+        Self::resolve_at_rate(stage, durations, TIME_FPS)
+    }
+
+    /// An offline capture world sets output FPS before mounting JSX, so every
+    /// authored second is quantized into that world's frames on construction.
+    /// Frame-string parsing still uses the language's fixed 30 fps unit.
+    pub fn resolve_at_rate(
+        stage: &Node,
+        durations: &BTreeMap<String, f64>,
+        fps: f64,
+    ) -> Result<Self> {
+        if !fps.is_finite() || fps <= 0.0 || fps > 240.0 {
+            return Err("Timeline FPS must be in (0, 240]".into());
+        }
+        let snap = |seconds| snap_at_rate(seconds, fps);
         if stage.tag != "stage" {
             return Err("The document root must be <stage>".into());
         }
@@ -134,7 +162,7 @@ impl Timeline {
             active,
         };
         for scene in scenes {
-            let span = timeline.resolve_node(scene, None, &scene.id, durations)?;
+            let span = timeline.resolve_node(scene, None, &scene.id, durations, fps)?;
             let area =
                 if let Some(value) = scene.props.get("workarea").filter(|value| !value.is_null()) {
                     let array = value
@@ -159,7 +187,9 @@ impl Timeline {
         parent: Option<&Span>,
         scene: &str,
         durations: &BTreeMap<String, f64>,
+        fps: f64,
     ) -> Result<Span> {
+        let snap = |seconds| snap_at_rate(seconds, fps);
         if node.props.contains_key("syncTo") {
             return Err(format!(
                 "{}: native audio syncTo resolution is not implemented yet",
@@ -189,7 +219,7 @@ impl Timeline {
                 return Err(format!("{}: invalid source duration", node.id));
             }
             if node.tag != "captions" || source_out.is_infinite() {
-                source_out = source_out.min(*duration);
+                source_out = source_out.min(snap(*duration));
             }
         } else if matches!(node.tag.as_str(), "video" | "audio") {
             return Err(format!(
@@ -199,7 +229,9 @@ impl Timeline {
         }
         let fits = node.is_container() && authored_out.is_none() && timeline_end.is_none();
         if source_out.is_infinite() {
-            source_out = DEFAULT_DURATION;
+            // The original runtime's fallback is 480 frames, including in a
+            // capture world with a different frame rate.
+            source_out = DEFAULT_DURATION * TIME_FPS / fps;
         }
         source_out = source_out.max(source_in);
         let origin = parent_origin + (start - source_in / rate) / parent_rate;
@@ -223,7 +255,7 @@ impl Timeline {
         };
         let mut children = Vec::new();
         for child in node.children.iter().filter(|child| child.is_timed()) {
-            children.push(self.resolve_node(child, Some(&span), scene, durations)?);
+            children.push(self.resolve_node(child, Some(&span), scene, durations, fps)?);
         }
         if fits && !children.is_empty() {
             span.start = children

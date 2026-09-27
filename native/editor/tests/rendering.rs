@@ -14,6 +14,149 @@ use std::{
 
 #[test]
 #[ignore = "requires installed FFmpeg and FFprobe; run with --ignored"]
+fn preset_and_keyframe_motion_is_sampled_for_capture_reverse_seek_and_export() {
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let folder = std::env::temp_dir().join(format!(
+        "ad3-rust-motion-render-{}-{stamp}",
+        std::process::id()
+    ));
+    fs::create_dir(&folder).unwrap();
+    let source = r#"export default <stage><scene id="s" active width={64} height={32} workarea={[0,1]}>
+      <rect id="r" width={16} height={16} fill="red" end={1}>
+        <animation type="fade" duration={1}/>
+        <keyframeTrack property="x"><keyframe value={0}/><keyframe time={0.9} value={40}/></keyframeTrack>
+      </rect>
+      <audio id="a" src="tone.wav" end={1}><animation type="gain" duration={1}/></audio>
+    </scene></stage>"#;
+    let document = SourceDocument::parse(folder.join("index.tsx"), source.into()).unwrap();
+    let tools = Tools::default();
+    checked_output(
+        command(&tools.ffmpeg)
+            .args([
+                "-v",
+                "error",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=440:duration=1",
+                "-ar",
+                "48000",
+                "-c:a",
+                "pcm_f32le",
+            ])
+            .arg(folder.join("tone.wav")),
+    )
+    .unwrap();
+    let mut renderer = ProjectRenderer::new(&document, &folder, tools.clone(), false).unwrap();
+    let black = renderer
+        .frame_plan("s", 0.0, 10.0, false)
+        .unwrap()
+        .frame(&tools, &folder)
+        .unwrap();
+    assert!(
+        black
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .all(|p| p[0] < 3 && p[1] < 3 && p[2] < 3)
+    );
+    let first = renderer
+        .frame_plan("s", 0.4, 10.0, false)
+        .unwrap()
+        .frame(&tools, &folder)
+        .unwrap();
+    let last = renderer
+        .frame_plan("s", 0.9, 10.0, false)
+        .unwrap()
+        .frame(&tools, &folder)
+        .unwrap();
+    let reverse = renderer
+        .frame_plan("s", 0.4, 10.0, false)
+        .unwrap()
+        .frame(&tools, &folder)
+        .unwrap();
+    assert_eq!(first, reverse);
+    let pixel = (8 * 64 + 48) * 4;
+    assert!(last[pixel] > 250 && last[pixel + 1] < 3);
+    let output = folder.join("motion.mp4");
+    let mut updates = Vec::new();
+    let report = ProjectRenderer::export(
+        &document,
+        &folder,
+        tools.clone(),
+        &output,
+        10.0,
+        None,
+        |n, total| updates.push((n, total)),
+    )
+    .unwrap();
+    assert_eq!(report.frames, 10);
+    assert_eq!(
+        updates.len(),
+        10,
+        "Motion must not take the static single-plan export path"
+    );
+    assert!(report.warnings.is_empty());
+    let decoded = checked_output(
+        command(&tools.ffmpeg)
+            .args(["-v", "error", "-ss", "0.9", "-i"])
+            .arg(&output)
+            .args([
+                "-frames:v",
+                "1",
+                "-f",
+                "rawvideo",
+                "-pix_fmt",
+                "rgba",
+                "pipe:1",
+            ]),
+    )
+    .unwrap();
+    assert_eq!(decoded.stdout.len(), 64 * 32 * 4);
+    assert!(decoded.stdout[pixel] > 220 && decoded.stdout[pixel + 1] < 20);
+    assert!((tools.probe(&output).unwrap().duration.unwrap() - 1.0).abs() < 0.002);
+    assert!(tools.probe(&output).unwrap().has_audio);
+    let audio = checked_output(
+        command(&tools.ffmpeg)
+            .args(["-v", "error", "-i"])
+            .arg(&output)
+            .args(["-vn", "-ar", "48000", "-ac", "1", "-f", "f32le", "pipe:1"]),
+    )
+    .unwrap();
+    let samples = audio
+        .stdout
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|n| f64::from(f32::from_le_bytes(*n)))
+        .collect::<Vec<_>>();
+    let rms = |from: usize, to: usize| {
+        (samples[from..to].iter().map(|n| n * n).sum::<f64>() / (to - from) as f64).sqrt()
+    };
+    let quiet = rms(1440, 2880);
+    let middle = rms(15000, 18000);
+    let loud = rms(39000, 42000);
+    assert!(
+        quiet < 0.001 && loud > 0.02 && loud > middle * 1.5,
+        "gain RMS {quiet} -> {middle} -> {loud}"
+    );
+    let absolute = fs::canonicalize(&folder).unwrap();
+    assert!(absolute.starts_with(fs::canonicalize(std::env::temp_dir()).unwrap()));
+    assert!(
+        absolute
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .starts_with("ad3-rust-motion-render-")
+    );
+    fs::remove_dir_all(absolute).unwrap();
+}
+
+#[test]
+#[ignore = "requires installed FFmpeg and FFprobe; run with --ignored"]
 fn native_export_preserves_trims_speed_audio_workarea_and_composition() {
     let stamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -60,6 +203,24 @@ fn native_export_preserves_trims_speed_audio_workarea_and_composition() {
     );
     let right = &frame[(8 * 32 + 24) * 4..(8 * 32 + 24) * 4 + 3];
     assert!(right[0] < 4 && right[1] > 250 && right[2] < 4, "{right:?}");
+    let groups = r#"export default <stage><scene id="s" active width={32} height={16} workarea={[0,1]}>
+      <group opacity={0.5}>
+        <rect width={32} height={16} fill="red"/>
+        <group><rect x={16} width={16} height={16} fill="blue"/></group>
+      </group>
+    </scene></stage>"#;
+    let document = SourceDocument::parse(folder.join("groups.tsx"), groups.into()).unwrap();
+    let library = MediaLibrary::load(&document.root, &folder, &tools).unwrap();
+    let timeline = Timeline::resolve(&document.root, &library.durations).unwrap();
+    let frame = RenderPlan::build(&document.root, &timeline, &library, "s", 30.0, None)
+        .unwrap()
+        .frame(&tools, &folder)
+        .unwrap();
+    let overlap = &frame[(8 * 32 + 24) * 4..(8 * 32 + 24) * 4 + 3];
+    assert!(
+        (60..=68).contains(&overlap[0]) && overlap[1] < 4 && (124..=132).contains(&overlap[2]),
+        "group per-draw alpha {overlap:?}"
+    );
     let cancel = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
     let trigger = cancel.clone();
     let cancel_thread = std::thread::spawn(move || {
@@ -399,8 +560,8 @@ fn reactive_export_advances_video_and_mixes_dynamic_gain_with_frozen_modules() {
         .is_err()
     );
     assert_eq!(fs::read(&output).unwrap(), before);
-    // Existing encoder contract floors complete frames. At 24 fps this
-    // 1/15-second workarea contains one complete frame, reported as 1/24 s.
+    // Capture mounts authored seconds into its output-rate world first.
+    // This 2/30-second workarea rounds to two whole frames at 24 fps.
     let short = source.replace("[0.2,1.2]", "[0,2/30]").replace(
         "<audio id=\"tone\" src=\"tone.wav\" volume={t.time()<0.7?0:-12} end={2}/>",
         "",
@@ -418,9 +579,9 @@ fn reactive_export_advances_video_and_mixes_dynamic_gain_with_frozen_modules() {
         |_, _| {},
     )
     .unwrap();
-    assert_eq!(short_report.frames, 1);
-    assert!((short_report.duration - 1.0 / 24.0).abs() < 1e-8);
-    assert!((short_report.workarea_duration - 2.0 / 30.0).abs() < 1e-8);
+    assert_eq!(short_report.frames, 2);
+    assert!((short_report.duration - 2.0 / 24.0).abs() < 1e-8);
+    assert!((short_report.workarea_duration - 2.0 / 24.0).abs() < 1e-8);
     assert!(
         (tools.probe(&fractional).unwrap().duration.unwrap() - short_report.duration).abs() < 0.002
     );

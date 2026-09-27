@@ -1,0 +1,7922 @@
+[
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.18074770142232988,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.6415517647333427,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.883764140554587,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9743944900543494,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9995186519261194,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.1759920141412122,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.6306839349858397,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.873957882795395,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.9761583879044259,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.999550387990616,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 1,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.10060309145780154,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.6582843439092668,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.8788442689725707,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9753001181345441,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9998844197835569,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "in",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.8192522985776701,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.35844823526665726,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.11623585944541304,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.025605509945650584,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.0004813480738805609,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 1,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.8240079858587878,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.36931606501416026,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.126042117204605,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.023841612095574116,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.0004496120093839817,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.8993969085421984,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.3417156560907332,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.12115573102742927,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.024699881865455908,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.00011558021644308969,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "fade",
+    "phase": "out",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": "silence"
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": "silence"
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": "silence"
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -45.941097401462656
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -22.097925790306856
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -11.245817967382163
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -7.353013873354165
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6.095559927469967
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": "silence"
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -46.290647104914484
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -22.586821623630467
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -11.677768659445086
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -7.27692069323423
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6.091941565970473
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": "silence"
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -52.98349202783839
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -21.345783609033234
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -11.462283710918639
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -7.313989662044194
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6.043653997058363
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "in",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": "silence"
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6.087893126265025
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -7.480487009090021
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -12.871321550147577
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -22.81796814920782
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -45.21850606886376
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": "silence"
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6.084409334486165
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -7.3925888011952745
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -12.377520701494639
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -23.283647673163266
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -45.551978441953686
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": "silence"
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6.038959495903547
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -7.627732901381597
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -12.617284219970504
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -23.053161140770698
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -51.99762369933961
+    }
+  },
+  {
+    "kind": "gain",
+    "phase": "out",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": "silence"
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5,
+      "scaleY": 0.5
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5,
+      "scaleY": 0.5
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5,
+      "scaleY": 0.5
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5903738507111649,
+      "scaleY": 0.5903738507111649
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.8207758823666713,
+      "scaleY": 0.8207758823666713
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.9418820702772934,
+      "scaleY": 0.9418820702772934
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.9871972450271747,
+      "scaleY": 0.9871972450271747
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.9997593259630597,
+      "scaleY": 0.9997593259630597
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5,
+      "scaleY": 0.5
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5879960070706061,
+      "scaleY": 0.5879960070706061
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.8153419674929199,
+      "scaleY": 0.8153419674929199
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.9369789413976974,
+      "scaleY": 0.9369789413976974
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.9880791939522129,
+      "scaleY": 0.9880791939522129
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.999775193995308,
+      "scaleY": 0.999775193995308
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5,
+      "scaleY": 0.5
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5503015457289008,
+      "scaleY": 0.5503015457289008
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.8291421719546335,
+      "scaleY": 0.8291421719546335
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.9394221344862854,
+      "scaleY": 0.9394221344862854
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.9876500590672721,
+      "scaleY": 0.9876500590672721
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.9999422098917785,
+      "scaleY": 0.9999422098917785
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "in",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5,
+      "scaleY": 0.5
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.9096261492888351,
+      "scaleY": 0.9096261492888351
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.6792241176333287,
+      "scaleY": 0.6792241176333287
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5581179297227066,
+      "scaleY": 0.5581179297227066
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5128027549728253,
+      "scaleY": 0.5128027549728253
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5002406740369403,
+      "scaleY": 0.5002406740369403
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5,
+      "scaleY": 0.5
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.9120039929293939,
+      "scaleY": 0.9120039929293939
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.6846580325070801,
+      "scaleY": 0.6846580325070801
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5630210586023026,
+      "scaleY": 0.5630210586023026
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5119208060477871,
+      "scaleY": 0.5119208060477871
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.500224806004692,
+      "scaleY": 0.500224806004692
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5,
+      "scaleY": 0.5
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.9496984542710992,
+      "scaleY": 0.9496984542710992
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.6708578280453665,
+      "scaleY": 0.6708578280453665
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5605778655137146,
+      "scaleY": 0.5605778655137146
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5123499409327279,
+      "scaleY": 0.5123499409327279
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5000577901082215,
+      "scaleY": 0.5000577901082215
+    }
+  },
+  {
+    "kind": "grow",
+    "phase": "out",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.5,
+      "scaleY": 0.5
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.5,
+      "scaleY": 1.5
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.5,
+      "scaleY": 1.5
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.5,
+      "scaleY": 1.5
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.4096261492888351,
+      "scaleY": 1.4096261492888351
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.1792241176333287,
+      "scaleY": 1.1792241176333287
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.0581179297227066,
+      "scaleY": 1.0581179297227066
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.0128027549728253,
+      "scaleY": 1.0128027549728253
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.0002406740369403,
+      "scaleY": 1.0002406740369403
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.5,
+      "scaleY": 1.5
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.412003992929394,
+      "scaleY": 1.412003992929394
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.1846580325070801,
+      "scaleY": 1.1846580325070801
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.0630210586023026,
+      "scaleY": 1.0630210586023026
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.0119208060477871,
+      "scaleY": 1.0119208060477871
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.000224806004692,
+      "scaleY": 1.000224806004692
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.5,
+      "scaleY": 1.5
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.4496984542710991,
+      "scaleY": 1.4496984542710991
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.1708578280453665,
+      "scaleY": 1.1708578280453665
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.0605778655137146,
+      "scaleY": 1.0605778655137146
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.012349940932728,
+      "scaleY": 1.012349940932728
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.0000577901082215,
+      "scaleY": 1.0000577901082215
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "in",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.5,
+      "scaleY": 1.5
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.0903738507111649,
+      "scaleY": 1.0903738507111649
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.3207758823666713,
+      "scaleY": 1.3207758823666713
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.4418820702772934,
+      "scaleY": 1.4418820702772934
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.4871972450271747,
+      "scaleY": 1.4871972450271747
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.4997593259630597,
+      "scaleY": 1.4997593259630597
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.5,
+      "scaleY": 1.5
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.087996007070606,
+      "scaleY": 1.087996007070606
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.3153419674929199,
+      "scaleY": 1.3153419674929199
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.4369789413976974,
+      "scaleY": 1.4369789413976974
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.4880791939522129,
+      "scaleY": 1.4880791939522129
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.499775193995308,
+      "scaleY": 1.499775193995308
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.5,
+      "scaleY": 1.5
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.0503015457289007,
+      "scaleY": 1.0503015457289007
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.3291421719546335,
+      "scaleY": 1.3291421719546335
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.4394221344862854,
+      "scaleY": 1.4394221344862854
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.487650059067272,
+      "scaleY": 1.487650059067272
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.4999422098917785,
+      "scaleY": 1.4999422098917785
+    }
+  },
+  {
+    "kind": "shrink",
+    "phase": "out",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.5,
+      "scaleY": 1.5
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 24
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 24
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 0
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 24
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 23.90573973736123
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 16.97155428943381
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 4.56576741762732
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 0.8805158888146956
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 0.015227744046828917
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 0
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "blur": 24
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "blur": 23.91214829622504
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "blur": 17.46457602909232
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "blur": 5.009841154382521
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "blur": 0.8168810099687853
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "blur": 0.014217882525478842
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "blur": 0
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 24
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 23.978104015790738
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 16.17228010608453
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 4.78748608055826
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 0.8477984249989134
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 0.0036335344765703326
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "in",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 0
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 0
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 0
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 24
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 0
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 0.05677004133072072
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 2.223999379258709
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 8.247253486981274
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 15.402377994291491
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 22.667509944769385
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 24
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "blur": 0
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "blur": 0.05312778706280814
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "blur": 2.09366425334414
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "blur": 7.79555309675113
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "blur": 15.665596916679007
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "blur": 22.711082684061587
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "blur": 24
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 0
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 0.01403543242789102
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 2.4386106766819493
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 8.016491631944913
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 15.536025005312439
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 23.3376773651295
+    }
+  },
+  {
+    "kind": "blur",
+    "phase": "out",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "blur": 24
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetX": 100
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetX": 100
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetX": 0
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetX": 100
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.18074770142232988,
+      "volume": -6,
+      "offsetX": 81.92522985776701
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.6415517647333427,
+      "volume": -6,
+      "offsetX": 35.84482352666573
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.883764140554587,
+      "volume": -6,
+      "offsetX": 11.623585944541304
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9743944900543494,
+      "volume": -6,
+      "offsetX": 2.5605509945650584
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9995186519261194,
+      "volume": -6,
+      "offsetX": 0.04813480738805609
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetX": 0
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetX": 100
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.17599201414121224,
+      "volume": -6,
+      "offsetX": 82.40079858587877
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.6306839349858397,
+      "volume": -6,
+      "offsetX": 36.93160650141603
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.873957882795395,
+      "volume": -6,
+      "offsetX": 12.604211720460501
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.9761583879044259,
+      "volume": -6,
+      "offsetX": 2.3841612095574116
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.999550387990616,
+      "volume": -6,
+      "offsetX": 0.04496120093839817
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetX": 0
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetX": 100
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.10060309145780155,
+      "volume": -6,
+      "offsetX": 89.93969085421985
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.6582843439092668,
+      "volume": -6,
+      "offsetX": 34.17156560907332
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.8788442689725707,
+      "volume": -6,
+      "offsetX": 12.115573102742927
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9753001181345441,
+      "volume": -6,
+      "offsetX": 2.469988186545591
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9998844197835569,
+      "volume": -6,
+      "offsetX": 0.011558021644308969
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "in",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetX": 0
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetX": 0
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetX": 0
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetX": -100
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetX": 0
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.8192522985776701,
+      "volume": -6,
+      "offsetX": -18.07477014223299
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.35844823526665726,
+      "volume": -6,
+      "offsetX": -64.15517647333428
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.11623585944541304,
+      "volume": -6,
+      "offsetX": -88.3764140554587
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.025605509945650584,
+      "volume": -6,
+      "offsetX": -97.43944900543494
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.0004813480738805609,
+      "volume": -6,
+      "offsetX": -99.95186519261195
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetX": -100
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetX": 0
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.8240079858587878,
+      "volume": -6,
+      "offsetX": -17.59920141412122
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.36931606501416026,
+      "volume": -6,
+      "offsetX": -63.06839349858397
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.126042117204605,
+      "volume": -6,
+      "offsetX": -87.3957882795395
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.023841612095574116,
+      "volume": -6,
+      "offsetX": -97.6158387904426
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.0004496120093839817,
+      "volume": -6,
+      "offsetX": -99.9550387990616
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetX": -100
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetX": 0
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.8993969085421984,
+      "volume": -6,
+      "offsetX": -10.060309145780154
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.3417156560907332,
+      "volume": -6,
+      "offsetX": -65.82843439092669
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.12115573102742927,
+      "volume": -6,
+      "offsetX": -87.88442689725707
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.024699881865455908,
+      "volume": -6,
+      "offsetX": -97.53001181345441
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.00011558021644308969,
+      "volume": -6,
+      "offsetX": -99.9884419783557
+    }
+  },
+  {
+    "kind": "slideLeft",
+    "phase": "out",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetX": -100
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetX": -100
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetX": -100
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetX": 0
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetX": -100
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.18074770142232988,
+      "volume": -6,
+      "offsetX": -81.92522985776701
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.6415517647333427,
+      "volume": -6,
+      "offsetX": -35.84482352666573
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.883764140554587,
+      "volume": -6,
+      "offsetX": -11.623585944541304
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9743944900543494,
+      "volume": -6,
+      "offsetX": -2.5605509945650584
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9995186519261194,
+      "volume": -6,
+      "offsetX": -0.04813480738805609
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetX": 0
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetX": -100
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.17599201414121224,
+      "volume": -6,
+      "offsetX": -82.40079858587877
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.6306839349858397,
+      "volume": -6,
+      "offsetX": -36.93160650141603
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.873957882795395,
+      "volume": -6,
+      "offsetX": -12.604211720460501
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.9761583879044259,
+      "volume": -6,
+      "offsetX": -2.3841612095574116
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.999550387990616,
+      "volume": -6,
+      "offsetX": -0.04496120093839817
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetX": 0
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetX": -100
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.10060309145780155,
+      "volume": -6,
+      "offsetX": -89.93969085421985
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.6582843439092668,
+      "volume": -6,
+      "offsetX": -34.17156560907332
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.8788442689725707,
+      "volume": -6,
+      "offsetX": -12.115573102742927
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9753001181345441,
+      "volume": -6,
+      "offsetX": -2.469988186545591
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9998844197835569,
+      "volume": -6,
+      "offsetX": -0.011558021644308969
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "in",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetX": 0
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetX": 0
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetX": 0
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetX": 100
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetX": 0
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.8192522985776701,
+      "volume": -6,
+      "offsetX": 18.07477014223299
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.35844823526665726,
+      "volume": -6,
+      "offsetX": 64.15517647333428
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.11623585944541304,
+      "volume": -6,
+      "offsetX": 88.3764140554587
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.025605509945650584,
+      "volume": -6,
+      "offsetX": 97.43944900543494
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.0004813480738805609,
+      "volume": -6,
+      "offsetX": 99.95186519261195
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetX": 100
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetX": 0
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.8240079858587878,
+      "volume": -6,
+      "offsetX": 17.59920141412122
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.36931606501416026,
+      "volume": -6,
+      "offsetX": 63.06839349858397
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.126042117204605,
+      "volume": -6,
+      "offsetX": 87.3957882795395
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.023841612095574116,
+      "volume": -6,
+      "offsetX": 97.6158387904426
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.0004496120093839817,
+      "volume": -6,
+      "offsetX": 99.9550387990616
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetX": 100
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetX": 0
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.8993969085421984,
+      "volume": -6,
+      "offsetX": 10.060309145780154
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.3417156560907332,
+      "volume": -6,
+      "offsetX": 65.82843439092669
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.12115573102742927,
+      "volume": -6,
+      "offsetX": 87.88442689725707
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.024699881865455908,
+      "volume": -6,
+      "offsetX": 97.53001181345441
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.00011558021644308969,
+      "volume": -6,
+      "offsetX": 99.9884419783557
+    }
+  },
+  {
+    "kind": "slideRight",
+    "phase": "out",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetX": 100
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetY": 100
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetY": 100
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetY": 0
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetY": 100
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.18074770142232988,
+      "volume": -6,
+      "offsetY": 81.92522985776701
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.6415517647333427,
+      "volume": -6,
+      "offsetY": 35.84482352666573
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.883764140554587,
+      "volume": -6,
+      "offsetY": 11.623585944541304
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9743944900543494,
+      "volume": -6,
+      "offsetY": 2.5605509945650584
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9995186519261194,
+      "volume": -6,
+      "offsetY": 0.04813480738805609
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetY": 0
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetY": 100
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.17599201414121224,
+      "volume": -6,
+      "offsetY": 82.40079858587877
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.6306839349858397,
+      "volume": -6,
+      "offsetY": 36.93160650141603
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.873957882795395,
+      "volume": -6,
+      "offsetY": 12.604211720460501
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.9761583879044259,
+      "volume": -6,
+      "offsetY": 2.3841612095574116
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.999550387990616,
+      "volume": -6,
+      "offsetY": 0.04496120093839817
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetY": 0
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetY": 100
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.10060309145780155,
+      "volume": -6,
+      "offsetY": 89.93969085421985
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.6582843439092668,
+      "volume": -6,
+      "offsetY": 34.17156560907332
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.8788442689725707,
+      "volume": -6,
+      "offsetY": 12.115573102742927
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9753001181345441,
+      "volume": -6,
+      "offsetY": 2.469988186545591
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9998844197835569,
+      "volume": -6,
+      "offsetY": 0.011558021644308969
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "in",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetY": 0
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetY": 0
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetY": 0
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetY": -100
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetY": 0
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.8192522985776701,
+      "volume": -6,
+      "offsetY": -18.07477014223299
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.35844823526665726,
+      "volume": -6,
+      "offsetY": -64.15517647333428
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.11623585944541304,
+      "volume": -6,
+      "offsetY": -88.3764140554587
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.025605509945650584,
+      "volume": -6,
+      "offsetY": -97.43944900543494
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.0004813480738805609,
+      "volume": -6,
+      "offsetY": -99.95186519261195
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetY": -100
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetY": 0
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.8240079858587878,
+      "volume": -6,
+      "offsetY": -17.59920141412122
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.36931606501416026,
+      "volume": -6,
+      "offsetY": -63.06839349858397
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.126042117204605,
+      "volume": -6,
+      "offsetY": -87.3957882795395
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.023841612095574116,
+      "volume": -6,
+      "offsetY": -97.6158387904426
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.0004496120093839817,
+      "volume": -6,
+      "offsetY": -99.9550387990616
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetY": -100
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetY": 0
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.8993969085421984,
+      "volume": -6,
+      "offsetY": -10.060309145780154
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.3417156560907332,
+      "volume": -6,
+      "offsetY": -65.82843439092669
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.12115573102742927,
+      "volume": -6,
+      "offsetY": -87.88442689725707
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.024699881865455908,
+      "volume": -6,
+      "offsetY": -97.53001181345441
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.00011558021644308969,
+      "volume": -6,
+      "offsetY": -99.9884419783557
+    }
+  },
+  {
+    "kind": "slideUp",
+    "phase": "out",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetY": -100
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetY": -100
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetY": -100
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetY": 0
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetY": -100
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.18074770142232988,
+      "volume": -6,
+      "offsetY": -81.92522985776701
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.6415517647333427,
+      "volume": -6,
+      "offsetY": -35.84482352666573
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.883764140554587,
+      "volume": -6,
+      "offsetY": -11.623585944541304
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9743944900543494,
+      "volume": -6,
+      "offsetY": -2.5605509945650584
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9995186519261194,
+      "volume": -6,
+      "offsetY": -0.04813480738805609
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetY": 0
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetY": -100
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.17599201414121224,
+      "volume": -6,
+      "offsetY": -82.40079858587877
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.6306839349858397,
+      "volume": -6,
+      "offsetY": -36.93160650141603
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.873957882795395,
+      "volume": -6,
+      "offsetY": -12.604211720460501
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.9761583879044259,
+      "volume": -6,
+      "offsetY": -2.3841612095574116
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.999550387990616,
+      "volume": -6,
+      "offsetY": -0.04496120093839817
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetY": 0
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetY": -100
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.10060309145780155,
+      "volume": -6,
+      "offsetY": -89.93969085421985
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.6582843439092668,
+      "volume": -6,
+      "offsetY": -34.17156560907332
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.8788442689725707,
+      "volume": -6,
+      "offsetY": -12.115573102742927
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9753001181345441,
+      "volume": -6,
+      "offsetY": -2.469988186545591
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.9998844197835569,
+      "volume": -6,
+      "offsetY": -0.011558021644308969
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "in",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetY": 0
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetY": 0
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetY": 0
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetY": 100
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetY": 0
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.8192522985776701,
+      "volume": -6,
+      "offsetY": 18.07477014223299
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.35844823526665726,
+      "volume": -6,
+      "offsetY": 64.15517647333428
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.11623585944541304,
+      "volume": -6,
+      "offsetY": 88.3764140554587
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.025605509945650584,
+      "volume": -6,
+      "offsetY": 97.43944900543494
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.0004813480738805609,
+      "volume": -6,
+      "offsetY": 99.95186519261195
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetY": 100
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetY": 0
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.8240079858587878,
+      "volume": -6,
+      "offsetY": 17.59920141412122
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.36931606501416026,
+      "volume": -6,
+      "offsetY": 63.06839349858397
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.126042117204605,
+      "volume": -6,
+      "offsetY": 87.3957882795395
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.023841612095574116,
+      "volume": -6,
+      "offsetY": 97.6158387904426
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0.0004496120093839817,
+      "volume": -6,
+      "offsetY": 99.9550387990616
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetY": 100
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 1,
+      "volume": -6,
+      "offsetY": 0
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.8993969085421984,
+      "volume": -6,
+      "offsetY": 10.060309145780154
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.3417156560907332,
+      "volume": -6,
+      "offsetY": 65.82843439092669
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.12115573102742927,
+      "volume": -6,
+      "offsetY": 87.88442689725707
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.024699881865455908,
+      "volume": -6,
+      "offsetY": 97.53001181345441
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0.00011558021644308969,
+      "volume": -6,
+      "offsetY": 99.9884419783557
+    }
+  },
+  {
+    "kind": "slideDown",
+    "phase": "out",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "opacity": 0,
+      "volume": -6,
+      "offsetY": 100
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0,
+      "scaleY": 0,
+      "rotation": -45
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0,
+      "scaleY": 0,
+      "rotation": -45
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1,
+      "rotation": 0
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0,
+      "scaleY": 0,
+      "rotation": -45
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.0036962615763201923,
+      "scaleY": 0.0036962615763201923,
+      "rotation": -44.833668229065594
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.17158022959521502,
+      "scaleY": 0.17158022959521502,
+      "rotation": -37.27888966821532
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.7576159377362511,
+      "scaleY": 0.7576159377362511,
+      "rotation": -10.9072828018687
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.9548598040863773,
+      "scaleY": 0.9548598040863773,
+      "rotation": -2.0313088161130226
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.9989210229755798,
+      "scaleY": 0.9989210229755798,
+      "rotation": -0.04855396609890761
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1,
+      "rotation": 0
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0,
+      "scaleY": 0,
+      "rotation": -45
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.0035004290037951025,
+      "scaleY": 0.0035004290037951025,
+      "rotation": -44.84248069482922
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.1579872847170054,
+      "scaleY": 0.1579872847170054,
+      "rotation": -37.890572187734755
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.7325689243798585,
+      "scaleY": 0.7325689243798585,
+      "rotation": -12.034398402906366
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.958089538992282,
+      "scaleY": 0.958089538992282,
+      "rotation": -1.88597074534731
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.9989805179309887,
+      "scaleY": 0.9989805179309887,
+      "rotation": -0.04587669310550657
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1,
+      "rotation": 0
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0,
+      "scaleY": 0,
+      "rotation": -45
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.0012693903105674975,
+      "scaleY": 0.0012693903105674975,
+      "rotation": -44.94287743602446
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.19487221272209454,
+      "scaleY": 0.19487221272209454,
+      "rotation": -36.23075042750575
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.7451384484806414,
+      "scaleY": 0.7451384484806414,
+      "rotation": -11.468769818371138
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.9565209956054638,
+      "scaleY": 0.9565209956054638,
+      "rotation": -1.9565551977541302
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.9996496674223455,
+      "scaleY": 0.9996496674223455,
+      "rotation": -0.015764965994451985
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "in",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1,
+      "rotation": 0
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1,
+      "rotation": 0
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1,
+      "rotation": 0
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0,
+      "scaleY": 0,
+      "rotation": -45
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1,
+      "rotation": 0
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.9963037384236798,
+      "scaleY": 0.9963037384236798,
+      "rotation": -0.16633177093440887
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.828419770404785,
+      "scaleY": 0.828419770404785,
+      "rotation": -7.721110331784676
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.24238406226374887,
+      "scaleY": 0.24238406226374887,
+      "rotation": -34.092717198131304
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.04514019591362273,
+      "scaleY": 0.04514019591362273,
+      "rotation": -42.968691183886975
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.001078977024420169,
+      "scaleY": 0.001078977024420169,
+      "rotation": -44.95144603390109
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0,
+      "scaleY": 0,
+      "rotation": -45
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1,
+      "rotation": 0
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.9964995709962049,
+      "scaleY": 0.9964995709962049,
+      "rotation": -0.15751930517077803
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.8420127152829946,
+      "scaleY": 0.8420127152829946,
+      "rotation": -7.109427812265241
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.26743107562014146,
+      "scaleY": 0.26743107562014146,
+      "rotation": -32.96560159709364
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.041910461007718,
+      "scaleY": 0.041910461007718,
+      "rotation": -43.11402925465269
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.0010194820690112572,
+      "scaleY": 0.0010194820690112572,
+      "rotation": -44.954123306894495
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 0,
+      "scaleY": 0,
+      "rotation": -45
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1,
+      "rotation": 0
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.9987306096894325,
+      "scaleY": 0.9987306096894325,
+      "rotation": -0.05712256397553967
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.8051277872779055,
+      "scaleY": 0.8051277872779055,
+      "rotation": -8.769249572494251
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.25486155151935863,
+      "scaleY": 0.25486155151935863,
+      "rotation": -33.531230181628864
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.043479004394536225,
+      "scaleY": 0.043479004394536225,
+      "rotation": -43.04344480224587
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0.00035033257765448855,
+      "scaleY": 0.00035033257765448855,
+      "rotation": -44.98423503400555
+    }
+  },
+  {
+    "kind": "spin",
+    "phase": "out",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 0,
+      "scaleY": 0,
+      "rotation": -45
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 2,
+      "scaleY": 2,
+      "offsetX": -30,
+      "offsetY": -30,
+      "rotation": -10
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 2,
+      "scaleY": 2,
+      "offsetX": -30,
+      "offsetY": -30,
+      "rotation": -10
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "rotation": 0
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 2,
+      "scaleY": 2,
+      "offsetX": -30,
+      "offsetY": -30,
+      "rotation": -10
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.8192522985776702,
+      "scaleY": 1.8192522985776702,
+      "offsetX": -24.577568957330104,
+      "offsetY": -24.577568957330104,
+      "rotation": -8.192522985776701
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.3584482352666574,
+      "scaleY": 1.3584482352666574,
+      "offsetX": -10.753447057999718,
+      "offsetY": -10.753447057999718,
+      "rotation": -3.584482352666573
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.1162358594454131,
+      "scaleY": 1.1162358594454131,
+      "offsetX": -3.487075783362391,
+      "offsetY": -3.487075783362391,
+      "rotation": -1.1623585944541304
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.0256055099456507,
+      "scaleY": 1.0256055099456507,
+      "offsetX": -0.7681652983695175,
+      "offsetY": -0.7681652983695175,
+      "rotation": -0.25605509945650584
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.0004813480738806,
+      "scaleY": 1.0004813480738806,
+      "offsetX": -0.014440442216416827,
+      "offsetY": -0.014440442216416827,
+      "rotation": -0.004813480738805609
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "rotation": 0
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 2,
+      "scaleY": 2,
+      "offsetX": -30,
+      "offsetY": -30,
+      "rotation": -10
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.8240079858587879,
+      "scaleY": 1.8240079858587879,
+      "offsetX": -24.72023957576363,
+      "offsetY": -24.72023957576363,
+      "rotation": -8.240079858587878
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.3693160650141603,
+      "scaleY": 1.3693160650141603,
+      "offsetX": -11.079481950424807,
+      "offsetY": -11.079481950424807,
+      "rotation": -3.6931606501416026
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.1260421172046051,
+      "scaleY": 1.1260421172046051,
+      "offsetX": -3.78126351613815,
+      "offsetY": -3.78126351613815,
+      "rotation": -1.26042117204605
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.0238416120955742,
+      "scaleY": 1.0238416120955742,
+      "offsetX": -0.7152483628672235,
+      "offsetY": -0.7152483628672235,
+      "rotation": -0.23841612095574116
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.000449612009384,
+      "scaleY": 1.000449612009384,
+      "offsetX": -0.013488360281519451,
+      "offsetY": -0.013488360281519451,
+      "rotation": -0.004496120093839817
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "rotation": 0
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 2,
+      "scaleY": 2,
+      "offsetX": -30,
+      "offsetY": -30,
+      "rotation": -10
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.8993969085421984,
+      "scaleY": 1.8993969085421984,
+      "offsetX": -26.981907256265952,
+      "offsetY": -26.981907256265952,
+      "rotation": -8.993969085421984
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.341715656090733,
+      "scaleY": 1.341715656090733,
+      "offsetX": -10.251469682721995,
+      "offsetY": -10.251469682721995,
+      "rotation": -3.4171565609073316
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.1211557310274292,
+      "scaleY": 1.1211557310274292,
+      "offsetX": -3.6346719308228783,
+      "offsetY": -3.6346719308228783,
+      "rotation": -1.2115573102742927
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.0246998818654558,
+      "scaleY": 1.0246998818654558,
+      "offsetX": -0.7409964559636772,
+      "offsetY": -0.7409964559636772,
+      "rotation": -0.24699881865455908
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.000115580216443,
+      "scaleY": 1.000115580216443,
+      "offsetX": -0.0034674064932926907,
+      "offsetY": -0.0034674064932926907,
+      "rotation": -0.001155802164430897
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "in",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "rotation": 0
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "rotation": 0
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "rotation": 0
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 2,
+      "scaleY": 2,
+      "offsetX": -30,
+      "offsetY": -30,
+      "rotation": -10
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "rotation": 0
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.1807477014223298,
+      "scaleY": 1.1807477014223298,
+      "offsetX": -5.4224310426698965,
+      "offsetY": -5.4224310426698965,
+      "rotation": -1.8074770142232988
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.6415517647333426,
+      "scaleY": 1.6415517647333426,
+      "offsetX": -19.24655294200028,
+      "offsetY": -19.24655294200028,
+      "rotation": -6.415517647333427
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.8837641405545869,
+      "scaleY": 1.8837641405545869,
+      "offsetX": -26.512924216637607,
+      "offsetY": -26.512924216637607,
+      "rotation": -8.83764140554587
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.9743944900543493,
+      "scaleY": 1.9743944900543493,
+      "offsetX": -29.231834701630483,
+      "offsetY": -29.231834701630483,
+      "rotation": -9.743944900543495
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.9995186519261194,
+      "scaleY": 1.9995186519261194,
+      "offsetX": -29.98555955778358,
+      "offsetY": -29.98555955778358,
+      "rotation": -9.995186519261194
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 2,
+      "scaleY": 2,
+      "offsetX": -30,
+      "offsetY": -30,
+      "rotation": -10
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "rotation": 0
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.1759920141412121,
+      "scaleY": 1.1759920141412121,
+      "offsetX": -5.2797604242363665,
+      "offsetY": -5.2797604242363665,
+      "rotation": -1.7599201414121222
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.6306839349858397,
+      "scaleY": 1.6306839349858397,
+      "offsetX": -18.920518049575193,
+      "offsetY": -18.920518049575193,
+      "rotation": -6.3068393498583974
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.8739578827953949,
+      "scaleY": 1.8739578827953949,
+      "offsetX": -26.21873648386185,
+      "offsetY": -26.21873648386185,
+      "rotation": -8.73957882795395
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.9761583879044258,
+      "scaleY": 1.9761583879044258,
+      "offsetX": -29.284751637132775,
+      "offsetY": -29.284751637132775,
+      "rotation": -9.76158387904426
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.999550387990616,
+      "scaleY": 1.999550387990616,
+      "offsetX": -29.98651163971848,
+      "offsetY": -29.98651163971848,
+      "rotation": -9.99550387990616
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "scaleX": 2,
+      "scaleY": 2,
+      "offsetX": -30,
+      "offsetY": -30,
+      "rotation": -10
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1,
+      "scaleY": 1,
+      "offsetX": 0,
+      "offsetY": 0,
+      "rotation": 0
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.1006030914578016,
+      "scaleY": 1.1006030914578016,
+      "offsetX": -3.018092743734046,
+      "offsetY": -3.018092743734046,
+      "rotation": -1.0060309145780153
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.658284343909267,
+      "scaleY": 1.658284343909267,
+      "offsetX": -19.748530317278004,
+      "offsetY": -19.748530317278004,
+      "rotation": -6.5828434390926684
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.8788442689725708,
+      "scaleY": 1.8788442689725708,
+      "offsetX": -26.36532806917712,
+      "offsetY": -26.36532806917712,
+      "rotation": -8.788442689725708
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.9753001181345442,
+      "scaleY": 1.9753001181345442,
+      "offsetX": -29.25900354403632,
+      "offsetY": -29.25900354403632,
+      "rotation": -9.753001181345441
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 1.999884419783557,
+      "scaleY": 1.999884419783557,
+      "offsetX": -29.996532593506707,
+      "offsetY": -29.996532593506707,
+      "rotation": -9.998844197835568
+    }
+  },
+  {
+    "kind": "twist",
+    "phase": "out",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "scaleX": 2,
+      "scaleY": 2,
+      "offsetX": -30,
+      "offsetY": -30,
+      "rotation": -10
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "012345678901234567890123456789"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "in",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "012345678901234567890123456789"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3"
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearWord",
+    "phase": "out",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 mo"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motio"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion �"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "0123456"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "012345678901234"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "01234567890123456789012"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "01234567890123456789012345678"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "012345678901234567890123456789"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 mo"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motio"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion �"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "in",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion �"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motio"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 mo"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "012345678901234567890123456789"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "01234567890123456789012345678"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "01234567890123456789012"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "012345678901234"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "012345"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion �"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motio"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 mo"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3"
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "appearChar",
+    "phase": "out",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": ""
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "keW #kB!IK KB"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "keW #kB!IK KB"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "keW #kB!IK KB"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "BD# Zm5BaV Zh"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "beL Lyj0gV Qf"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 UOiSJ! 7a"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motioE vS"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion �c"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "#5V9SihUJu!jWTdGahbnK9iJ3Gu6w7"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "#5V9SihUJu!jWTdGahbnK9iJ3Gu6w7"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "4ViiTr1u6Qm4tmFuZUTD0S3mnsjfVw"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "012345678WsSvArK8lMmtxqfC7#HzG"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "01234567890123456789OX3skR%hUE"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "01234567890123456789012345678Z"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "012345678901234567890123456789"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "keW #kB!IK KB"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "keW #kB!IK KB"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "beL Lyj0gV Qf"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 UOiSJ! 7a"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motioE vS"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "in",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 0,
+    "duration": 1,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 0,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 1,
+    "duration": 2,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "keW #kB!IK KB"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 0,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 1,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion �c"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 7,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motioE vS"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 15,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 Il3Y5O W%"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 22,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "beL Lyj0gV Qf"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 28,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "BD# Zm5BaV Zh"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 29,
+    "duration": 30,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "keW #kB!IK KB"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 0,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "012345678901234567890123456789"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 1,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "01234567890123456789012345678Z"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 7,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "01234567890123456789OX3skR%hUE"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 15,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "012345678WsSvArK8lMmtxqfC7#HzG"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 23,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "c5n3UP#12#6n5e!jUdDDqAu8krRC_p"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 29,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "#5V9SihUJu!jWTdGahbnK9iJ3Gu6w7"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 30,
+    "duration": 31,
+    "text": "012345678901234567890123456789",
+    "values": {
+      "volume": -6,
+      "chars": "#5V9SihUJu!jWTdGahbnK9iJ3Gu6w7"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 0,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 1,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motion 🙂"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 15,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 motioE vS"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 30,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "AD3 Il3Y5O W%"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 45,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "beL Lyj0gV Qf"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 58,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "keW #kB!IK KB"
+    }
+  },
+  {
+    "kind": "scramble",
+    "phase": "out",
+    "frame": 59,
+    "duration": 60,
+    "text": "AD3 motion 🙂",
+    "values": {
+      "volume": -6,
+      "chars": "keW #kB!IK KB"
+    }
+  }
+]

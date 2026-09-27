@@ -17,10 +17,11 @@ cargo run --locked --manifest-path native/editor/Cargo.toml --bin dapi-rust -- -
 cargo run --locked --manifest-path native/editor/Cargo.toml --features desktop --bin ad3-editing -- /path/to/project
 ```
 
-Four runnable projects are included: `examples/static` exercises source editing;
+Five runnable projects are included: `examples/static` exercises source editing;
 `examples/modules` exercises imported components/JSON; `examples/reactive` animates
 rectangles and text through the native ticker, signals, `For` and `Show`;
-`examples/inspect` exposes editable controls from an imported component module.
+`examples/inspect` exposes editable controls from an imported component module;
+`examples/motion` combines slide/fade/text presets with an animated color track.
 Pass the full path to a folder to the native executable.
 
 The desktop application opens an existing project folder or source entry, shows
@@ -65,8 +66,9 @@ Rendered media never overwrites an existing output or original footage.
   export, bounded encoder pipe, progress, and a 48 kHz stereo mixer in Rust.
   FFmpeg decodes and time-stretches sources once per path/rate; Rust applies clip
   windows, source clocks, reactive gain and summation at sample boundaries.
-- `timing.rs`: 30 fps authoring time, source trims, both out-edge caps, natural
-  source durations, nested clocks, container spans/clipping, workareas and dB buses.
+- `timing.rs`: 30 fps authoring units, output-rate frame quantization, source
+  trims, both out-edge caps, natural source durations, nested clocks, container
+  spans/clipping, workareas and dB buses. The original fallback is 480 frames.
 - `transport.rs`: seeks, J/K/L shuttle tiers, looping and decoder generations.
 - `media.rs`: local probing, linked asset resolution, video frames and waveform.
 - `render.rs`: local static scene composition, rectangles, basic unwrapped text,
@@ -78,8 +80,19 @@ Rendered media never overwrites an existing output or original footage.
   in the original reconciler, while opacity remains independent.
 - `easing.rs`, `text_motion.rs`: native Bezier/steps/spring curves and deterministic
   character/word reveals and scrambling, checked against original-source
-  fixtures. Preset/keyframe tree sampling is the next integration step; these
-  helpers alone do not yet enable authored animation elements in rendering.
+  fixtures.
+- `motion.rs`: per-frame sampling of all 14 preset formulas and numeric/color
+  keyframes, source-local clocks, delays, input/output windows, child ordering,
+  inherited style clocks and uniform-scale rules. Sampling derives a new tree
+  from authored values each frame, so reverse seeks do not accumulate changes.
+  Preview/export integrate leaf/group fade/slide, text reveals/scramble and supported
+  position/color/opacity/gain tracks. Transform/blur presets and style targets
+  still require their pending graphics implementations; unsupported render
+  properties fail explicitly. Group opacity inherits per draw, as in the original
+  Canvas renderer, including retention of inherited alpha when a computed
+  assignment is outside [0,1], following the
+  [Canvas contract](https://html.spec.whatwg.org/multipage/canvas.html#dom-context-2d-globalalpha).
+  Width/height rendering still requires integers.
 - `main.rs`: JSON CLI for inspection, context, structural checks, source edits,
   media inspection, capture and export; no running Electron application required.
 - `desktop.rs`: native egui canvas preview, timeline, inspector, source editing,
@@ -117,8 +130,8 @@ this ledger is waived because a smaller example renders successfully.
 | Source/project model | Static TSX edits; native ES modules, reactive props, signals/effects, For/Index/Show and ticker; original file spans; live `@inspect` and imported initializer writeback | Remaining package/Solid/browser APIs, generation hooks, loop unrolling and general multi-file JSX edits; complete last-good-render behavior |
 | Timeline | Source/timeline clocks, workareas, cuts/trims/moves, nested rates, transport | Ripple Q/E, multi-selection, clipboard/grouping, transitions, keyframe tracks, all timeline gestures/colors/toggles and established constraints |
 | Graphics | Static media, rects and basic unwrapped text | GPU compositor; every transform, masks, blend modes, gradients, paints, strokes, shadows, effects, wrapped/styled text, HTML, surfaces, WGSL and adjustment layers |
-| Audio | Offline retiming and Rust stereo mixing with per-frame reactive gain | Real-time output and seek/rate re-anchoring, solo/bus hierarchy, gain/keyframes, syncTo and precise behavior across all cuts/rates |
-| Animation/captions | Authored data retained; native easing, text motion and color interpolation helpers | Preset/keyframe tree sampling and renderer integration, transitions, transcript parsing and every caption preset |
+| Audio | Offline retiming and Rust stereo mixing with per-frame reactive/preset/keyframe gain | Real-time output and seek/rate re-anchoring, solo/bus hierarchy, sample-accurate gain automation, syncTo and precise behavior across all cuts/rates |
+| Animation/captions | Native preset/keyframe sampling integrated with preview/export for supported render properties | Transform/blur/style rendering, sequence targeting, transition behavior, track editing UI, transcript parsing and every caption preset |
 | Media/assets | Local FFprobe and linked YAML sources | Hash/manifest lifecycle, import/relink/move/folders, proxies and bounded caches, frame directories, remote resolution/modifiers, transcripts |
 | CLI/IPC | Native explicit-project commands | Existing dapi flags/output/contracts, open/context IPC, logs, fonts, screenshots, filmstrips/contact sheets and all applicable local commands |
 | HyperFrames | Existing separate package untouched | Rust save/template/preview/render/cancel engine, project isolation, immutable outputs and linked timeline updates |
@@ -160,12 +173,23 @@ smoke changed two imported initializers, checked all other source bytes and
 captured the result; the native UI displayed those controls and the same frame.
 
 Numeric fixtures compare 220 easing samples, 273 text-motion results, 339 color
-parses and 51 color interpolations, including large overshoots and JS bitwise
+parses, 51 color interpolations and 672 complete preset samples from the original
+ECS function, including both phases, large overshoots and JS bitwise
 wrapping. Rust tests read committed JSON and need no JavaScript runtime. The
 development-only `tests/reference/generate-motion.mjs` regenerates these fixtures
 from the original TS implementation and installed anime.js/colord; it requires
 Node 24 and the repository's development dependencies. Adapted algorithms retain
 their MIT notices under `licenses/`.
+
+For compatibility reviews, follow the whole source path: public JSX props in
+`packages/reconciler/src/document.ts`, then their runtime consumer. The Rust
+tree retains authored prop names (`x`, `scaleX`, stroke `width`); ECS paths such
+as `position.x` and `stroke.width` are internal adapter outputs, not another
+accepted authoring syntax. Existing fallbacks are intentional compatibility:
+unknown preset types become fade, non-`out` phases become in, and unrecognized
+easing descriptors use linear interpolation. Tests cover these source-defined
+fallbacks; reviews should include the adapter before proposing stricter input
+rules or additional aliases.
 
 Integration modules share one test executable to avoid linking the VM multiple
 times on Windows. On a memory-constrained build machine, use `CARGO_BUILD_JOBS=2`.
@@ -175,10 +199,14 @@ assertions and overflow checks enabled. To debug the editor with symbols, pass
 their normal profile, avoiding a full cache rebuild when changing this setting.
 Dependency symbols can still produce Windows PDB files; this setting does not
 disable all symbol linking.
-For a faster local Windows UI iteration without a PDB, use
+To omit PDB generation during local Windows UI iteration, use
 `cargo rustc --locked --manifest-path native/editor/Cargo.toml --features desktop --bin ad3-editing -- -C link-arg=/DEBUG:NONE`.
 This explicit linker override leaves cached dependency compilation intact; omit
 it when a Windows debugging session needs the PDB.
+For repeated Windows development/tests, setting `AD3_NATIVE_PDB=0` applies that
+linker override to this package's debug targets through its Rust build script.
+It does not change dependency compilation flags or disable runtime checks.
+Leave it unset for normal PDB generation; release settings are unaffected.
 Source saves preserve Windows metadata through
 [ReplaceFileW](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-replacefilew),
 retaining a recoverable backup when replacement cannot complete.
@@ -203,7 +231,10 @@ memo equality and pull order, conditional dependencies, nested cleanup, list
 identity/reordering, Show lifetime, mount ordering, ticker boundaries, optional
 children props, offline holds/cancellation, and independent samples.
 
-The export clock follows the existing encoder: it writes complete frames
+The export clock follows the existing capture engine: authored seconds are
+quantized to output frames when its fresh world is mounted, including workareas,
+natural source durations and motion windows. Frame strings such as `45f` retain
+the language's fixed 30 fps unit before conversion. The encoder writes complete frames
 (`floor(workarea duration * output FPS)`). The report distinguishes the authored
 workarea duration from the video duration; audio covers the workarea at 48 kHz.
 `playing()` is true in exports. The ticker's frame accessor uses the output FPS

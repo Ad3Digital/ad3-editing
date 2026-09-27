@@ -74,7 +74,8 @@ fn supported(node: &Node) -> Result<()> {
     ];
     let specific: &[&str] = match node.tag.as_str() {
         "scene" => &["active", "workarea", "fill"],
-        "group" | "sequence" => &[],
+        "group" => &["opacity"],
+        "sequence" => &[],
         "video" | "image" => &["src", "objectFit", "opacity"],
         "audio" => &["src"],
         "rect" => &["fill", "opacity"],
@@ -177,6 +178,7 @@ impl RenderPlan {
             library,
             window,
             [0.0, 0.0],
+            1.0,
             &mut visual,
             &mut input,
             &mut audio,
@@ -201,6 +203,7 @@ impl RenderPlan {
         library: &MediaLibrary,
         window: [f64; 2],
         offset: [f64; 2],
+        parent_opacity: f64,
         visual: &mut usize,
         input: &mut usize,
         audio: &mut Vec<String>,
@@ -215,6 +218,17 @@ impl RenderPlan {
             }
             let x = offset[0] + node.number("x", 0.0)? + node.number("offsetX", 0.0)?;
             let y = offset[1] + node.number("y", 0.0)? + node.number("offsetY", 0.0)?;
+            // The original Canvas renderNode inherits globalAlpha per draw;
+            // groups do not flatten their children into an isolated layer.
+            let requested_opacity = parent_opacity * node.number("opacity", 1.0)?;
+            // Canvas ignores an invalid globalAlpha assignment and retains the
+            // previous alpha; this also matters for overshooting keyframes.
+            // https://html.spec.whatwg.org/multipage/canvas.html#dom-context-2d-globalalpha
+            let opacity = if (0.0..=1.0).contains(&requested_opacity) {
+                requested_opacity
+            } else {
+                parent_opacity
+            };
             if node.is_container() {
                 self.children(
                     node,
@@ -222,6 +236,7 @@ impl RenderPlan {
                     library,
                     window,
                     [x, y],
+                    opacity,
                     visual,
                     input,
                     audio,
@@ -249,7 +264,6 @@ impl RenderPlan {
                 ));
             }
             let source_duration = duration * span.playback_rate;
-            let opacity = node.number("opacity", 1.0)?.clamp(0.0, 1.0);
             let index = *input;
             let media = matches!(node.tag.as_str(), "video" | "audio" | "image");
             if media {

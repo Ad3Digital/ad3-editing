@@ -203,16 +203,20 @@ mod tests {
     use super::*;
     use std::{
         io,
+        sync::atomic::{AtomicU64, Ordering},
         time::{SystemTime, UNIX_EPOCH},
     };
     fn directory() -> PathBuf {
+        // Windows clock resolution can give parallel tests the same timestamp.
+        static NEXT_DIRECTORY: AtomicU64 = AtomicU64::new(0);
         let path = std::env::temp_dir().join(format!(
-            "ad3-rust-backup-{}-{}",
+            "ad3-rust-backup-{}-{}-{}",
             std::process::id(),
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
-                .as_nanos()
+                .as_nanos(),
+            NEXT_DIRECTORY.fetch_add(1, Ordering::Relaxed)
         ));
         fs::create_dir(&path).unwrap();
         path

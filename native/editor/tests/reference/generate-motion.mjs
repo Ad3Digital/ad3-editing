@@ -55,4 +55,34 @@ const { lerpColor } = await import('data:text/javascript;base64,' + Buffer.from(
 const colorPairs = [[0xff0000, 0x0000ff], [0x123456, 0xaafc01], [0x000000, 0xffffff]];
 const colorProgress = [-Number.MAX_VALUE, -1e300, -1e12, -1e8, -1.5, -.1, 0, .5, 1, 1.1, 2, 1e8, 1e12, 1e300, Number.MAX_VALUE, 2 ** 52, 2 ** 52 + 1];
 save('color-lerp.json', colorPairs.flatMap(([from, to]) => colorProgress.map(progress => ({ from, to, progress, color: lerpColor(from, to, progress) & 0xffffff }))));
-console.log('Generated easing, text motion and color fixtures from the original editor sources.');
+// Execute the original preset function with its ECS stores represented by
+// plain arrays. No duplicated animation formulas in the reference harness.
+const constants = readFileSync(resolve(root, 'packages/runtime/src/constants.ts'), 'utf8');
+const enumObject = name => Object.fromEntries(constants.match(new RegExp(`export enum ${name} \\{([^}]+)\\}`))[1]
+  .split(',').map(n => n.trim()).filter(Boolean).map((n, i) => [n, i]));
+const presetSource = `
+import { cubicBezier } from '${original('node_modules/animejs/dist/modules/index.js')}';
+import { revealChars, revealWords, scrambleChars } from '${original('packages/runtime/src/utils/text-motion.ts')}';
+const Computed='computed', Animation='animation', Chars='chars';
+const store=(world, trait)=>world[trait];
+const AnimationType=${JSON.stringify(enumObject('AnimationType'))};
+const AnimationPhase=${JSON.stringify(enumObject('AnimationPhase'))};
+export ${motionSource.slice(motionSource.indexOf('function applyAnimation('), motionSource.indexOf('export function motionSystem('))}
+${motionSource.slice(motionSource.indexOf('function clamp01('))}`;
+const { applyAnimation } = await import('data:text/javascript;base64,' + Buffer.from(stripTypeScriptTypes(presetSource)).toString('base64'));
+const types = ['fade','gain','grow','shrink','blur','slideLeft','slideRight','slideUp','slideDown','spin','twist','appearWord','appearChar','scramble'];
+const presets = [];
+for (const [type, kind] of types.entries()) for (const [phase, phaseName] of ['in','out'].entries())
+  for (const duration of [1,2,30,31,60])
+  for (const frame of [...new Set([0,1,Math.floor(duration/4),Math.floor(duration/2),Math.floor(3*duration/4),duration-2,duration-1])].filter(n=>n>=0 && n<duration)) {
+    const text = duration === 31 ? '012345678901234567890123456789' : 'AD3 motion 🙂';
+    const computed = Object.fromEntries(['opacity','volume','scaleX','scaleY','blur','offsetX','offsetY','rotation','chars'].map(n => [n, []]));
+    computed.volume[0] = -6;
+    const world = { computed, animation: { type:[type], phase:[phase] }, chars: { value:[text] } };
+    applyAnimation(world, {id:()=>0}, {id:()=>0}, frame/Math.max(1,duration-1));
+    const values = Object.fromEntries(Object.entries(computed).filter(([,v])=>v[0]!==undefined)
+      .map(([name,v])=>[name, typeof v[0]==='string'?v[0].toWellFormed():v[0]===-Infinity?'silence':v[0]]));
+    presets.push({kind, phase:phaseName, frame, duration, text, values});
+  }
+save('presets.json', presets);
+console.log('Generated easing, text motion, color and preset fixtures from the original editor sources.');

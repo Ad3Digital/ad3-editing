@@ -90,29 +90,32 @@ fn run(args: &[String]) -> Result<Value> {
     } else {
         document.path.parent().ok_or("Missing project directory")?
     };
+    // Export resolves timing only in its output-rate world. A 30 fps preflight
+    // would reject sub-frame workareas that are valid at a higher output rate.
+    if action == "export" && (rest.len() == 1 || rest.len() == 2) {
+        let output = &rest[0];
+        let fps = rest
+            .get(1)
+            .map(|v| v.parse::<f64>())
+            .transpose()
+            .map_err(|_| "Invalid FPS")?
+            .unwrap_or(30.0);
+        let report = ProjectRenderer::export(
+            &document,
+            project,
+            tools,
+            Path::new(output),
+            fps,
+            None,
+            |_, _| {},
+        )?;
+        return Ok(
+            json!({"path":output,"width":report.width,"height":report.height,"duration":report.duration,"workareaDuration":report.workarea_duration,"videoDuration":report.video_duration,"fps":report.fps,"frames":report.frames,"warnings":report.warnings}),
+        );
+    }
     let library = MediaLibrary::load(&document.root, project, &tools)?;
     let timeline = Timeline::resolve(&document.root, &library.durations)?;
     match (action.as_str(), rest) {
-        ("export", [output]) | ("export", [output, _]) => {
-            let fps = rest
-                .get(1)
-                .map(|v| v.parse::<f64>())
-                .transpose()
-                .map_err(|_| "Invalid FPS")?
-                .unwrap_or(30.0);
-            let report = ProjectRenderer::export(
-                &document,
-                project,
-                tools,
-                Path::new(output),
-                fps,
-                None,
-                |_, _| {},
-            )?;
-            Ok(
-                json!({"path":output,"width":report.width,"height":report.height,"duration":report.duration,"workareaDuration":report.workarea_duration,"videoDuration":report.video_duration,"fps":report.fps,"frames":report.frames,"warnings":report.warnings}),
-            )
-        }
         ("capture", [scene, at, output]) => {
             let area = timeline.workareas.get(scene).ok_or("Scene not found")?;
             let relative_time = parse_time(at)?;
