@@ -163,6 +163,10 @@ during fast reverse shuttle. Export decoding remains full-resolution.
 
 ## Build from source
 
+The complete Rust rewrite is in progress under [`native/editor`](native/editor/README.md).
+That crate has its own native application, document engine and CLI. Its acceptance
+ledger lists the functionality still required before it can replace this release.
+
 Use **Node.js 24**, npm, and Git. Build natively on Windows x64, macOS Apple silicon,
 or macOS Intel for the corresponding published package. macOS builds also require
 the Xcode command-line tools.

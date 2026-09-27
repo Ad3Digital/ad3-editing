@@ -41,6 +41,9 @@ out/
 artifacts/
 release-assets/
 
+# Rust build outputs (sources and Cargo.lock stay versioned)
+target/
+
 # Vercel
 .vercel
 
