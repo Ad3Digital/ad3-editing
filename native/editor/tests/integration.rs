@@ -6,6 +6,8 @@ mod editing;
 mod inspect;
 #[path = "modules.rs"]
 mod modules;
+#[path = "motion.rs"]
+mod motion;
 #[path = "reactivity.rs"]
 mod reactivity;
 #[path = "rendering.rs"]

@@ -72,6 +72,14 @@ Rendered media never overwrites an existing output or original footage.
 - `render.rs`: local static scene composition, rectangles, basic unwrapped text,
   video/image fitting, stacking, opacity, trimmed/rate-adjusted audio, mixing,
   workarea MP4 export and PNG/RGBA capture.
+- `color.rs`: original packed-RGB parsing, its 43 named colors, RGB/HSL syntax,
+  numeric colors, hex normalization and channel interpolation with JavaScript
+  integer wrapping. Rendering uses this parser; embedded alpha is discarded as
+  in the original reconciler, while opacity remains independent.
+- `easing.rs`, `text_motion.rs`: native Bezier/steps/spring curves and deterministic
+  character/word reveals and scrambling, checked against original-source
+  fixtures. Preset/keyframe tree sampling is the next integration step; these
+  helpers alone do not yet enable authored animation elements in rendering.
 - `main.rs`: JSON CLI for inspection, context, structural checks, source edits,
   media inspection, capture and export; no running Electron application required.
 - `desktop.rs`: native egui canvas preview, timeline, inspector, source editing,
@@ -110,7 +118,7 @@ this ledger is waived because a smaller example renders successfully.
 | Timeline | Source/timeline clocks, workareas, cuts/trims/moves, nested rates, transport | Ripple Q/E, multi-selection, clipboard/grouping, transitions, keyframe tracks, all timeline gestures/colors/toggles and established constraints |
 | Graphics | Static media, rects and basic unwrapped text | GPU compositor; every transform, masks, blend modes, gradients, paints, strokes, shadows, effects, wrapped/styled text, HTML, surfaces, WGSL and adjustment layers |
 | Audio | Offline retiming and Rust stereo mixing with per-frame reactive gain | Real-time output and seek/rate re-anchoring, solo/bus hierarchy, gain/keyframes, syncTo and precise behavior across all cuts/rates |
-| Animation/captions | Authored data retained | Easing, preset animations, keyframes, transitions, transcript parsing and every caption preset |
+| Animation/captions | Authored data retained; native easing, text motion and color interpolation helpers | Preset/keyframe tree sampling and renderer integration, transitions, transcript parsing and every caption preset |
 | Media/assets | Local FFprobe and linked YAML sources | Hash/manifest lifecycle, import/relink/move/folders, proxies and bounded caches, frame directories, remote resolution/modifiers, transcripts |
 | CLI/IPC | Native explicit-project commands | Existing dapi flags/output/contracts, open/context IPC, logs, fonts, screenshots, filmstrips/contact sheets and all applicable local commands |
 | HyperFrames | Existing separate package untouched | Rust save/template/preview/render/cancel engine, project isolation, immutable outputs and linked timeline updates |
@@ -150,6 +158,14 @@ time/named streams, zero-byte originals, locked files, concurrent replacement,
 late writes through displaced handles and exclusive backup disposal. A real CLI
 smoke changed two imported initializers, checked all other source bytes and
 captured the result; the native UI displayed those controls and the same frame.
+
+Numeric fixtures compare 220 easing samples, 273 text-motion results, 339 color
+parses and 51 color interpolations, including large overshoots and JS bitwise
+wrapping. Rust tests read committed JSON and need no JavaScript runtime. The
+development-only `tests/reference/generate-motion.mjs` regenerates these fixtures
+from the original TS implementation and installed anime.js/colord; it requires
+Node 24 and the repository's development dependencies. Adapted algorithms retain
+their MIT notices under `licenses/`.
 
 Integration modules share one test executable to avoid linking the VM multiple
 times on Windows. On a memory-constrained build machine, use `CARGO_BUILD_JOBS=2`.

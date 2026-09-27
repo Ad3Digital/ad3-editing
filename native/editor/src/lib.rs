@@ -2,8 +2,10 @@
 // License, v. 2.0. https://mozilla.org/MPL/2.0/
 mod atomic_file;
 mod audio;
+pub mod color;
 mod control;
 pub mod document;
+pub mod easing;
 mod encoder;
 pub mod evaluator;
 pub mod inspect;
@@ -17,6 +19,7 @@ pub mod render;
 pub mod source;
 mod source_inspect;
 mod stack;
+pub mod text_motion;
 pub mod timing;
 pub mod transport;
 

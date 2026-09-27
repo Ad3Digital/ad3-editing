@@ -35,25 +35,17 @@ fn dimension(n: f64) -> Result<u32> {
     Ok(n as u32)
 }
 
-fn color(value: &str) -> Result<String> {
-    if let Some(hex) = value.strip_prefix('#') {
-        if !hex.bytes().all(|c| c.is_ascii_hexdigit()) {
-            return Err("Invalid hex color".into());
-        }
-        return match hex.len() {
-            3 | 4 => Ok(format!(
-                "0x{}",
-                hex.chars().flat_map(|ch| [ch, ch]).collect::<String>()
-            )),
-            6 | 8 => Ok(format!("0x{hex}")),
-            _ => Err("Invalid hex color length".into()),
-        };
-    }
-    if !value.is_empty() && value.bytes().all(|c| c.is_ascii_alphabetic()) {
-        Ok(value.into())
-    } else {
-        Err(format!("Color {value:?} needs the native CSS color parser"))
-    }
+fn color(value: &serde_json::Value) -> Result<String> {
+    let packed = match value {
+        serde_json::Value::String(text) => crate::color::parse(text),
+        serde_json::Value::Number(number) => number.as_f64().and_then(crate::color::number),
+        _ => None,
+    };
+    // The JSX reconciler stores packed RGB. Alpha embedded in authored colors
+    // is discarded there; opacity is an independent composition property.
+    packed
+        .map(|rgb| format!("0x{rgb:06X}"))
+        .ok_or_else(|| format!("Invalid color: {value}"))
 }
 
 fn supported(node: &Node) -> Result<()> {
@@ -158,7 +150,12 @@ impl RenderPlan {
         if duration > 24.0 * 3600.0 {
             return Err("Native render workarea exceeds the current 24-hour job limit".into());
         }
-        let background = color(scene.string("fill").unwrap_or("black"))?;
+        let background = scene
+            .props
+            .get("fill")
+            .map(color)
+            .transpose()?
+            .unwrap_or_else(|| "0x000000".into());
         let mut plan = Self {
             width,
             height,
@@ -315,15 +312,7 @@ impl RenderPlan {
                 if size <= 0.0 || size > 8192.0 {
                     return Err("Invalid font size".into());
                 }
-                let fill = node.string("color").ok_or("Text color must be a string")?;
-                // Glyph color alpha is ignored by the JSX API; opacity controls
-                // visibility. The general CSS color parser is still pending.
-                let fill = color(fill)?;
-                let fill = if fill.starts_with("0x") && fill.len() == 10 {
-                    &fill[..8]
-                } else {
-                    &fill
-                };
+                let fill = color(node.props.get("color").ok_or("Missing text color")?)?;
                 self.graph += &format!(
                     ";[base{previous}]drawtext=textfile=text-{text_id}.txt:expansion=none:font='{font}':fontsize={size}:fontcolor={fill}:alpha={opacity}:x={x}:y={y}:enable='gte(t,{delay})*lt(t,{})'[base{current}]",
                     delay + duration
@@ -339,7 +328,7 @@ impl RenderPlan {
             let height = dimension(node.number("height", default_size[1])?)?;
             let layer = format!("layer{current}");
             if node.tag == "rect" {
-                let fill = color(node.string("fill").ok_or_else(|| {
+                let fill = color(node.props.get("fill").ok_or_else(|| {
                     format!(
                         "{}: unpainted rect requires transparent composition support",
                         node.id

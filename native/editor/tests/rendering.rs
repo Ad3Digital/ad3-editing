@@ -42,6 +42,24 @@ fn native_export_preserves_trims_speed_audio_workarea_and_composition() {
             .iter()
             .any(|pixel| pixel[2] > 100 && pixel[2] < 150 && pixel[0] < 10)
     );
+    let colors = r#"export default <stage><scene id="s" active width={32} height={16} fill={255} workarea={[0,1]}>
+      <rect id="left" width={16} height={16} fill="rgba(255,0,0,0.1)" opacity={0.5}/>
+      <rect id="right" x={16} width={16} height={16} fill="hsl(120 100% 50%)"/>
+    </scene></stage>"#;
+    let document = SourceDocument::parse(folder.join("colors.tsx"), colors.into()).unwrap();
+    let library = MediaLibrary::load(&document.root, &folder, &tools).unwrap();
+    let timeline = Timeline::resolve(&document.root, &library.durations).unwrap();
+    let frame = RenderPlan::build(&document.root, &timeline, &library, "s", 30.0, None)
+        .unwrap()
+        .frame(&tools, &folder)
+        .unwrap();
+    let left = &frame[(8 * 32 + 8) * 4..(8 * 32 + 8) * 4 + 3];
+    assert!(
+        (122..=132).contains(&left[0]) && left[1] < 4 && (122..=132).contains(&left[2]),
+        "{left:?}"
+    );
+    let right = &frame[(8 * 32 + 24) * 4..(8 * 32 + 24) * 4 + 3];
+    assert!(right[0] < 4 && right[1] > 250 && right[2] < 4, "{right:?}");
     let cancel = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
     let trigger = cancel.clone();
     let cancel_thread = std::thread::spawn(move || {
