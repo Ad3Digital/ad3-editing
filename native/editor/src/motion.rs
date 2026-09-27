@@ -15,6 +15,7 @@ use std::collections::BTreeMap;
 #[derive(Default)]
 pub struct Motion {
     easings: BTreeMap<String, Easing>,
+    pub(crate) text_sizes: crate::text::TextSizes,
 }
 const PROPERTIES: &[&str] = &[
     "x",
@@ -88,6 +89,7 @@ impl Motion {
         {
             return Err("Invalid native motion clock".into());
         }
+        self.text_sizes.clear();
         crate::stack::runtime(|| self.node(root, timeline, scene_frame, fps, None))
     }
     fn node(
@@ -274,6 +276,25 @@ impl Motion {
                     numbers.remove(key);
                 }
             }
+        }
+        if matches!(original.tag.as_str(), "text" | "textRange") {
+            let color = crate::text::node_color(original);
+            output.props.remove("fill");
+            output.props.remove("color");
+            if let Some(color) = color {
+                output.props.insert("color".into(), color.into());
+            } else {
+                numbers.remove("color");
+            }
+        }
+        if original.tag == "text" {
+            self.text_sizes.insert(
+                original.id.clone(),
+                [
+                    numbers.get("width").copied(),
+                    numbers.get("height").copied(),
+                ],
+            );
         }
         Self::write_values(&mut output, &numbers)?;
         for child in &original.children {

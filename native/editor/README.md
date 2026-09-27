@@ -17,13 +17,14 @@ cargo run --locked --manifest-path native/editor/Cargo.toml --bin dapi-rust -- -
 cargo run --locked --manifest-path native/editor/Cargo.toml --features desktop --bin ad3-editing -- /path/to/project
 ```
 
-Seven runnable projects are included: `examples/static` exercises source editing;
+Eight runnable projects are included: `examples/static` exercises source editing;
 `examples/modules` exercises imported components/JSON; `examples/reactive` animates
 rectangles and text through the native ticker, signals, `For` and `Show`;
 `examples/inspect` exposes editable controls from an imported component module;
 `examples/motion` combines slide/fade/text presets with an animated color track;
 `examples/vectors` exercises native rounded shapes, transforms and group opacity;
-`examples/media` combines native image/video composition with generated test assets.
+`examples/media` combines native image/video composition with generated test assets;
+`examples/text` exercises wrapped text, variable font weights, italic ranges and rotation.
 Pass the full path to a folder to the native executable.
 
 The desktop application opens an existing project folder or source entry, shows
@@ -78,13 +79,20 @@ Rendered media never overwrites an existing output or original footage.
   default/explicit anchors, singular matrices, group exclusions and selection
   boundaries. The compositor now uses these kernels for scene traversal.
 - `compositor.rs`: native CPU rasterization with tiny-skia for scenes made
-  of rectangles, images, videos, groups, sequences and audio nodes. Shared preview/capture/export
+  of rectangles, text, images, videos, groups, sequences and audio nodes. Shared preview/capture/export
   draw lists apply position/offset, rotation, uniform/axis scale, inherited opacity,
   rounded corners and scene clipping. Group bounds follow the original parent-first
   traversal using previous child transforms. Offline frames/PNG preserve alpha;
   H.264 frames explicitly composite over black. Realtime scene previews use the
   stage background. Media fit and clipping use the same native transformed geometry.
   Native composition does not invoke FFmpeg filters for stacking or drawing.
+- `font_catalog.rs`, `fonts.rs`, `text.rs`, `text_layout.rs`: bundled Inter normal/italic variable
+  fonts, system font discovery, HarfRust shaping, Skrifa outlines and native glyph
+  composition. ASCII-space wrapping, explicit newlines, font weight/size/style,
+  letter spacing, casing, UTF-16 style ranges, overlapping colors and all four
+  vertical baselines follow the existing text path. Text sizes update after
+  transform traversal, preserving the next-frame pivot/group behavior. Rounded
+  authored wrap widths stay separate from animated computed dimensions.
 - `texture.rs`: Rust PNG/JPEG/WebP/GIF/BMP/TIFF decoding, EXIF orientation,
   premultiplied alpha and a shared 128 MiB/256-entry decoded texture LRU.
   FFmpeg supplies source video RGBA, including display rotation and normalization
@@ -94,7 +102,7 @@ Rendered media never overwrites an existing output or original footage.
 - `media.rs`: native image probing, local FFprobe metadata, linked asset resolution,
   video frames and waveform. Matroska content duration excludes positive start offsets.
 - `render.rs`: shared frame/output interface and the existing FFmpeg composition
-  path for projects containing remaining node types such as text: rectangles, basic unwrapped text,
+  planner retained for compatibility tests and unsupported-node backend selection: rectangles, basic unwrapped text,
   video/image fitting, stacking, opacity, trimmed/rate-adjusted audio, mixing,
   workarea MP4 export and PNG/RGBA capture.
 - `color.rs`: original packed-RGB parsing, its 43 named colors, RGB/HSL syntax,
@@ -109,7 +117,7 @@ Rendered media never overwrites an existing output or original footage.
   inherited style clocks and uniform-scale rules. Sampling derives a new tree
   from authored values each frame, so reverse seeks do not accumulate changes.
   Preview/export integrate leaf/group fade/slide, text reveals/scramble and supported
-  position/color/opacity/gain tracks. Native vector/media scenes also render grow/shrink,
+  position/color/opacity/gain tracks. Native vector/media/text scenes also render grow/shrink,
   spin/twist and numeric transform/size/corner tracks. Blur presets and style targets
   still require their pending graphics implementations; unsupported render
   properties fail explicitly. Group opacity inherits per draw, as in the original
@@ -155,9 +163,9 @@ this ledger is waived because a smaller example renders successfully.
 | --- | --- | --- |
 | Source/project model | Static TSX edits; native ES modules, reactive props, signals/effects, For/Index/Show and ticker; original file spans; live `@inspect` and imported initializer writeback | Remaining package/Solid/browser APIs, generation hooks, loop unrolling and general multi-file JSX edits; complete last-good-render behavior |
 | Timeline | Source/timeline clocks, workareas, cuts/trims/moves, nested rates, transport | Ripple Q/E, multi-selection, clipboard/grouping, transitions, keyframe tracks, all timeline gestures/colors/toggles and established constraints |
-| Graphics | Native transformed/rounded vectors, images and video; basic unwrapped text through FFmpeg | Unified native text drawing, GPU compositor, remaining transforms/constraints, masks, blend modes, gradients, paints, strokes, shadows, effects, wrapped/styled text, HTML, surfaces, WGSL and adjustment layers |
+| Graphics | Native transformed/rounded vectors, images, video and wrapped text with font/color ranges | GPU compositor, complete font fallback/scripts/emoji and synthetic styles, remaining transforms/constraints, masks, blend modes, gradients, paints, strokes, shadows, effects, full text styling, HTML, surfaces, WGSL and adjustment layers |
 | Audio | Offline retiming and Rust stereo mixing with per-frame reactive/preset/keyframe gain | Real-time output and seek/rate re-anchoring, solo/bus hierarchy, sample-accurate gain automation, syncTo and precise behavior across all cuts/rates |
-| Animation/captions | Native preset/keyframe sampling integrated with preview/export, including vector/media transforms | Transform rendering for text, blur/style rendering, sequence targeting, transition behavior, track editing UI, transcript parsing and every caption preset |
+| Animation/captions | Native preset/keyframe sampling integrated with preview/export, including vector/media/text transforms | Blur/style rendering, sequence targeting, transition behavior, track editing UI, transcript parsing and every caption preset |
 | Media/assets | Rust raster image codecs/EXIF, FFprobe/video RGBA, linked YAML sources and bounded shared decoded texture cache | Hash/manifest lifecycle, import/relink/move/folders, SVG/remaining formats, color profiles/HDR, proxies and persistent decoders/cache tiers, VFR/container timestamp parity, frame directories, remote resolution/modifiers, transcripts |
 | CLI/IPC | Native explicit-project commands | Existing dapi flags/output/contracts, open/context IPC, logs, fonts, screenshots, filmstrips/contact sheets and all applicable local commands |
 | HyperFrames | Existing separate package untouched | Rust save/template/preview/render/cancel engine, project isolation, immutable outputs and linked timeline updates |
@@ -220,6 +228,25 @@ actual original render function, including fractional, negative and zero boxes.
 The real CLI captured `examples/media` at two times and exported 48 H.264 frames
 at 960x540/24 fps (2 seconds). Both captures, a decoded MP4 frame and the actual
 egui window were visually inspected; the UI error log was empty.
+
+The native text stage passed 124 ordinary tests (40 unit and 84 integration),
+all four real FFmpeg integration tests, Clippy for all targets with desktop
+enabled, and the desktop build. Text regressions cover UTF-16 and overlapping
+ranges, fractional indices, wrapping/baselines, authored versus animated sizes,
+next-frame transforms, hidden text, temporary font failures and cancellation.
+Font tests cover variable weights, pinned Inter priority, bounded discovery/read
+budgets, collection limits, cache eviction/shared source bytes and a real Windows
+junction escaping a discovery root.
+The committed fixtures contain 192 cases executed against the original
+tokenization/layout functions and 1536 Canvas font measurements using the same
+bundled fonts in Electron 43.1.1 / Chromium 150.0.7871.114. Advances allow at most
+0.125 px difference; font box metrics match exactly. The development-only
+generators under `tests/reference/` record source/font hashes; ordinary native
+tests consume those snapshots without a JavaScript runtime.
+The real CLI captured `examples/text` at two times and exported 48 H.264 frames
+at 960x540/24 fps (2 seconds), without warnings. Both PNG captures, the decoded
+first MP4 frame and the actual egui window were visually inspected. The UI error
+log was empty, and independent critical review approved this increment.
 
 `@inspect` coverage includes semantic binding/shadowing, escaped identifiers,
 UTF-8 initializer spans, VM garbage collection/remounts, imported-module edits,
@@ -314,20 +341,23 @@ count at 48 kHz. The report distinguishes the authored
 workarea duration from the video duration; audio covers the workarea at 48 kHz.
 `playing()` is true in exports. The ticker's frame accessor uses the output FPS
 in exports and 30 fps in the editor/capture, matching the current engine behavior.
-Native vector/media export rasterizes each frame in Rust and streams it to one encoder.
-Uncached video frames still start a separate FFmpeg decode process. Scenes using
-the older text renderer still compose one CPU frame per FFmpeg invocation; native
-GPU rendering and persistent decoders remain pending. Decoded audio is held in
+Native vector/media/text export rasterizes each frame in Rust and streams it to one encoder.
+Uncached video frames still start a separate FFmpeg decode process. The older filter planner remains for compatibility and rejects unported node kinds;
+native GPU rendering and persistent decoders remain pending. Decoded audio is held in
 job-owned temporary files, with a limit of 128 distinct source/rate variants.
 
 The compositor chooses a backend from all materialized node types on the
 first frame, including hidden nodes, and retains it and geometry history per scene.
-Scenes containing text retain the older renderer and its transform restrictions.
+Plain text and font/color ranges use the same native backend as vectors and media.
 A native scene with incompatible nodes, properties or planning data stays stopped
-until the project is reopened; cancellation during pixel rendering remains
-recoverable. Both backends explicitly reject unsupported properties; the older
-renderer is not a generic fallback for styles. Seamless text transitions await
-unified native drawing.
+until the project is reopened; cancellation during pixel rendering and text/font
+preparation remains recoverable. Text shaping starts only after visibility and
+culling have been resolved; text preparation failures do not commit geometry
+history. Culling is inherited from the scene, as in the original: text outside
+the canvas can still be measured while its scene is visible. Both backends
+explicitly reject unsupported properties; the older
+renderer is not a generic fallback for styles. Reactive addition/removal of supported
+text stays on the native compositor.
 Nested scenes, masks, aspect constraints and negative-size rounded shapes fail
 explicitly. Rounded corners use a fine cubic approximation;
 browser Canvas antialiasing is not assumed byte-identical. Preview currently
@@ -338,6 +368,36 @@ of one. Repeated resizes derive their ratio from the original scene dimensions.
 Color/corner keyframes preserve the original trait membership: a color track
 does not paint an unfilled rectangle, and mixed-corner fallbacks resolve before
 an animated uniform radius.
+
+Text uses LTR Canvas paragraph context, as the current runtime does, and Unicode
+bidi runs within it. The bundled Inter font is pinned with its OFL license and
+hashes in `assets/fonts/`; system font availability and fallback ordering remain
+platform dependent. Synthetic bold/italic, sequence-aware ZWJ/variation-selector
+font selection, color/bitmap/SVG glyph painting, and full script/locale fallback
+parity remain pending and unsupported representations fail explicitly. Requested
+weights outside 1..1000 and malformed/excessive font requests also fail instead
+of emulating Canvas's retained invalid-font assignment. Unhinted outline ink
+bounds and antialiasing can differ from Canvas, even when advances and font box
+metrics agree. An empty styled text uses finite zero geometry instead of the
+original non-finite empty-line result. Paint/stroke/shadow/effect text children
+still need their common rendering implementations.
+Font files are copied into owned bytes, limited to 64 MiB per file; the cache
+holds at most 128 faces/256 MiB of source bytes, plus parser data. Shaped words
+use a 2048-entry/64 MiB cache and fallback results a 4096-entry/4 MiB text-key
+cache; up to 32 metadata candidate lists cache family/style matching. A frame limits text to 4 MiB, 100000 pieces, two million outline points
+and 65536 uncached font probes; a word limits characters to 100000 and probes
+to 8192. Discovery scans common system/user font folders with cancellation checks, at most
+65536 directory entries, 8192 files and 16384 faces; font collections cap at 256
+faces. Canonical descendants must remain inside those roots; links escaping the
+roots are skipped. Discovery reads at most 1 GiB, and each frame at most 256 MiB
+of font source bytes (plus one EOF probe byte). Faces sharing a cached source
+version share owned bytes, including collection faces; eviction cannot bypass
+the frame I/O budget. Oversized/unreadable/malformed system files are skipped as unavailable.
+Additional fontconfig/OS registration paths remain pending. Installed font versions
+are recorded during discovery; an evicted face cannot reload changed bytes under
+its old catalog identity. Cached bytes are immutable; reopen the renderer after
+changing installed fonts. In-flight paths and parser working storage are
+additional allocations beyond these cache limits.
 
 Native source textures currently cap decoded pixels at 4096x4096 in total (16 Mi
 pixels, with other aspect ratios allowed). Rust image decoder allocation is limited

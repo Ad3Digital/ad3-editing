@@ -36,10 +36,12 @@ struct SceneState {
 pub struct ProjectRenderer {
     live: Option<LiveProject>,
     authored_root: Node,
+    current_authored: Node,
     motion: crate::motion::Motion,
     has_motion: bool,
     scenes: BTreeMap<String, SceneState>,
     textures: Arc<crate::texture::TextureStore>,
+    fonts: crate::fonts::FontBook,
     cancel: Option<Arc<AtomicBool>>,
     offline: bool,
     cache: ProbeCache,
@@ -93,10 +95,12 @@ impl ProjectRenderer {
         let mut renderer = Self {
             live,
             authored_root: document.root.clone(),
+            current_authored: document.root.clone(),
             motion: Default::default(),
             has_motion: false,
             scenes: BTreeMap::new(),
             textures: Arc::new(crate::texture::TextureStore::new(tools.clone())),
+            fonts: Default::default(),
             cancel,
             offline,
             cache: ProbeCache::default(),
@@ -153,6 +157,7 @@ impl ProjectRenderer {
             }
         }
         self.has_motion = crate::motion::has_motion(&authored);
+        self.current_authored = authored.clone();
         self.root = if self.has_motion {
             self.motion
                 .sample(&authored, &timeline, time, self.frame_rate)?
@@ -202,6 +207,18 @@ impl ProjectRenderer {
             return Err(error.clone());
         }
         if let SceneBackend::Native(compositor) = backend {
+            let no_text_motion = Default::default();
+            let mut texts = crate::text::prepare(
+                node,
+                self.current_authored
+                    .find(scene)
+                    .ok_or("Missing authored scene")?,
+                if self.has_motion {
+                    &self.motion.text_sizes
+                } else {
+                    &no_text_motion
+                },
+            );
             let result = (|| {
                 let background = if self.offline {
                     None
@@ -227,15 +244,24 @@ impl ProjectRenderer {
                         library: &self.library,
                         store: &self.textures,
                     }),
+                    &mut texts,
+                    &mut self.fonts,
+                    self.cancel.as_deref(),
                 )
             })();
             let frame = match result {
                 Ok(frame) => frame,
                 Err(error) => {
+                    if error.transient {
+                        return Err(error.message);
+                    }
                     // Planning errors describe input/feature incompatibility.
                     // Pixel allocation, cancellation and file/codec errors are
                     // handled later, outside this state transition.
-                    let error = format!("{error}; scene rendering requires reopening the project");
+                    let error = format!(
+                        "{}; scene rendering requires reopening the project",
+                        error.message
+                    );
                     *backend = SceneBackend::Blocked(error.clone());
                     return Err(error);
                 }

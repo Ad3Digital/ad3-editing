@@ -1,0 +1,3 @@
+# Preserve the pinned upstream bytes, including license whitespace.
+*.ttf -text
+OFL.txt -text -whitespace

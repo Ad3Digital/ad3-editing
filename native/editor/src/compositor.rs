@@ -20,6 +20,33 @@ use tiny_skia::{
     SpreadMode, Transform,
 };
 
+#[derive(Debug)]
+pub(crate) struct FrameError {
+    pub message: String,
+    pub transient: bool,
+}
+impl FrameError {
+    fn transient(message: String) -> Self {
+        Self {
+            message,
+            transient: true,
+        }
+    }
+}
+impl From<String> for FrameError {
+    fn from(message: String) -> Self {
+        Self {
+            message,
+            transient: false,
+        }
+    }
+}
+impl From<&str> for FrameError {
+    fn from(message: &str) -> Self {
+        Self::from(message.to_owned())
+    }
+}
+
 pub(crate) struct MediaContext<'a> {
     pub library: &'a MediaLibrary,
     pub store: &'a Arc<TextureStore>,
@@ -29,6 +56,13 @@ pub(crate) struct MediaContext<'a> {
 struct GeometryState {
     local: Mat2D,
     frame: Frame,
+    text: Option<TextGeometry>,
+}
+
+#[derive(Clone, Copy)]
+struct TextGeometry {
+    authored: [Option<f64>; 2],
+    size: Option<[f64; 2]>,
 }
 
 #[derive(Default)]
@@ -158,6 +192,19 @@ fn validate(node: &Node, root: bool) -> Result<()> {
             "cornerRadiusBottomLeft",
         ],
         "audio" => &["src"],
+        "text" | "textRange" => &[
+            "fill",
+            "color",
+            "fontFamily",
+            "fontSize",
+            "fontWeight",
+            "fontStyle",
+            "letterSpacing",
+            "textCase",
+            "textAlign",
+            "textBaseline",
+            "leading",
+        ],
         "image" | "video" => &[
             "src",
             "objectFit",
@@ -203,7 +250,15 @@ impl Compositor {
         while let Some(node) = pending.pop() {
             if !matches!(
                 node.tag.as_str(),
-                "scene" | "rect" | "group" | "sequence" | "audio" | "image" | "video"
+                "scene"
+                    | "rect"
+                    | "group"
+                    | "sequence"
+                    | "audio"
+                    | "image"
+                    | "video"
+                    | "text"
+                    | "textRange"
             ) {
                 return false;
             }
@@ -226,6 +281,7 @@ impl Compositor {
         sizes_resolved_by_motion: bool,
         background: Option<u32>,
     ) -> Result<NativeFrame> {
+        let mut texts = crate::text::prepare(scene, scene, &Default::default());
         self.frame_on_canvas(
             scene,
             timeline,
@@ -235,7 +291,11 @@ impl Compositor {
             background,
             None,
             None,
+            &mut texts,
+            &mut Default::default(),
+            None,
         )
+        .map_err(|error| error.message)
     }
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn frame_on_canvas(
@@ -248,15 +308,29 @@ impl Compositor {
         background: Option<u32>,
         canvas: Option<[f64; 2]>,
         media: Option<MediaContext<'_>>,
-    ) -> Result<NativeFrame> {
+        texts: &mut crate::text::PreparedTexts,
+        fonts: &mut crate::fonts::FontBook,
+        cancel: Option<&AtomicBool>,
+    ) -> std::result::Result<NativeFrame, FrameError> {
         if !time.is_finite() || !fps.is_finite() || !(0.0..=240.0).contains(&fps) || fps == 0.0 {
             return Err("Invalid native frame clock".into());
         }
         let mut layers: Vec<Layer<'_>> = Vec::new();
-        let mut pending = vec![(scene, None)];
+        let mut pending: Vec<(&Node, Option<usize>)> = vec![(scene, None)];
         let global_frame = round_frame(time * fps);
         while let Some((node, parent)) = pending.pop() {
             validate(node, parent.is_none())?;
+            if node.tag == "textRange" {
+                if parent.is_none_or(|p| layers[p].node.tag != "text") || !node.children.is_empty()
+                {
+                    return Err(format!(
+                        "{}: textRange needs a text parent and supported style children",
+                        node.id
+                    )
+                    .into());
+                }
+                continue;
+            }
             let index = layers.len();
             let old = if self.scene == scene.id {
                 self.previous.get(&node.id).copied().unwrap_or_default()
@@ -269,7 +343,44 @@ impl Compositor {
                 "audio" => [500.0, 150.0],
                 _ => [100.0; 2],
             };
-            let size = if group {
+            let mut text_state = None;
+            let size = if node.tag == "text" {
+                let prepared = texts.get(&node.id).ok_or("Missing prepared text")?;
+                let mut state = old.text.unwrap_or(TextGeometry {
+                    authored: [None; 2],
+                    size: None,
+                });
+                let mut computed = old.frame.size;
+                if old.text.is_none() || state.authored != prepared.authored_size {
+                    let previous_authored = state.authored;
+                    state.authored = prepared.authored_size;
+                    if state.authored.iter().any(Option::is_some) {
+                        let mut size = state.size.unwrap_or([0.0; 2]);
+                        let mut changed = false;
+                        for (i, value) in state.authored.iter().enumerate() {
+                            if let Some(value) = value
+                                && (old.text.is_none() || previous_authored[i] != Some(*value))
+                            {
+                                size[i] = round_frame(*value);
+                                changed = true;
+                            }
+                        }
+                        state.size = Some(size);
+                        if changed {
+                            computed = size;
+                        }
+                    } else {
+                        state.size = None;
+                    }
+                }
+                for (i, value) in prepared.animated_size.iter().enumerate() {
+                    if let Some(value) = value {
+                        computed[i] = *value;
+                    }
+                }
+                text_state = Some(state);
+                computed
+            } else if group {
                 old.frame.size
             } else {
                 let raw = [
@@ -314,6 +425,7 @@ impl Compositor {
                 children: Vec::new(),
                 values,
                 state: GeometryState {
+                    text: text_state,
                     local: old.local,
                     frame: Frame {
                         origin: old.frame.origin,
@@ -376,15 +488,46 @@ impl Compositor {
             raster_transform(world)?;
         }
         let mut draws = Vec::new();
+        let mut text_work = crate::text::TextWork::default();
+        fonts.begin_frame();
         let clip = shape_path(scene, layers[0].state.frame.size)?;
-        for layer in &layers {
+        for layer in &mut layers {
             if !layer.visible
                 || layer.culled
                 || !matches!(
                     layer.node.tag.as_str(),
-                    "scene" | "rect" | "image" | "video"
+                    "scene" | "rect" | "image" | "video" | "text"
                 )
             {
+                continue;
+            }
+            if layer.node.tag == "text" {
+                let prepared = texts
+                    .get_mut(&layer.node.id)
+                    .ok_or("Missing prepared text")?;
+                crate::text::shape(layer.node, prepared, fonts, &mut text_work, cancel)
+                    .map_err(FrameError::transient)?;
+                let layout = prepared.layout(
+                    layer.state.frame.size,
+                    layer.state.text.and_then(|t| t.size),
+                )?;
+                // Render-time measurement changes Computed size after this
+                // frame's transforms and parent-first group bounds were made.
+                layer.state.frame.size = layout.size;
+                for token in layout.tokens {
+                    let word = &prepared.words[token.piece];
+                    if let (Some(path), Some(color)) = (&word.shaped.path, word.color) {
+                        draws.push(Draw {
+                            path: path.clone(),
+                            world: layer
+                                .world
+                                .multiply(Mat2D::translate(token.x as f64, token.y as f64)),
+                            ink: Ink::Solid(color),
+                            opacity: layer.opacity,
+                            clipped: layer.parent.is_some(),
+                        });
+                    }
+                }
                 continue;
             }
             // Validate shape values even when unpainted.
@@ -725,5 +868,70 @@ impl NativeFrame {
             cancelled(cancel)?;
             Ok(bytes)
         }
+    }
+}
+
+#[cfg(test)]
+mod text_geometry_tests {
+    use super::*;
+    #[test]
+    fn adding_the_first_size_axis_starts_the_other_axis_at_trait_default_zero() {
+        let doc=crate::source::SourceDocument::parse("size.tsx".into(),"export default <stage><scene id=\"s\" width={240} height={160}><text id=\"t\" x={40} y={40} color=\"red\" fontSize={32} rotation={30}>Hello</text></scene></stage>".into()).unwrap();
+        let mut root = doc.root;
+        let timeline = Timeline::resolve(&root, &Default::default()).unwrap();
+        let mut compositor = Compositor::default();
+        compositor
+            .frame(root.find("s").unwrap(), &timeline, 0.0, 30.0, false, None)
+            .unwrap();
+        assert_eq!(compositor.previous["t"].frame.size, [71.0, 39.0]);
+        root.children[0].children[0]
+            .props
+            .insert("width".into(), 120.into());
+        compositor
+            .frame(root.find("s").unwrap(), &timeline, 0.0, 30.0, false, None)
+            .unwrap();
+        let state = compositor.previous["t"];
+        assert_eq!(state.text.unwrap().size, Some([120.0, 0.0]));
+        let values = TransformValues {
+            position: [40.0, 40.0],
+            size: [120.0, 0.0],
+            rotation: 30.0,
+            ..Default::default()
+        };
+        assert_eq!(state.local, values.local_matrix());
+    }
+    #[test]
+    fn size_tracks_keep_authored_wrap_width_while_changing_the_computed_container() {
+        let doc=crate::source::SourceDocument::parse("size-track.tsx".into(),"export default <stage><scene id=\"s\" width={240} height={160}><text id=\"t\" width={120} height={40} color=\"red\">Hello world</text></scene></stage>".into()).unwrap();
+        let scene = doc.root.find("s").unwrap();
+        let timeline = Timeline::resolve(&doc.root, &Default::default()).unwrap();
+        let mut texts = crate::text::prepare(
+            scene,
+            scene,
+            &BTreeMap::from([("t".into(), [Some(10.0), None])]),
+        );
+        let mut compositor = Compositor::default();
+        compositor
+            .frame_on_canvas(
+                scene,
+                &timeline,
+                0.0,
+                30.0,
+                true,
+                None,
+                None,
+                None,
+                &mut texts,
+                &mut Default::default(),
+                None,
+            )
+            .unwrap();
+        let state = compositor.previous["t"];
+        assert_eq!(state.frame.size, [10.0, 40.0]);
+        assert_eq!(state.text.unwrap().size, Some([120.0, 40.0]));
+        let layout = texts["t"]
+            .layout(state.frame.size, state.text.unwrap().size)
+            .unwrap();
+        assert!(layout.tokens.iter().all(|token| token.line == 0));
     }
 }

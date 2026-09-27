@@ -4,6 +4,8 @@
 mod compositor;
 #[path = "editing.rs"]
 mod editing;
+#[path = "fonts.rs"]
+mod fonts;
 #[path = "geometry.rs"]
 mod geometry;
 #[path = "inspect.rs"]
@@ -16,5 +18,7 @@ mod motion;
 mod reactivity;
 #[path = "rendering.rs"]
 mod rendering;
+#[path = "text.rs"]
+mod text;
 #[path = "textures.rs"]
 mod textures;

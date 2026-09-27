@@ -210,7 +210,7 @@ fn unsupported_native_properties_fail_explicitly_and_failed_plans_do_not_advance
             .unwrap_err()
             .contains("Scenes cannot be nested")
     );
-    let doc = document("", r#"<text color="red">Legacy text</text>"#);
+    let doc = document("", r#"<html/>"#);
     assert!(!Compositor::supports(doc.root.find("s").unwrap()));
     let doc = document(
         "",
@@ -358,7 +358,7 @@ fn a_mounted_scene_keeps_its_backend_and_rejects_new_unsupported_nodes() {
     let source = r#"import {useTicker} from '@diffusionstudio/jsx';
       export default ()=>{const t=useTicker();return <stage><scene id="s" active width={64} height={48} workarea={[0,3]}>
         <group x={24} y={8} rotation={90}><rect width={8} height={8} fill="red"/><rect x={t.time()<1?20:30} width={8} height={8} fill="blue"/></group>
-        {t.time()>=1&&t.time()<2?<text color="white">Temporary</text>:null}
+        {t.time()>=1&&t.time()<2?<html/>:null}
       </scene></stage>};"#;
     let doc = dynamic_document("backend.tsx", source.into());
     let tools = unavailable_tools();
@@ -395,12 +395,7 @@ fn a_mounted_scene_keeps_its_backend_and_rejects_new_unsupported_nodes() {
     let legacy_doc = dynamic_document("legacy-backend.tsx", source.replace("rotation={90}", ""));
     let mut legacy =
         ProjectRenderer::new(&legacy_doc, std::path::Path::new("."), tools, true).unwrap();
-    assert!(
-        !legacy
-            .frame_plan("s", 1.0, 30.0, false)
-            .unwrap()
-            .is_native()
-    );
+    assert!(legacy.frame_plan("s", 1.0, 30.0, false).is_err());
     assert!(
         !legacy
             .frame_plan("s", 2.0, 30.0, false)
@@ -417,17 +412,12 @@ fn switching_scenes_retains_each_backend_and_group_history() {
           <group x={24} y={8} rotation={90}><rect width={8} height={8} fill="red"/><rect x={20} width={8} height={8}/></group>
         </scene>
         <scene id="b" width={64} height={48} workarea={[0,3]}><rect fill="blue"/></scene>
-        <scene id="l" width={64} height={48} workarea={[0,3]}>{t.time()<1?<text color="white">Legacy</text>:null}</scene>
+        <scene id="l" width={64} height={48} workarea={[0,3]}>{t.time()<1?<html/>:null}</scene>
       </stage>};"#.into());
     let tools = unavailable_tools();
     let project = std::path::Path::new(".");
     let mut renderer = ProjectRenderer::new(&doc, project, tools.clone(), true).unwrap();
-    assert!(
-        !renderer
-            .frame_plan("l", 0.0, 30.0, false)
-            .unwrap()
-            .is_native()
-    );
+    assert!(renderer.frame_plan("l", 0.0, 30.0, false).is_err());
     let first = renderer
         .frame_plan("a", 0.0, 30.0, false)
         .unwrap()
