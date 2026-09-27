@@ -217,6 +217,11 @@ Verification and backup deletion hold one exclusive Windows file handle, so an
 outside writer with a still-open handle also causes retention. Recovery after a
 failed replacement always retains the original backup, even after restoring the
 target name. Conflict recovery is explicit; it never overwrites a newer target.
+An exclusive-create failure never deletes the pre-existing candidate pathname.
+Failed source candidates are retained when still present, with the path reported
+for recovery. Source candidates and concurrent render jobs include a process-local
+sequence so a coarse or repeated Windows timestamp cannot reuse another operation's
+name. Render directories are reserved with atomic creation and collision retries.
 Unix saves
 preserve permission bits and refuse ownership changes; concurrent external
 replacement guarantees, broader Unix ACL/xattr
@@ -234,8 +239,10 @@ children props, offline holds/cancellation, and independent samples.
 The export clock follows the existing capture engine: authored seconds are
 quantized to output frames when its fresh world is mounted, including workareas,
 natural source durations and motion windows. Frame strings such as `45f` retain
-the language's fixed 30 fps unit before conversion. The encoder writes complete frames
-(`floor(workarea duration * output FPS)`). The report distinguishes the authored
+the language's fixed 30 fps unit before conversion. The encoder counts complete
+frames from those integer endpoint indices; this avoids cancellation when a short
+workarea is far from scene time zero. Audio sample counts derive from that frame
+count at 48 kHz. The report distinguishes the authored
 workarea duration from the video duration; audio covers the workarea at 48 kHz.
 `playing()` is true in exports. The ticker's frame accessor uses the output FPS
 in exports and 30 fps in the editor/capture, matching the current engine behavior.
@@ -243,6 +250,9 @@ Reactive export currently composes one CPU frame per FFmpeg invocation; native
 GPU rendering and persistent decoders remain pending. Decoded audio is held in
 job-owned temporary files, with a limit of 128 distinct source/rate variants.
 
+Native exports also cap absolute workarea endpoint indices at 2^40 frames, leaving
+precision headroom for conversion between frame indices and seconds. This is
+separate from the workarea duration limit and is checked before encoding starts.
 The current renderer caps one job at a 24-hour workarea and applies a 24-hour
 process timeout. Probe/capture processes have a 120-second timeout.
 The evaluator limits modules (512), each source (16 MiB), loop iterations

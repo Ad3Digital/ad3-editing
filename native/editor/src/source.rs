@@ -15,9 +15,9 @@ use serde_json::{Map, Value, json};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs::{self, OpenOptions},
-    io::Write,
     ops::Range,
     path::{Path, PathBuf},
+    sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -803,23 +803,13 @@ impl SourceDocument {
             .duration_since(UNIX_EPOCH)
             .map_err(|e| e.to_string())?
             .as_nanos();
-        let temp = state.join(format!("native-save-{}-{suffix}.tmp", std::process::id()));
-        let result = (|| {
-            let mut file = OpenOptions::new()
-                .write(true)
-                .create_new(true)
-                .open(&temp)
-                .map_err(|e| e.to_string())?;
-            file.write_all(source.as_bytes())
-                .and_then(|_| file.sync_all())
-                .map_err(|e| e.to_string())?;
-            drop(file);
-            crate::atomic_file::replace(&temp, &canonical, before[target].as_bytes())
-        })();
-        if result.is_err() {
-            let _ = fs::remove_file(&temp);
-        }
-        result
+        static NEXT_CANDIDATE: AtomicU64 = AtomicU64::new(0);
+        let serial = NEXT_CANDIDATE.fetch_add(1, Ordering::Relaxed);
+        let temp = state.join(format!(
+            "native-save-{}-{suffix}-{serial}.tmp",
+            std::process::id()
+        ));
+        crate::atomic_file::write_candidate(&temp, &canonical, before[target].as_bytes(), source)
     }
 }
 

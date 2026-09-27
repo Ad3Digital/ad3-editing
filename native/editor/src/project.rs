@@ -201,8 +201,10 @@ impl ProjectRenderer {
             fps,
             Some(area),
         )?;
-        // The original encoder writes only complete output frames.
-        let frames = (plan.duration * fps + 1e-9).floor() as u64;
+        // The capture world already quantized both endpoints to output frames.
+        // Subtract their integer frame indices: subtracting seconds first can
+        // lose a whole frame through cancellation at large scene times.
+        let frames = complete_frames(area, fps)?;
         if frames == 0 {
             return Err("Workarea is shorter than one complete frame at the selected FPS".into());
         }
@@ -245,7 +247,7 @@ impl ProjectRenderer {
                 &video,
                 &mut directory,
             )?;
-            let samples = (plan.duration * SAMPLE_RATE).ceil() as u64;
+            let samples = (frames as f64 * SAMPLE_RATE / fps).ceil() as u64;
             let mut first_sample = 0;
             for frame in 0..frames {
                 cancelled(cancel)?;
@@ -313,7 +315,7 @@ impl ProjectRenderer {
                         "-b:a",
                         "192k",
                         "-t",
-                        &plan.duration.to_string(),
+                        &video_duration.to_string(),
                         "-movflags",
                         "+faststart",
                     ])
@@ -326,5 +328,58 @@ impl ProjectRenderer {
         }
         report.warnings = renderer.warnings();
         Ok(report)
+    }
+}
+
+fn complete_frames(area: [f64; 2], fps: f64) -> Result<u64> {
+    // Leave a wide precision margin for seconds <-> frames round trips. At
+    // 2^40 frames their f64 error stays well below a half-frame; larger absolute
+    // positions are outside the current native export range. This is separate
+    // from the 24-hour duration limit and checked before an encoder is started.
+    const MAX_ABSOLUTE_FRAME: f64 = (1_u64 << 40) as f64;
+    let frames = area.map(|time| crate::timing::round_frame(time * fps));
+    if frames
+        .iter()
+        .any(|frame| !frame.is_finite() || !(0.0..=MAX_ABSOLUTE_FRAME).contains(frame))
+    {
+        return Err(
+            "Export frame positions exceed the supported absolute timeline range (2^40 frames)"
+                .into(),
+        );
+    }
+    Ok((frames[1] - frames[0]) as u64)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::complete_frames;
+    #[test]
+    fn quantized_workareas_count_frames_without_cancellation_at_late_scene_times() {
+        for (fps, start, count) in [
+            (120.0, 9_960_004.0, 7.0),
+            (119.88, 9_950_042.0, 1.0),
+            (239.99, 19_919_170.0, 23.0),
+            (237.0, 19_671_000.0, 7.0),
+        ] {
+            let area = [start / fps, (start + count) / fps];
+            assert_eq!(complete_frames(area, fps).unwrap(), count as u64);
+            assert_ne!(
+                ((area[1] - area[0]) * fps + 1e-9).floor() as u64,
+                count as u64
+            );
+        }
+    }
+    #[test]
+    fn export_rejects_absolute_positions_beyond_precise_frame_clock_range() {
+        let boundary = (1_u64 << 40) as f64;
+        assert_eq!(
+            complete_frames([(boundary - 1.0) / 120.0, boundary / 120.0], 120.0).unwrap(),
+            1
+        );
+        assert!(
+            complete_frames([(boundary + 100.0) / 30.0, (boundary + 130.0) / 30.0], 30.0).is_err()
+        );
+        let start = 2_f64.powi(54) / 30.0;
+        assert!(complete_frames([start, start + 1.0], 30.0).is_err());
     }
 }

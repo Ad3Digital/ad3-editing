@@ -13,7 +13,7 @@ use std::{
     fs,
     io::{Read, Write},
     path::{Path, PathBuf},
-    sync::atomic::AtomicBool,
+    sync::atomic::{AtomicBool, AtomicU64, Ordering},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
@@ -596,17 +596,30 @@ impl JobDirectory {
             .duration_since(UNIX_EPOCH)
             .map_err(|e| e.to_string())?
             .as_nanos();
+        Self::at_stamp(project, stamp)
+    }
+    fn at_stamp(project: &Path, stamp: u128) -> Result<Self> {
+        static NEXT_JOB: AtomicU64 = AtomicU64::new(0);
         let parent = std::path::absolute(project)
             .map_err(|e| e.to_string())?
             .join(".diffusion")
             .join("native-render");
         fs::create_dir_all(&parent).map_err(|e| e.to_string())?;
-        let path = parent.join(format!("{}-{stamp}", std::process::id()));
-        fs::create_dir(&path).map_err(|e| e.to_string())?;
-        Ok(Self {
-            path,
-            files: Vec::new(),
-        })
+        for _ in 0..128 {
+            let serial = NEXT_JOB.fetch_add(1, Ordering::Relaxed);
+            let path = parent.join(format!("{}-{stamp}-{serial}", std::process::id()));
+            match fs::create_dir(&path) {
+                Ok(()) => {
+                    return Ok(Self {
+                        path,
+                        files: Vec::new(),
+                    });
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                Err(error) => return Err(error.to_string()),
+            }
+        }
+        Err("Could not reserve a unique render directory".into())
     }
     pub fn file(&mut self, name: &str) -> PathBuf {
         let path = self.path.join(name);
@@ -650,4 +663,34 @@ pub(crate) fn remove_owned_file(path: &Path) -> std::io::Result<()> {
         }
     }
     unreachable!()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn parallel_render_jobs_with_identical_timestamps_reserve_distinct_directories() {
+        let stamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let folder = std::env::temp_dir().join(format!(
+            "ad3-rust-reservations-{}-{stamp}",
+            std::process::id()
+        ));
+        fs::create_dir(&folder).unwrap();
+        let threads: Vec<_> = (0..32)
+            .map(|_| {
+                let folder = folder.clone();
+                std::thread::spawn(move || JobDirectory::at_stamp(&folder, 42).unwrap())
+            })
+            .collect();
+        let jobs: Vec<_> = threads.into_iter().map(|t| t.join().unwrap()).collect();
+        let unique: std::collections::BTreeSet<_> = jobs.iter().map(|job| &job.path).collect();
+        assert_eq!(unique.len(), 32);
+        drop(jobs);
+        fs::remove_dir(folder.join(".diffusion/native-render")).unwrap();
+        fs::remove_dir(folder.join(".diffusion")).unwrap();
+        fs::remove_dir(folder).unwrap();
+    }
 }

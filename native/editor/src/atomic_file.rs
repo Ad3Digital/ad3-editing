@@ -29,6 +29,38 @@ pub(crate) fn source_target(root: &Path, target: &Path) -> Result<PathBuf> {
     Ok(target)
 }
 
+pub(crate) fn write_candidate(
+    temp: &Path,
+    target: &Path,
+    expected: &[u8],
+    source: &str,
+) -> Result<()> {
+    use std::io::Write;
+    // A failed exclusive create conveys no ownership of that pathname.
+    // In particular, never delete an existing file after create_new fails.
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(temp)
+        .map_err(|e| e.to_string())?;
+    let result = (|| {
+        file.write_all(source.as_bytes())
+            .and_then(|_| file.sync_all())
+            .map_err(|e| e.to_string())?;
+        drop(file);
+        replace(temp, target, expected)
+    })();
+    // Keep failed candidates for recovery. This also avoids deleting a pathname
+    // that an outside process may have replaced after our file handle closed.
+    result.map_err(|error| {
+        if temp.exists() {
+            format!("{error}; source candidate retained at {}", temp.display())
+        } else {
+            error
+        }
+    })
+}
+
 #[cfg(windows)]
 pub(crate) fn replace(temp: &Path, target: &Path, expected: &[u8]) -> Result<()> {
     use std::{ffi::c_void, io, os::windows::ffi::OsStrExt, ptr};
@@ -220,6 +252,44 @@ mod tests {
         ));
         fs::create_dir(&path).unwrap();
         path
+    }
+    #[test]
+    fn candidate_create_conflict_preserves_the_preexisting_file_and_source() {
+        let folder = directory();
+        let target = folder.join("source.tsx");
+        let candidate = folder.join("candidate.tmp");
+        fs::write(&target, "original").unwrap();
+        fs::write(&candidate, "another operation's bytes").unwrap();
+        assert!(write_candidate(&candidate, &target, b"original", "replacement").is_err());
+        assert_eq!(fs::read_to_string(&target).unwrap(), "original");
+        assert_eq!(
+            fs::read_to_string(&candidate).unwrap(),
+            "another operation's bytes"
+        );
+        fs::remove_file(candidate).unwrap();
+        fs::remove_file(target).unwrap();
+        fs::remove_dir(folder).unwrap();
+    }
+    #[test]
+    fn a_failed_source_write_retains_its_candidate_for_recovery() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let folder = directory();
+        let target = folder.join("source.tsx");
+        let candidate = folder.join("candidate.tmp");
+        fs::write(&target, "original").unwrap();
+        let locked = fs::OpenOptions::new()
+            .read(true)
+            .share_mode(0)
+            .open(&target)
+            .unwrap();
+        let error = write_candidate(&candidate, &target, b"original", "replacement").unwrap_err();
+        assert!(error.contains("candidate retained"));
+        drop(locked);
+        assert_eq!(fs::read_to_string(&target).unwrap(), "original");
+        assert_eq!(fs::read_to_string(&candidate).unwrap(), "replacement");
+        fs::remove_file(candidate).unwrap();
+        fs::remove_file(target).unwrap();
+        fs::remove_dir(folder).unwrap();
     }
     #[test]
     fn failed_replace_restores_zero_byte_original_with_its_streams() {

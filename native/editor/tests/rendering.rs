@@ -143,6 +143,35 @@ fn preset_and_keyframe_motion_is_sampled_for_capture_reverse_seek_and_export() {
         quiet < 0.001 && loud > 0.02 && loud > middle * 1.5,
         "gain RMS {quiet} -> {middle} -> {loud}"
     );
+    let late = SourceDocument::parse(
+        folder.join("late.tsx"),
+        r#"export default <stage>
+      <scene id="s" active width={32} height={16} fill="red" workarea={[9960004/120,9960011/120]}/>
+    </stage>"#
+            .into(),
+    )
+    .unwrap();
+    let late_output = folder.join("late.mp4");
+    let late_report = ProjectRenderer::export(
+        &late,
+        &folder,
+        tools.clone(),
+        &late_output,
+        120.0,
+        None,
+        |_, _| {},
+    )
+    .unwrap();
+    assert_eq!(late_report.frames, 7);
+    assert_eq!(late_report.video_duration, 7.0 / 120.0);
+    let late_frames = checked_output(
+        command(&tools.ffmpeg)
+            .args(["-v", "error", "-i"])
+            .arg(&late_output)
+            .args(["-f", "rawvideo", "-pix_fmt", "rgba", "pipe:1"]),
+    )
+    .unwrap();
+    assert_eq!(late_frames.stdout.len(), 7 * 32 * 16 * 4);
     let absolute = fs::canonicalize(&folder).unwrap();
     assert!(absolute.starts_with(fs::canonicalize(std::env::temp_dir()).unwrap()));
     assert!(
