@@ -4,6 +4,8 @@
 mod compositor;
 #[path = "editing.rs"]
 mod editing;
+#[path = "effects.rs"]
+mod effects;
 #[path = "fonts.rs"]
 mod fonts;
 #[path = "geometry.rs"]

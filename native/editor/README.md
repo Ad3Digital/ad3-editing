@@ -17,7 +17,7 @@ cargo run --locked --manifest-path native/editor/Cargo.toml --bin dapi-rust -- -
 cargo run --locked --manifest-path native/editor/Cargo.toml --features desktop --bin ad3-editing -- /path/to/project
 ```
 
-Ten runnable projects are included: `examples/static` exercises source editing;
+Eleven runnable projects are included: `examples/static` exercises source editing;
 `examples/modules` exercises imported components/JSON; `examples/reactive` animates
 rectangles and text through the native ticker, signals, `For` and `Show`;
 `examples/inspect` exposes editable controls from an imported component module;
@@ -26,7 +26,8 @@ rectangles and text through the native ticker, signals, `For` and `Show`;
 `examples/media` combines native image/video composition with generated test assets;
 `examples/text` exercises wrapped text, variable font weights, italic ranges and rotation;
 `examples/paints` exercises animated gradients, glyph outlines and screen blending;
-`examples/masks` exercises rounded/intersecting masks and a text reveal.
+`examples/masks` exercises rounded/intersecting masks and a text reveal;
+`examples/effects` combines fractional shadows, animated hue rotation and masked blur.
 Pass the full path to a folder to the native executable.
 
 The desktop application opens an existing project folder or source entry, shows
@@ -102,6 +103,10 @@ Rendered media never overwrites an existing output or original footage.
   enter the timeline or group bounds. Text ranges replace the corresponding
   fill/stroke list; gradients span the whole text box across words. Shapes draw
   strokes after fills; text completes its stroke pass before drawing fills.
+- `effects.rs`: ordered sRGB blur/brightness/contrast/grayscale/hue rotation/
+  invert/saturate/sepia filters, inherited per drawing operation, plus shape and
+  text shadows. Native temporary rasters retain off-canvas source pixels needed
+  by blur and shadows; masks apply to their final output.
 - `texture.rs`: Rust PNG/JPEG/WebP/GIF/BMP/TIFF decoding, EXIF orientation,
   premultiplied alpha and a shared 128 MiB/256-entry decoded texture LRU.
   FFmpeg supplies source video RGBA, including display rotation and normalization
@@ -172,9 +177,9 @@ this ledger is waived because a smaller example renders successfully.
 | --- | --- | --- |
 | Source/project model | Static TSX edits; native ES modules, reactive props, signals/effects, For/Index/Show and ticker; original file spans; live `@inspect` and imported initializer writeback | Remaining package/Solid/browser APIs, generation hooks, loop unrolling and general multi-file JSX edits; complete last-good-render behavior |
 | Timeline | Source/timeline clocks, workareas, cuts/trims/moves, nested rates, transport | Ripple Q/E, multi-selection, clipboard/grouping, transitions, keyframe tracks, all timeline gestures/colors/toggles and established constraints |
-| Graphics | Native transformed/rounded vectors, images, video, wrapped text/ranges, solid/gradient paint stacks, solid strokes, blend modes and timed rect masks | GPU compositor, complete font fallback/scripts/emoji and synthetic styles, remaining transforms/constraints, non-rect mask targets, media/HTML/surface/shader paints, shadows, effects, remaining text styling, HTML, surfaces, WGSL and adjustment layers |
+| Graphics | Native transformed/rounded vectors, images, video, wrapped text/ranges, solid/gradient paint stacks, solid strokes, blend modes, timed rect masks, shape/text shadows and the eight existing filter effects | GPU compositor and interactive filter performance, complete font fallback/scripts/emoji and synthetic styles, remaining transforms/constraints, non-rect mask targets, media/HTML/surface/shader paints, remaining text styling and style hierarchies, HTML, surfaces, WGSL and adjustment layers |
 | Audio | Offline retiming and Rust stereo mixing with per-frame reactive/preset/keyframe gain | Real-time output and seek/rate re-anchoring, solo/bus hierarchy, sample-accurate gain automation, syncTo and precise behavior across all cuts/rates |
-| Animation/captions | Native preset/keyframe sampling integrated with preview/export, including vector/media/text transforms | Blur/style rendering, sequence targeting, transition behavior, track editing UI, transcript parsing and every caption preset |
+| Animation/captions | Native preset/keyframe sampling integrated with preview/export, including vector/media/text transforms, blur and supported paint/shadow/filter properties | Remaining style targets, sequence targeting, transition behavior, track editing UI, transcript parsing and every caption preset |
 | Media/assets | Rust raster image codecs/EXIF, FFprobe/video RGBA, linked YAML sources and bounded shared decoded texture cache | Hash/manifest lifecycle, import/relink/move/folders, SVG/remaining formats, color profiles/HDR, proxies and persistent decoders/cache tiers, VFR/container timestamp parity, frame directories, remote resolution/modifiers, transcripts |
 | CLI/IPC | Native explicit-project commands | Existing dapi flags/output/contracts, open/context IPC, logs, fonts, screenshots, filmstrips/contact sheets and all applicable local commands |
 | HyperFrames | Existing separate package untouched | Rust save/template/preview/render/cancel engine, project isolation, immutable outputs and linked timeline updates |
@@ -188,6 +193,15 @@ The existing JavaScript project language is user-authored content; implementing
 its host/evaluator in Rust is compatible with a Rust application.
 
 ## Verification
+
+The shadows/effects increment passed 50 unit tests, 112 ordinary integration
+tests and all four real FFmpeg integration tests (166 total), Clippy with desktop
+enabled and warnings denied, and the desktop build. Both new reference generators
+passed `--check`. The actual native CLI captured `examples/effects` at 0 and
+0.75 seconds and exported a 640x360, 12 fps, 12-frame H.264 video. Captures,
+decoded first video frame and the real egui framebuffer were visually inspected;
+CLI warnings and the desktop error log were empty. These are gates for the
+implemented increment; the full conversion acceptance ledger remains open.
 
 ```sh
 cargo fmt --manifest-path native/editor/Cargo.toml -- --check
@@ -441,9 +455,55 @@ the existing difference between text styles and shape styles. A hidden range
 does not suppress its intrinsic text styling, while a hidden paint is skipped.
 Gradient stops remain included even when their own `hidden` prop is true.
 
+Filters use the original `buildEffects` order: the holder's animated `blur`,
+then visible effect children. A nonempty local list replaces the inherited
+Canvas filter; an empty/no-op list retains it. Each fill, stroke or word is
+filtered separately, including beneath groups. This follows `renderNode`, whose
+behavior differs from the isolated-group wording in the older JSX reference.
+Brightness, contrast and saturation retain the original 0..1 clamp. Unknown
+effect types map to blur, and the original epsilon skips neutral effects.
+The color matrices follow the [CSS filter definitions](https://www.w3.org/TR/filter-effects-1/#FilterProperty).
+
+Shadows draw their colored source silhouette as well as the cast shadow, just
+like the original `ctx.fill()`/`fillText()` call. Shape shadows read animated
+properties; text shadows read authored color, opacity, blur and offsets.
+Text ranges replace shadow lists independently of fills/strokes. All text
+shadows precede all strokes and fills. The widest visible stroke supplies a
+stroked word's shadow silhouette, while its foreground stroke retains the
+parent's stroke color because `renderTokens` only changes `fillStyle` there.
+Negative shadow blur and invalid alpha retain the preceding Canvas assignment.
+
+Rasterization follows the [Canvas drawing model](https://html.spec.whatwg.org/multipage/canvas.html#drawing-model):
+transform, global alpha, filters, cast shadow, then clip and blend each output.
+CSS blur lengths are device pixels; shadow blur/offsets additionally follow
+capture resolution, as the original renderer explicitly scales them. Filtered
+media applies its fitted image before clipping to the holder, preserving pixels
+outside the box that contribute to blur. Intermediate bounds include this
+source margin even at canvas edges. Small/medium blurs use separable Gaussian
+convolution; sigma above 32 uses the specification's three-box approximation.
+This CPU implementation is not an interactive-performance or GPU parity claim.
+
+tiny-skia 0.12 changes pure pattern translations to nearest-neighbor sampling
+even when bilinear quality is requested. Fractional shadow offsets are therefore
+resampled explicitly before integer compositing; keep that regression when
+changing the raster backend.
+
+`tests/reference/generate-effects.cjs` executes the original filter builders,
+shape/shadow/stroke renderer, transforms and `renderNode` in default Chromium
+Canvas. Its 107 cases include all eight filters, clamping/defaults, alpha,
+inheritance, filter order, masks, off-canvas input, shadows and capture scale.
+The 57856 samples require agreement within two premultiplied byte levels without
+blur and four with blur. Four transformed shape cases permit only the original
+one-pixel neighborhood range plus two levels for differing edge antialiasing.
+`generate-text-shadows.cjs` executes the original text styling consumers with a
+Canvas-state recorder; eight command traces check exact draw order, inherited
+stroke color/width, ranges and authored-vs-animated values. Both oracles record
+source hashes and accept `--check`; only the development generator uses Node or
+Electron. Rust tests consume the committed JSON directly.
+
 Native planning limits each scene to 100000 nodes/128 levels and each frame to
 65536 draws, eight million styled path points and one million gradient stop
-applications. A holder accepts 1024 paints/strokes; a gradient accepts 4096 stops.
+applications. A holder accepts 1024 paints/strokes/shadows/effects; a gradient accepts 4096 stops.
 Stroke width is limited to 8192 and miter ratio to one million. Planning checks
 cancellation before committing new geometry history. Large raster buffers use
 fallible reservation: at most 256 MiB for pixels and 64 MiB per clip mask.
@@ -455,6 +515,15 @@ stacks are rebuilt. A frame caps clip raster work at 2^31 pixel applications.
 Pixel intersections and stack planning check cancellation. These bounds
 exclude decoded textures, fonts and the rasterizer's additional working storage;
 they do not guarantee recovery from every allocation inside dependencies.
+
+Effects additionally permit at most 64 active filters per holder, sigma 256
+device pixels, 8192 pixels of accumulated blur support and 2^31 filter pixel/tap
+applications per frame. Shadow inputs permit blur 512 and offsets of one million
+document pixels, with the sigma bound checked again after output scaling.
+Each padded effect raster is at most 16384 pixels per edge and 64 MiB; foreground,
+cast shadow and scratch together need at most 192 MiB beyond the existing frame,
+clip, font and media storage. Allocation is fallible, processing checks
+cancellation between rows/chunks, and resource excesses fail explicitly.
 
 Text uses LTR Canvas paragraph context, as the current runtime does, and Unicode
 bidi runs within it. The bundled Inter font is pinned with its OFL license and

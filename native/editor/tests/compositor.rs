@@ -185,7 +185,7 @@ fn visibility_uses_rounded_frame_boundaries_and_unpainted_nodes_stay_transparent
 #[test]
 fn unsupported_native_properties_fail_explicitly_and_failed_plans_do_not_advance_geometry() {
     for (props, body) in [
-        ("blur={2}", ""),
+        ("skewX={2}", ""),
         ("", r#"<rect keepAspectRatio/>"#),
         ("", r#"<rect cornerRadius={-1} fill="red"/>"#),
     ] {
@@ -449,7 +449,7 @@ fn switching_scenes_retains_each_backend_and_group_history() {
 fn unsupported_properties_stop_native_history_until_remount_but_pixel_cancellation_does_not() {
     let doc=dynamic_document("transient-prop.tsx",r#"import {useTicker} from '@diffusionstudio/jsx';
       export default ()=>{const t=useTicker();return <stage><scene id="s" active width={64} height={48} workarea={[0,3]}>
-        <group x={24} y={8} rotation={90} {...(t.time()>=1&&t.time()<2?{blur:2}:{})}>
+        <group x={24} y={8} rotation={90} {...(t.time()>=1&&t.time()<2?{skewX:2}:{})}>
           <rect width={8} height={8} fill="red"/><rect x={t.time()<1?20:30} width={8} height={8} fill="blue"/>
         </group></scene></stage>};"#.into());
     let tools = unavailable_tools();
@@ -469,7 +469,7 @@ fn unsupported_properties_stop_native_history_until_remount_but_pixel_cancellati
         .unwrap();
     assert_eq!(pixel(&second, 64, 38, 2), [255, 0, 0, 255]);
     let failed = renderer.frame_plan("s", 1.0, 30.0, false).err().unwrap();
-    assert!(failed.contains("blur") && failed.contains("reopening"));
+    assert!(failed.contains("skewX") && failed.contains("reopening"));
     assert_eq!(
         renderer.frame_plan("s", 2.0, 30.0, false).err().unwrap(),
         failed

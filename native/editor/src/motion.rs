@@ -288,7 +288,10 @@ impl Motion {
                 }
             }
         }
-        if matches!(original.tag.as_str(), "solidPaint" | "stroke" | "colorStop") {
+        if matches!(
+            original.tag.as_str(),
+            "solidPaint" | "stroke" | "colorStop" | "shadow"
+        ) {
             let color = crate::text::node_color(original).unwrap_or(0);
             output.props.remove("fill");
             output.props.remove("color");

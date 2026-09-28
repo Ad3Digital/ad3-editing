@@ -7,6 +7,7 @@ pub mod compositor;
 mod control;
 pub mod document;
 pub mod easing;
+mod effects;
 mod encoder;
 pub mod evaluator;
 mod font_catalog;

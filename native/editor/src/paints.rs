@@ -13,7 +13,11 @@ pub(crate) fn is_fill(tag: &str) -> bool {
     )
 }
 pub(crate) fn is_style(tag: &str) -> bool {
-    is_fill(tag) || matches!(tag, "stroke" | "colorStop" | "textRange")
+    is_fill(tag)
+        || matches!(
+            tag,
+            "stroke" | "colorStop" | "textRange" | "shadow" | "effect"
+        )
 }
 pub(crate) fn number(node: &Node, key: &str, default: f64) -> f64 {
     scalar(node.props.get(key)).unwrap_or(default)

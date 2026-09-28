@@ -5,6 +5,7 @@
 use crate::{
     Result,
     document::Node,
+    effects::{self, Filters, Shadow, ShadowState},
     encoder::cancelled,
     geometry::{Frame, GroupChild, Mat2D, TransformValues, group_frame, is_culled},
     media::MediaLibrary,
@@ -18,7 +19,7 @@ use std::{
 };
 use tiny_skia::{
     BlendMode, Color, FillRule, FilterQuality, Mask, Paint, Path, PathBuilder, Pattern, Pixmap,
-    Rect, SpreadMode, Stroke, Transform,
+    PixmapPaint, Rect, SpreadMode, Stroke, Transform,
 };
 
 #[derive(Debug)]
@@ -84,6 +85,8 @@ struct Layer<'a> {
     culled: bool,
     blend: BlendMode,
     line: LineStyle,
+    stroke_color: u32,
+    filters: Filters,
     clip: Option<usize>,
     child_clip: Option<usize>,
     suppressed: bool,
@@ -104,6 +107,8 @@ struct Draw {
     clip: Option<usize>,
     blend: BlendMode,
     stroke: Option<Stroke>,
+    filters: Filters,
+    shadow: Option<Shadow>,
 }
 enum Ink {
     Solid(u32),
@@ -191,6 +196,7 @@ fn validate(node: &Node, root: bool) -> Result<()> {
         "clipColor",
         "keepAspectRatio",
         "mask",
+        "blur",
     ];
     let specific: &[&str] = match node.tag.as_str() {
         "scene" => &[
@@ -243,6 +249,8 @@ fn validate(node: &Node, root: bool) -> Result<()> {
         "linearGradientPaint" | "radialGradientPaint" => &[],
         "colorStop" => &["color", "fill", "offset"],
         "stroke" => &["color", "fill", "join", "cap", "miterLimit"],
+        "shadow" => &["color", "fill"],
+        "effect" => &["type", "value"],
         tag => {
             return Err(format!(
                 "{}: native vector rendering of <{tag}> is not ported yet",
@@ -305,10 +313,17 @@ fn validate_children(
                     "linearGradientPaint" | "radialGradientPaint"
                 )
             }),
-            tag if paints::is_fill(tag) || tag == "stroke" => parent.is_some_and(|p| {
+            tag if paints::is_fill(tag) || matches!(tag, "stroke" | "shadow") => parent
+                .is_some_and(|p| {
+                    matches!(
+                        p.tag.as_str(),
+                        "scene" | "rect" | "image" | "video" | "text" | "textRange"
+                    )
+                }),
+            "effect" => parent.is_some_and(|p| {
                 matches!(
                     p.tag.as_str(),
-                    "scene" | "rect" | "image" | "video" | "text" | "textRange"
+                    "scene" | "rect" | "image" | "video" | "text" | "group" | "sequence"
                 )
             }),
             _ => parent.is_none_or(|p| !paints::is_style(&p.tag)),
@@ -316,8 +331,10 @@ fn validate_children(
         if !valid {
             return Err(format!("{}: invalid parent for <{}>", node.id, node.tag).into());
         }
-        if matches!(node.tag.as_str(), "solidPaint" | "stroke" | "colorStop")
-            && !node.children.is_empty()
+        if matches!(
+            node.tag.as_str(),
+            "solidPaint" | "stroke" | "colorStop" | "shadow" | "effect"
+        ) && !node.children.is_empty()
         {
             return Err(
                 format!("{}: this paint/style cannot have render children", node.id).into(),
@@ -326,11 +343,15 @@ fn validate_children(
         if node
             .children
             .iter()
-            .filter(|n| paints::is_fill(&n.tag) || n.tag == "stroke")
+            .filter(|n| {
+                paints::is_fill(&n.tag) || matches!(n.tag.as_str(), "stroke" | "shadow" | "effect")
+            })
             .count()
             > 1024
         {
-            return Err("A holder accepts at most 1024 native paints/strokes".into());
+            return Err(
+                "A holder accepts at most 1024 native paints/strokes/shadows/effects".into(),
+            );
         }
         pending.extend(node.children.iter().map(|n| (n, Some(node))));
     }
@@ -421,6 +442,59 @@ fn draw_style(
                 clip: layer.clip,
                 blend: paints::blend(node, layer.blend),
                 stroke,
+                filters: layer.filters.clone(),
+                shadow: None,
+            },
+        )?;
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn draw_shadow(
+    draws: &mut Vec<Draw>,
+    brushes: &mut Brushes<'_>,
+    layer: &Layer<'_>,
+    node: &Node,
+    path: Option<&Arc<Path>>,
+    origin: [f64; 2],
+    text: bool,
+    stroke: Option<&Stroke>,
+    state: &mut ShadowState,
+    current_alpha: &mut f64,
+) -> Result<()> {
+    if node.flag("hidden") {
+        return Ok(());
+    }
+    let source = if text { brushes.authored(node) } else { node };
+    let shadow = state.assign(source)?;
+    *current_alpha = paints::assigned_alpha(
+        *current_alpha,
+        layer.opacity * paints::number(source, "opacity", 1.0),
+    );
+    if let Some(path) = path {
+        brushes.points = brushes.points.saturating_add(path.points().len());
+        if brushes.points > 8_000_000 {
+            return Err("Native frame exceeds eight million styled path points".into());
+        }
+        push_draw(
+            draws,
+            Draw {
+                path: path.clone(),
+                world: layer.world.multiply(Mat2D::translate(origin[0], origin[1])),
+                // renderTokens sets fillStyle only; strokeText retains the parent's
+                // strokeStyle, even though its cast shadow uses the shadow's color.
+                ink: Ink::Solid(if stroke.is_some() {
+                    layer.stroke_color
+                } else {
+                    shadow.color
+                }),
+                opacity: *current_alpha,
+                clip: layer.clip,
+                blend: layer.blend,
+                stroke: stroke.cloned(),
+                filters: layer.filters.clone(),
+                shadow: Some(shadow),
             },
         )?;
     }
@@ -451,6 +525,8 @@ impl Compositor {
                     | "radialGradientPaint"
                     | "colorStop"
                     | "stroke"
+                    | "shadow"
+                    | "effect"
             ) {
                 return false;
             }
@@ -642,6 +718,8 @@ impl Compositor {
                 culled: false,
                 blend: BlendMode::SourceOver,
                 line: LineStyle::default(),
+                stroke_color: 0,
+                filters: Arc::from([]),
                 clip: None,
                 child_clip: None,
                 suppressed: node.flag("mask") || parent.is_some_and(|p| layers[p].suppressed),
@@ -699,6 +777,10 @@ impl Compositor {
                 layers[index].node,
                 parent.map_or(BlendMode::SourceOver, |p| layers[p].blend),
             );
+            layers[index].filters = effects::inherited(
+                layers[index].node,
+                &parent.map_or_else(|| Arc::from([]), |p| layers[p].filters.clone()),
+            )?;
             raster_transform(world)?;
         }
         let mut draws = Vec::new();
@@ -735,8 +817,10 @@ impl Compositor {
             let inherited_line = layers[index]
                 .parent
                 .map_or_else(LineStyle::default, |p| layers[p].line.clone());
+            let inherited_stroke = layers[index].parent.map_or(0, |p| layers[p].stroke_color);
             let layer = &mut layers[index];
             layer.line = inherited_line.clone();
+            layer.stroke_color = inherited_stroke;
             if layer.suppressed
                 || !layer.visible
                 || layer.culled
@@ -773,6 +857,51 @@ impl Compositor {
                     .collect::<Vec<_>>();
                 let mut line = inherited_line.clone();
                 let mut current_alpha = layer.opacity;
+                let mut shadow_state = ShadowState::default();
+                // One saved Canvas state across all words in the shadows pass.
+                for (token, path) in layout.tokens.iter().zip(&paths) {
+                    cancelled(cancel).map_err(FrameError::transient)?;
+                    let word = &prepared.words[token.piece];
+                    let mut widest: Option<&Node> = None;
+                    if let Some(holder) =
+                        word.strokes.as_deref().and_then(|id| sampled_nodes.get(id))
+                    {
+                        for stroke in holder
+                            .children
+                            .iter()
+                            .filter(|n| n.tag == "stroke" && !n.flag("hidden"))
+                        {
+                            if widest.is_none_or(|previous| {
+                                paints::number(stroke, "width", 1.0)
+                                    > paints::number(previous, "width", 1.0)
+                            }) {
+                                widest = Some(stroke);
+                            }
+                        }
+                    }
+                    let stroke = widest.map(|n| line.apply(n)).transpose()?;
+                    if let Some(holder) =
+                        word.shadows.as_deref().and_then(|id| sampled_nodes.get(id))
+                    {
+                        for shadow in holder.children.iter().filter(|n| n.tag == "shadow") {
+                            draw_shadow(
+                                &mut draws,
+                                &mut brushes,
+                                layer,
+                                shadow,
+                                path.as_ref(),
+                                [token.x as f64, token.y as f64],
+                                true,
+                                stroke.as_ref(),
+                                &mut shadow_state,
+                                &mut current_alpha,
+                            )?;
+                        }
+                        current_alpha = layer.opacity;
+                    }
+                }
+                line = inherited_line.clone();
+                current_alpha = layer.opacity;
                 // Canvas completes every word's stroke pass before any fills.
                 for (token, path) in layout.tokens.iter().zip(&paths) {
                     cancelled(cancel).map_err(FrameError::transient)?;
@@ -814,6 +943,8 @@ impl Compositor {
                                     clip: layer.clip,
                                     blend: layer.blend,
                                     stroke: None,
+                                    filters: layer.filters.clone(),
+                                    shadow: None,
                                 },
                             )?;
                         }
@@ -839,6 +970,23 @@ impl Compositor {
             }
             // Validate shape values even when unpainted.
             let path = shape_path(layer.node, layer.state.frame.size)?.map(Arc::new);
+            let mut shadow_state = ShadowState::default();
+            let mut shadow_alpha = layer.opacity;
+            for shadow in layer.node.children.iter().filter(|n| n.tag == "shadow") {
+                cancelled(cancel).map_err(FrameError::transient)?;
+                draw_shadow(
+                    &mut draws,
+                    &mut brushes,
+                    layer,
+                    shadow,
+                    path.as_ref(),
+                    [0.0; 2],
+                    false,
+                    None,
+                    &mut shadow_state,
+                    &mut shadow_alpha,
+                )?;
+            }
             if let Some(rgb) = crate::text::node_color(layer.node)
                 && let Some(path) = &path
             {
@@ -852,6 +1000,8 @@ impl Compositor {
                         clip: layer.clip,
                         blend: layer.blend,
                         stroke: None,
+                        filters: layer.filters.clone(),
+                        shadow: None,
                     },
                 )?;
             }
@@ -895,6 +1045,8 @@ impl Compositor {
                         clip: layer.clip,
                         blend: layer.blend,
                         stroke: None,
+                        filters: layer.filters.clone(),
+                        shadow: None,
                         ink: Ink::Media {
                             request: Box::new(TextureRequest {
                                 path: source,
@@ -929,6 +1081,9 @@ impl Compositor {
                     &mut line,
                     &mut opacity,
                 )?;
+                if style.tag == "stroke" && !style.flag("hidden") {
+                    layer.stroke_color = paints::color(style);
+                }
             }
             layer.line = line;
         }
@@ -1215,6 +1370,7 @@ impl NativeFrame {
             round_frame(height as f64 * 1e6 / self.canvas[1]) / 1e6
         };
         let mut clips = None;
+        let mut effect_work = effects::Work::default();
         for draw in &self.draws {
             cancelled(cancel)?;
             let mask = if let Some(id) = draw.clip {
@@ -1230,102 +1386,19 @@ impl NativeFrame {
             } else {
                 None
             };
-            match &draw.ink {
-                Ink::Solid(_) | Ink::Gradient { .. } => {
-                    let shader = match &draw.ink {
-                        Ink::Solid(rgb) => Some(paints::solid_shader(*rgb, draw.opacity)),
-                        Ink::Gradient { gradient, origin } => {
-                            gradient.shader(draw.opacity, *origin)?
-                        }
-                        _ => unreachable!(),
-                    };
-                    let Some(shader) = shader else { continue };
-                    let paint = Paint {
-                        shader,
-                        blend_mode: draw.blend,
-                        force_hq_pipeline: draw.blend != BlendMode::SourceOver
-                            || matches!(&draw.ink, Ink::Gradient { .. }),
-                        ..Paint::default()
-                    };
-                    if let Some(stroke) = &draw.stroke {
-                        pixels.stroke_path(
-                            &draw.path,
-                            &paint,
-                            stroke,
-                            raster_transform(draw.world.view(scale))?,
-                            mask,
-                        );
-                    } else {
-                        pixels.fill_path(
-                            &draw.path,
-                            &paint,
-                            FillRule::Winding,
-                            raster_transform(draw.world.view(scale))?,
-                            mask,
-                        );
-                    }
-                }
-                Ink::Media {
-                    request,
-                    store,
-                    size,
-                    fit,
-                } => {
-                    let bitmap = store.frame(request, cancel)?;
-                    let [mut x, mut y, w, h] =
-                        fit.rectangle([bitmap.width() as f64, bitmap.height() as f64], *size);
-                    if w == 0.0 || h == 0.0 {
-                        continue;
-                    }
-                    // Canvas drawImage with a negative destination size grows
-                    // backwards without flipping source pixels.
-                    if w < 0.0 {
-                        x += w;
-                    }
-                    if h < 0.0 {
-                        y += h;
-                    }
-                    let local = Mat2D::translate(x, y).multiply(Mat2D::scale(
-                        w.abs() / bitmap.width() as f64,
-                        h.abs() / bitmap.height() as f64,
-                    ));
-                    // Fill the media mask directly, then intersect in place.
-                    // Mask::clone/intersect_path allocate infallibly and would
-                    // need an additional full-size temporary mask.
-                    let mut clip = raster_mask(width, height)?;
-                    clip.fill_path(
-                        &draw.path,
-                        FillRule::Winding,
-                        true,
-                        raster_transform(draw.world.view(scale))?,
-                    );
-                    if let Some(mask) = mask {
-                        intersect_masks(&mut clip, mask, cancel)?;
-                    }
-                    let paint = Paint {
-                        blend_mode: draw.blend,
-                        force_hq_pipeline: true,
-                        shader: Pattern::new(
-                            bitmap.as_ref().as_ref(),
-                            SpreadMode::Pad,
-                            FilterQuality::Bilinear,
-                            draw.opacity as f32,
-                            Transform::identity(),
-                        ),
-                        ..Paint::default()
-                    };
-                    let path = PathBuilder::from_rect(
-                        Rect::from_xywh(0.0, 0.0, bitmap.width() as f32, bitmap.height() as f32)
-                            .ok_or("Invalid bitmap bounds")?,
-                    );
-                    pixels.fill_path(
-                        &path,
-                        &paint,
-                        FillRule::Winding,
-                        raster_transform(draw.world.multiply(local).view(scale))?,
-                        Some(&clip),
-                    );
-                }
+            if draw.filters.is_empty() && draw.shadow.is_none() {
+                raster_draw(
+                    draw,
+                    &mut pixels,
+                    scale,
+                    [0.0; 2],
+                    draw.blend,
+                    mask,
+                    true,
+                    cancel,
+                )?;
+            } else {
+                filtered_draw(draw, &mut pixels, scale, mask, &mut effect_work, cancel)?;
             }
         }
         cancelled(cancel)?;
@@ -1355,9 +1428,374 @@ impl NativeFrame {
     }
 }
 
+fn filtered_draw(
+    draw: &Draw,
+    target: &mut Pixmap,
+    scale: f64,
+    mask: Option<&Mask>,
+    work: &mut effects::Work,
+    cancel: Option<&AtomicBool>,
+) -> Result<()> {
+    cancelled(cancel)?;
+    let shadow = draw
+        .shadow
+        .filter(|s| s.blur != 0.0 || s.offset != [0.0; 2]);
+    let offset = shadow.map_or([0.0; 2], |s| s.offset.map(|v| v * scale));
+    let sigma = shadow.map_or(0.0, |s| s.blur * scale / 2.0);
+    let mut pad = effects::blur_support(sigma)? + 2.0;
+    for filter in draw.filters.iter() {
+        if let effects::Filter::Blur(sigma) = filter {
+            pad += effects::blur_support(*sigma)?;
+        }
+    }
+    let bounds = draw.path.bounds();
+    let expand = draw.stroke.as_ref().map_or(0.0, |s| {
+        s.width as f64 * 0.5 * (s.miter_limit as f64).max(1.5)
+    });
+    let mut local = [
+        bounds.left() as f64 - expand,
+        bounds.top() as f64 - expand,
+        bounds.right() as f64 + expand,
+        bounds.bottom() as f64 + expand,
+    ];
+    if let Ink::Media {
+        request,
+        store,
+        size,
+        fit,
+    } = &draw.ink
+    {
+        let bitmap = store.frame(request, cancel)?;
+        let [x, y, w, h] = fit.rectangle([bitmap.width() as f64, bitmap.height() as f64], *size);
+        local = [x.min(x + w), y.min(y + h), x.max(x + w), y.max(y + h)];
+    }
+    let matrix = draw.world.view(scale);
+    let corners = [
+        matrix.point(local[0], local[1]),
+        matrix.point(local[2], local[1]),
+        matrix.point(local[2], local[3]),
+        matrix.point(local[0], local[3]),
+    ];
+    if corners.iter().any(|p| !p.x.is_finite() || !p.y.is_finite()) {
+        return Err("Non-finite native effect bounds".into());
+    }
+    let lo = [
+        corners.iter().map(|p| p.x).fold(f64::INFINITY, f64::min),
+        corners.iter().map(|p| p.y).fold(f64::INFINITY, f64::min),
+    ];
+    let hi = [
+        corners
+            .iter()
+            .map(|p| p.x)
+            .fold(f64::NEG_INFINITY, f64::max),
+        corners
+            .iter()
+            .map(|p| p.y)
+            .fold(f64::NEG_INFINITY, f64::max),
+    ];
+    let viewport = [target.width() as f64, target.height() as f64];
+    let origin = std::array::from_fn(|i| (lo[i] - pad).max(0.0f64.min(-offset[i]) - pad).floor());
+    let end: [f64; 2] = std::array::from_fn(|i| {
+        (hi[i] + pad)
+            .min(viewport[i].max(viewport[i] - offset[i]) + pad)
+            .ceil()
+    });
+    if (0..2).any(|i| end[i] <= origin[i]) {
+        return Ok(());
+    }
+    let dims = [end[0] - origin[0], end[1] - origin[1]];
+    if dims.iter().any(|v| !v.is_finite() || *v > 16384.0) {
+        return Err("Native effect bounds exceed 16384 pixels per edge".into());
+    }
+    let mut foreground = effects::buffer(dims[0] as u32, dims[1] as u32)?;
+    work.charge(
+        foreground.width() as usize * foreground.height() as usize,
+        1,
+    )?;
+    raster_draw(
+        draw,
+        &mut foreground,
+        scale,
+        origin,
+        BlendMode::SourceOver,
+        None,
+        false,
+        cancel,
+    )?;
+    effects::apply(&mut foreground, &draw.filters, work, cancel)?;
+    // Canvas applies filters and casts shadows BEFORE clipping the final output.
+    // drawImage adds its geometry to that final clip, including for blur.
+    let mut own_clip = None;
+    if matches!(draw.ink, Ink::Media { .. }) {
+        let mut clip = raster_mask(target.width(), target.height())?;
+        clip.fill_path(
+            &draw.path,
+            FillRule::Winding,
+            true,
+            raster_transform(matrix)?,
+        );
+        if let Some(mask) = mask {
+            intersect_masks(&mut clip, mask, cancel)?;
+        }
+        own_clip = Some(clip);
+    }
+    let clip = own_clip.as_ref().or(mask);
+    let paint = PixmapPaint {
+        blend_mode: draw.blend,
+        quality: FilterQuality::Bilinear,
+        ..Default::default()
+    };
+    if let Some(shadow) = shadow {
+        let mut cast = effects::buffer(foreground.width(), foreground.height())?;
+        let rgb = [
+            (shadow.color >> 16) as u8,
+            (shadow.color >> 8) as u8,
+            shadow.color as u8,
+        ];
+        for (from, to) in foreground
+            .data()
+            .chunks(16384)
+            .zip(cast.data_mut().chunks_mut(16384))
+        {
+            cancelled(cancel)?;
+            for (from, to) in from
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .zip(to.as_chunks_mut::<4>().0)
+            {
+                to[3] = from[3];
+                for i in 0..3 {
+                    to[i] = ((rgb[i] as u32 * from[3] as u32 + 127) / 255) as u8;
+                }
+            }
+        }
+        effects::blur(&mut cast, sigma, work, cancel)?;
+        let offset = effects::fractional_offset(&mut cast, offset, work, cancel)?;
+        target.draw_pixmap(
+            0,
+            0,
+            cast.as_ref(),
+            &paint,
+            raster_transform(Mat2D::translate(
+                origin[0] + offset[0],
+                origin[1] + offset[1],
+            ))?,
+            clip,
+        );
+    }
+    cancelled(cancel)?;
+    target.draw_pixmap(
+        0,
+        0,
+        foreground.as_ref(),
+        &paint,
+        raster_transform(Mat2D::translate(origin[0], origin[1]))?,
+        clip,
+    );
+    cancelled(cancel)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn raster_draw(
+    draw: &Draw,
+    pixels: &mut Pixmap,
+    scale: f64,
+    origin: [f64; 2],
+    blend: BlendMode,
+    mask: Option<&Mask>,
+    clip_media: bool,
+    cancel: Option<&AtomicBool>,
+) -> Result<()> {
+    let device =
+        |matrix: Mat2D| Mat2D::translate(-origin[0], -origin[1]).multiply(matrix.view(scale));
+    match &draw.ink {
+        Ink::Solid(_) | Ink::Gradient { .. } => {
+            let shader = match &draw.ink {
+                Ink::Solid(rgb) => Some(paints::solid_shader(*rgb, draw.opacity)),
+                Ink::Gradient { gradient, origin } => gradient.shader(draw.opacity, *origin)?,
+                _ => unreachable!(),
+            };
+            let Some(shader) = shader else { return Ok(()) };
+            let paint = Paint {
+                shader,
+                blend_mode: blend,
+                force_hq_pipeline: blend != BlendMode::SourceOver
+                    || matches!(&draw.ink, Ink::Gradient { .. }),
+                ..Paint::default()
+            };
+            if let Some(stroke) = &draw.stroke {
+                pixels.stroke_path(
+                    &draw.path,
+                    &paint,
+                    stroke,
+                    raster_transform(device(draw.world))?,
+                    mask,
+                );
+            } else {
+                pixels.fill_path(
+                    &draw.path,
+                    &paint,
+                    FillRule::Winding,
+                    raster_transform(device(draw.world))?,
+                    mask,
+                );
+            }
+        }
+        Ink::Media {
+            request,
+            store,
+            size,
+            fit,
+        } => {
+            let bitmap = store.frame(request, cancel)?;
+            let [mut x, mut y, w, h] =
+                fit.rectangle([bitmap.width() as f64, bitmap.height() as f64], *size);
+            if w == 0.0 || h == 0.0 {
+                return Ok(());
+            }
+            // Canvas drawImage with a negative destination size grows
+            // backwards without flipping source pixels.
+            if w < 0.0 {
+                x += w;
+            }
+            if h < 0.0 {
+                y += h;
+            }
+            let local = Mat2D::translate(x, y).multiply(Mat2D::scale(
+                w.abs() / bitmap.width() as f64,
+                h.abs() / bitmap.height() as f64,
+            ));
+            // Fill the media mask directly, then intersect in place.
+            // Mask::clone/intersect_path allocate infallibly and would
+            // need an additional full-size temporary mask.
+            let mut clip = if clip_media {
+                Some(raster_mask(pixels.width(), pixels.height())?)
+            } else {
+                None
+            };
+            if let Some(clip) = clip.as_mut() {
+                clip.fill_path(
+                    &draw.path,
+                    FillRule::Winding,
+                    true,
+                    raster_transform(device(draw.world))?,
+                );
+                if let Some(mask) = mask {
+                    intersect_masks(clip, mask, cancel)?;
+                }
+            }
+            let paint = Paint {
+                blend_mode: blend,
+                force_hq_pipeline: true,
+                shader: Pattern::new(
+                    bitmap.as_ref().as_ref(),
+                    SpreadMode::Pad,
+                    FilterQuality::Bilinear,
+                    draw.opacity as f32,
+                    Transform::identity(),
+                ),
+                ..Paint::default()
+            };
+            let path = PathBuilder::from_rect(
+                Rect::from_xywh(0.0, 0.0, bitmap.width() as f32, bitmap.height() as f32)
+                    .ok_or("Invalid bitmap bounds")?,
+            );
+            pixels.fill_path(
+                &path,
+                &paint,
+                FillRule::Winding,
+                raster_transform(device(draw.world.multiply(local)))?,
+                clip.as_ref().or(mask),
+            );
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod text_geometry_tests {
     use super::*;
+    #[test]
+    fn text_shadow_draws_match_original_command_traces() {
+        let fixture: serde_json::Value =
+            serde_json::from_str(include_str!("../tests/fixtures/text-shadows.json")).unwrap();
+        assert_eq!(fixture["cases"].as_array().unwrap().len(), 8);
+        for case in fixture["cases"].as_array().unwrap() {
+            let doc=crate::source::SourceDocument::parse("text-shadow-trace.tsx".into(),format!("export default <stage><scene id=\"s\" width={{256}} height={{128}}>{}</scene></stage>",case["source"].as_str().unwrap())).unwrap();
+            let authored = doc.root.find("s").unwrap();
+            let mut sampled = authored.clone();
+            fn apply(node: &mut Node, changes: &serde_json::Value) {
+                if let Some(props) = changes.get(&node.id).and_then(serde_json::Value::as_object) {
+                    node.props.extend(props.clone());
+                }
+                for child in &mut node.children {
+                    apply(child, changes);
+                }
+            }
+            apply(&mut sampled, &case["overrides"]);
+            let timeline = Timeline::resolve(&doc.root, &Default::default()).unwrap();
+            let mut texts = crate::text::prepare(&sampled, authored, &Default::default());
+            let frame = Compositor::default()
+                .frame_on_canvas(
+                    &sampled,
+                    authored,
+                    &timeline,
+                    0.0,
+                    30.0,
+                    false,
+                    None,
+                    None,
+                    None,
+                    &mut texts,
+                    &mut Default::default(),
+                    None,
+                )
+                .unwrap();
+            let draws = &frame.draws[1..]; // parent rect's inherited stroke
+            let expected = case["draws"].as_array().unwrap();
+            assert_eq!(draws.len(), expected.len(), "{}", case["name"]);
+            for (draw, row) in draws.iter().zip(expected) {
+                assert_eq!(
+                    draw.stroke.is_some(),
+                    row[0].as_bool().unwrap(),
+                    "{}",
+                    case["name"]
+                );
+                let Ink::Solid(rgb) = draw.ink else {
+                    panic!("expected solid trace")
+                };
+                assert_eq!(
+                    rgb,
+                    crate::color::parse(row[1].as_str().unwrap()).unwrap(),
+                    "{}",
+                    case["name"]
+                );
+                assert!(
+                    (draw.opacity - row[2].as_f64().unwrap()).abs() < 1e-12,
+                    "{}",
+                    case["name"]
+                );
+                if row[3] == "transparent" {
+                    assert!(draw.shadow.is_none());
+                } else {
+                    let shadow = draw.shadow.unwrap();
+                    assert_eq!(
+                        shadow.color,
+                        crate::color::parse(row[3].as_str().unwrap()).unwrap()
+                    );
+                    assert_eq!(shadow.blur, row[4].as_f64().unwrap());
+                    assert_eq!(
+                        shadow.offset,
+                        [row[5].as_f64().unwrap(), row[6].as_f64().unwrap()]
+                    );
+                }
+                if let Some(stroke) = &draw.stroke {
+                    assert_eq!(stroke.width as f64, row[7].as_f64().unwrap());
+                }
+            }
+        }
+    }
     #[test]
     fn rotated_mask_world_matrix_and_edge_match_the_canvas_oracle() {
         let fixture: serde_json::Value =

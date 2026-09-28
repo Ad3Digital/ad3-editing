@@ -22,6 +22,7 @@ pub(crate) struct Word {
     pub color: Option<u32>,
     pub fills: Option<String>,
     pub strokes: Option<String>,
+    pub shadows: Option<String>,
     newline: bool,
 }
 pub(crate) struct PreparedText {
@@ -62,6 +63,7 @@ struct Style {
     baseline: Option<Baseline>,
     fills: Option<String>,
     strokes: Option<String>,
+    shadows: Option<String>,
 }
 #[derive(Clone, Copy, Default)]
 enum Case {
@@ -104,6 +106,9 @@ impl Style {
         }
         if node.children.iter().any(|n| n.tag == "stroke") {
             self.strokes = Some(node.id.clone());
+        }
+        if node.children.iter().any(|n| n.tag == "shadow") {
+            self.shadows = Some(node.id.clone());
         }
         if let Some(value) = node
             .string("fontFamily")
@@ -253,6 +258,7 @@ pub(crate) fn shape(
                     color: style.color,
                     fills: style.fills.clone(),
                     strokes: style.strokes.clone(),
+                    shadows: style.shadows.clone(),
                     newline: parts.peek().is_some(),
                 });
             }
