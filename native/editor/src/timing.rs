@@ -255,7 +255,12 @@ impl Timeline {
         };
         let mut children = Vec::new();
         for child in node.children.iter().filter(|child| child.is_timed()) {
-            children.push(self.resolve_node(child, Some(&span), scene, durations, fps)?);
+            let resolved = self.resolve_node(child, Some(&span), scene, durations, fps)?;
+            // Original Cache.children excludes IsMask; masks have their own
+            // timing, but do not extend a container fitted to its children.
+            if !child.flag("mask") {
+                children.push(resolved);
+            }
         }
         if fits && !children.is_empty() {
             span.start = children

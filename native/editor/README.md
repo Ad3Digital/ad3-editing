@@ -17,7 +17,7 @@ cargo run --locked --manifest-path native/editor/Cargo.toml --bin dapi-rust -- -
 cargo run --locked --manifest-path native/editor/Cargo.toml --features desktop --bin ad3-editing -- /path/to/project
 ```
 
-Nine runnable projects are included: `examples/static` exercises source editing;
+Ten runnable projects are included: `examples/static` exercises source editing;
 `examples/modules` exercises imported components/JSON; `examples/reactive` animates
 rectangles and text through the native ticker, signals, `For` and `Show`;
 `examples/inspect` exposes editable controls from an imported component module;
@@ -25,7 +25,8 @@ rectangles and text through the native ticker, signals, `For` and `Show`;
 `examples/vectors` exercises native rounded shapes, transforms and group opacity;
 `examples/media` combines native image/video composition with generated test assets;
 `examples/text` exercises wrapped text, variable font weights, italic ranges and rotation;
-`examples/paints` exercises animated gradients, glyph outlines and screen blending.
+`examples/paints` exercises animated gradients, glyph outlines and screen blending;
+`examples/masks` exercises rounded/intersecting masks and a text reveal.
 Pass the full path to a folder to the native executable.
 
 The desktop application opens an existing project folder or source entry, shows
@@ -82,7 +83,9 @@ Rendered media never overwrites an existing output or original footage.
 - `compositor.rs`: native CPU rasterization with tiny-skia for scenes made
   of rectangles, text, images, videos, groups, sequences and audio nodes. Shared preview/capture/export
   draw lists apply position/offset, rotation, uniform/axis scale, inherited opacity,
-  rounded corners and scene clipping. Group bounds follow the original parent-first
+  rounded corners, scene clipping and timed rectangle masks. Mask stacks cut the
+  holder's fills/strokes/media/text and descendants; multiple masks intersect.
+  Group bounds follow the original parent-first
   traversal using previous child transforms. Offline frames/PNG preserve alpha;
   H.264 frames explicitly composite over black. Realtime scene previews use the
   stage background. Media fit and clipping use the same native transformed geometry.
@@ -169,7 +172,7 @@ this ledger is waived because a smaller example renders successfully.
 | --- | --- | --- |
 | Source/project model | Static TSX edits; native ES modules, reactive props, signals/effects, For/Index/Show and ticker; original file spans; live `@inspect` and imported initializer writeback | Remaining package/Solid/browser APIs, generation hooks, loop unrolling and general multi-file JSX edits; complete last-good-render behavior |
 | Timeline | Source/timeline clocks, workareas, cuts/trims/moves, nested rates, transport | Ripple Q/E, multi-selection, clipboard/grouping, transitions, keyframe tracks, all timeline gestures/colors/toggles and established constraints |
-| Graphics | Native transformed/rounded vectors, images, video, wrapped text/ranges, solid/gradient paint stacks, solid strokes and blend modes | GPU compositor, complete font fallback/scripts/emoji and synthetic styles, remaining transforms/constraints, masks, media/HTML/surface/shader paints, shadows, effects, remaining text styling, HTML, surfaces, WGSL and adjustment layers |
+| Graphics | Native transformed/rounded vectors, images, video, wrapped text/ranges, solid/gradient paint stacks, solid strokes, blend modes and timed rect masks | GPU compositor, complete font fallback/scripts/emoji and synthetic styles, remaining transforms/constraints, non-rect mask targets, media/HTML/surface/shader paints, shadows, effects, remaining text styling, HTML, surfaces, WGSL and adjustment layers |
 | Audio | Offline retiming and Rust stereo mixing with per-frame reactive/preset/keyframe gain | Real-time output and seek/rate re-anchoring, solo/bus hierarchy, sample-accurate gain automation, syncTo and precise behavior across all cuts/rates |
 | Animation/captions | Native preset/keyframe sampling integrated with preview/export, including vector/media/text transforms | Blur/style rendering, sequence targeting, transition behavior, track editing UI, transcript parsing and every caption preset |
 | Media/assets | Rust raster image codecs/EXIF, FFprobe/video RGBA, linked YAML sources and bounded shared decoded texture cache | Hash/manifest lifecycle, import/relink/move/folders, SVG/remaining formats, color profiles/HDR, proxies and persistent decoders/cache tiers, VFR/container timestamp parity, frame directories, remote resolution/modifiers, transcripts |
@@ -268,6 +271,19 @@ The real CLI captured `examples/paints` at two times and exported 48 H.264 frame
 at 1024x576/24 fps (2 seconds), without warnings. PNGs, the decoded MP4 frame and
 the real egui window were visually inspected; the UI error log was empty.
 Independent critical review approved this increment after the complete checks.
+
+The mask stage passed 47 unit tests, 104 ordinary integration tests and all four
+real FFmpeg tests (155 total), formatting, Clippy with warnings denied across
+all targets with desktop enabled, and the desktop build. Its original-runtime
+oracle covers 56 cases and 3904 pixel samples, including 3768 uniform
+neighborhoods, plus timing and matrix comparisons. Regressions cover hidden
+masks, independently timed windows, reverse seeks, reactive mask toggles,
+group bounds, sibling restoration, nested intersections, text/image/video
+clipping, cancellation and clip working-memory/work limits.
+`examples/masks` was captured at 0 and 1 seconds and exported to H.264 at
+960x540, 24 fps, 48 frames (2 seconds), without warnings. Both captures, the
+decoded first video frame and the real egui window were visually inspected;
+the UI error log was empty.
 
 `@inspect` coverage includes semantic binding/shadowing, escaped identifiers,
 UTF-8 initializer spans, VM garbage collection/remounts, imported-module edits,
@@ -379,7 +395,7 @@ the canvas can still be measured while its scene is visible. Both backends
 explicitly reject unsupported properties; the older
 renderer is not a generic fallback for styles. Reactive addition/removal of supported
 text stays on the native compositor.
-Nested scenes, masks, aspect constraints and negative-size rounded shapes fail
+Nested scenes, non-rect mask targets, aspect constraints and negative-size rounded shapes fail
 explicitly. Rounded corners use a fine cubic approximation;
 browser Canvas antialiasing is not assumed byte-identical. Preview currently
 shows the normalized scene, rather than a complete stage/camera editing view.
@@ -389,6 +405,31 @@ of one. Repeated resizes derive their ratio from the original scene dimensions.
 Color/corner keyframes preserve the original trait membership: a color track
 does not paint an unfilled rectangle, and mixed-corner fallbacks resolve before
 an animated uniform radius.
+
+Rectangle masks use their full world transform and half-open time window.
+Masks retain antialiased edge coverage. The oracle uses the original default
+Chromium canvas configuration; forcing software/read-frequent rendering changes
+clip coverage and is not the reference mode.
+Their Hidden flag, fill, opacity, blend and render descendants do not affect the
+clip; hidden masks skip animation sampling. Nested masks inside a mask do not
+add another clip. Masks are excluded from group bounds and fitted durations.
+The current reconciler creates masks at **100x100**, and the timing runtime
+defaults them to **480 frames**. These actual source defaults differ from the
+500x500/whole-parent-span claims in `reference/jsx/rect.md`.
+Unsupported style children still fail validation, including beneath a mask.
+
+The development oracle `tests/reference/generate-masks.cjs` executes the original
+rect/mask adapter cases, cache refiling, timing, transform, visibility and
+`renderNode` functions with small ECS fixtures and Chromium Canvas. Its shape
+body stub paints intrinsic fills/solid strokes; clipping uses the original
+renderer. Source hashes accompany the 56 cases.
+Their matrices and timing are checked numerically. Pixel comparisons require
+matching interiors/exteriors within two premultiplied levels; only samples at
+an original one-pixel boundary may use that neighborhood's color/alpha range.
+The rounded-edge coverage of Canvas and tiny-skia is not byte-identical.
+Regenerate/check with
+`node node_modules/electron/cli.js native/editor/tests/reference/generate-masks.cjs --check`.
+The Rust tests consume the committed fixture without invoking Electron.
 
 Paint/stroke blending and opacity are inherited per draw. A `sourceOver` or
 unknown blend value removes the original trait and inherits the parent's mode.
@@ -405,8 +446,13 @@ Native planning limits each scene to 100000 nodes/128 levels and each frame to
 applications. A holder accepts 1024 paints/strokes; a gradient accepts 4096 stops.
 Stroke width is limited to 8192 and miter ratio to one million. Planning checks
 cancellation before committing new geometry history. Large raster buffers use
-fallible reservation: at most 256 MiB for pixels and 64 MiB per clip mask. Media
-clipping combines one temporary mask with the scene mask in place. These bounds
+fallible reservation: at most 256 MiB for pixels and 64 MiB per clip mask.
+Clip paths use a shared index arena capped at 4096 entries. Rasterization reuses
+two full masks for the current intersection and scratch, regardless of depth,
+plus one temporary mask while drawing media (at most 192 MiB for these masks).
+Consecutive styles reuse the intersection; descendants extend it, while sibling
+stacks are rebuilt. A frame caps clip raster work at 2^31 pixel applications.
+Pixel intersections and stack planning check cancellation. These bounds
 exclude decoded textures, fonts and the rasterizer's additional working storage;
 they do not guarantee recovery from every allocation inside dependencies.
 

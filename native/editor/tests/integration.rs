@@ -10,6 +10,8 @@ mod fonts;
 mod geometry;
 #[path = "inspect.rs"]
 mod inspect;
+#[path = "masks.rs"]
+mod masks;
 #[path = "modules.rs"]
 mod modules;
 #[path = "motion.rs"]

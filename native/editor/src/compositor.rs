@@ -84,6 +84,16 @@ struct Layer<'a> {
     culled: bool,
     blend: BlendMode,
     line: LineStyle,
+    clip: Option<usize>,
+    child_clip: Option<usize>,
+    suppressed: bool,
+}
+
+// Indices share ancestor clips without copying stacks or recursive Arc drops.
+struct Clip {
+    parent: Option<usize>,
+    path: Option<Path>,
+    world: Mat2D,
 }
 
 struct Draw {
@@ -91,7 +101,7 @@ struct Draw {
     world: Mat2D,
     ink: Ink,
     opacity: f64,
-    clipped: bool,
+    clip: Option<usize>,
     blend: BlendMode,
     stroke: Option<Stroke>,
 }
@@ -115,8 +125,7 @@ pub struct NativeFrame {
     canvas: [f64; 2],
     resolution: f64,
     background: Option<u32>,
-    // A scene clips descendants to its own (possibly rounded) path.
-    clip: Option<Path>,
+    clips: Vec<Clip>,
     draws: Vec<Draw>,
 }
 
@@ -181,6 +190,7 @@ fn validate(node: &Node, root: bool) -> Result<()> {
         "clipHeight",
         "clipColor",
         "keepAspectRatio",
+        "mask",
     ];
     let specific: &[&str] = match node.tag.as_str() {
         "scene" => &[
@@ -251,6 +261,12 @@ fn validate(node: &Node, root: bool) -> Result<()> {
     if node.flag("keepAspectRatio") {
         return Err(format!(
             "{}: native aspect constraints are not ported yet",
+            node.id
+        ));
+    }
+    if node.flag("mask") && node.tag != "rect" {
+        return Err(format!(
+            "{}: native masks currently require <rect>",
             node.id
         ));
     }
@@ -402,7 +418,7 @@ fn draw_style(
                 world: layer.world.multiply(Mat2D::translate(origin[0], origin[1])),
                 ink,
                 opacity: *current_alpha,
-                clipped: layer.parent.is_some(),
+                clip: layer.clip,
                 blend: paints::blend(node, layer.blend),
                 stroke,
             },
@@ -626,6 +642,9 @@ impl Compositor {
                 culled: false,
                 blend: BlendMode::SourceOver,
                 line: LineStyle::default(),
+                clip: None,
+                child_clip: None,
+                suppressed: node.flag("mask") || parent.is_some_and(|p| layers[p].suppressed),
             });
             if let Some(parent) = parent {
                 layers[parent].children.push(index);
@@ -651,7 +670,7 @@ impl Compositor {
                         local: layers[child].state.local,
                         size: layers[child].state.frame.size,
                         hidden: layers[child].node.flag("hidden"),
-                        mask: false,
+                        mask: layers[child].node.flag("mask"),
                     })
                     .collect::<Vec<_>>();
                 layers[index].state.frame =
@@ -685,7 +704,32 @@ impl Compositor {
         let mut draws = Vec::new();
         let mut text_work = crate::text::TextWork::default();
         fonts.begin_frame();
-        let clip = shape_path(scene, layers[0].state.frame.size)?;
+        let mut clips = Vec::new();
+        for index in 0..layers.len() {
+            cancelled(cancel).map_err(FrameError::transient)?;
+            if layers[index].suppressed || !layers[index].visible || layers[index].culled {
+                continue;
+            }
+            let mut current = layers[index].parent.and_then(|p| layers[p].child_clip);
+            for &child in &layers[index].children {
+                cancelled(cancel).map_err(FrameError::transient)?;
+                let mask = &layers[child];
+                let span = timeline.get(&mask.node.id)?;
+                // The original parent's mask loop checks the time window only:
+                // Hidden, opacity, culling and paints do not disable a mask.
+                if mask.node.flag("mask")
+                    && global_frame >= span.start * fps
+                    && global_frame < span.end * fps
+                {
+                    current = Some(push_clip(&mut clips, current, mask)?);
+                }
+            }
+            layers[index].clip = current;
+            if layers[index].parent.is_none() {
+                current = Some(push_clip(&mut clips, current, &layers[index])?);
+            }
+            layers[index].child_clip = current;
+        }
         for index in 0..layers.len() {
             cancelled(cancel).map_err(FrameError::transient)?;
             let inherited_line = layers[index]
@@ -693,7 +737,8 @@ impl Compositor {
                 .map_or_else(LineStyle::default, |p| layers[p].line.clone());
             let layer = &mut layers[index];
             layer.line = inherited_line.clone();
-            if !layer.visible
+            if layer.suppressed
+                || !layer.visible
                 || layer.culled
                 || !matches!(
                     layer.node.tag.as_str(),
@@ -766,7 +811,7 @@ impl Compositor {
                                         .multiply(Mat2D::translate(token.x as f64, token.y as f64)),
                                     ink: Ink::Solid(color),
                                     opacity: layer.opacity,
-                                    clipped: layer.parent.is_some(),
+                                    clip: layer.clip,
                                     blend: layer.blend,
                                     stroke: None,
                                 },
@@ -804,7 +849,7 @@ impl Compositor {
                         world: layer.world,
                         ink: Ink::Solid(rgb),
                         opacity: layer.opacity,
-                        clipped: layer.parent.is_some(),
+                        clip: layer.clip,
                         blend: layer.blend,
                         stroke: None,
                     },
@@ -847,7 +892,7 @@ impl Compositor {
                         path: path.clone(),
                         world: layer.world,
                         opacity: layer.opacity,
-                        clipped: layer.parent.is_some(),
+                        clip: layer.clip,
                         blend: layer.blend,
                         stroke: None,
                         ink: Ink::Media {
@@ -901,10 +946,23 @@ impl Compositor {
             canvas,
             resolution: 1.0,
             background,
-            clip,
+            clips,
             draws,
         })
     }
+}
+
+fn push_clip(clips: &mut Vec<Clip>, parent: Option<usize>, layer: &Layer<'_>) -> Result<usize> {
+    if clips.len() >= 4096 {
+        return Err("Native frame exceeds 4096 clip paths".into());
+    }
+    let index = clips.len();
+    clips.push(Clip {
+        parent,
+        path: shape_path(layer.node, layer.state.frame.size)?,
+        world: layer.world,
+    });
+    Ok(index)
 }
 
 fn canvas_dimensions(canvas: [f64; 2], resolution: f64) -> Result<[u32; 2]> {
@@ -1045,6 +1103,86 @@ fn raster_mask(width: u32, height: u32) -> Result<Mask> {
     }
     Mask::from_vec(raster_bytes(len)?, size).ok_or_else(|| "Invalid native mask storage".into())
 }
+
+fn intersect_masks(target: &mut Mask, other: &Mask, cancel: Option<&AtomicBool>) -> Result<()> {
+    for (part, clip) in target
+        .data_mut()
+        .chunks_mut(65536)
+        .zip(other.data().chunks(65536))
+    {
+        cancelled(cancel)?;
+        for (a, b) in part.iter_mut().zip(clip) {
+            let product = u32::from(*a) * u32::from(*b) + 128;
+            *a = (((product >> 8) + product) >> 8) as u8;
+        }
+    }
+    Ok(())
+}
+
+// At most two full masks for a clip stack, independent of its depth. Consecutive
+// styles reuse the current result; descendants can extend it in place.
+struct ClipRaster {
+    mask: Mask,
+    scratch: Mask,
+    current: Option<usize>,
+    pixel_work: u64,
+}
+impl ClipRaster {
+    fn new(width: u32, height: u32) -> Result<Self> {
+        Ok(Self {
+            mask: raster_mask(width, height)?,
+            scratch: raster_mask(width, height)?,
+            current: None,
+            pixel_work: 0,
+        })
+    }
+    fn resolve(
+        &mut self,
+        id: usize,
+        clips: &[Clip],
+        scale: f64,
+        cancel: Option<&AtomicBool>,
+    ) -> Result<&Mask> {
+        cancelled(cancel)?;
+        let mut chain = Vec::new();
+        let mut next = Some(id);
+        while next != self.current && next.is_some() {
+            cancelled(cancel)?;
+            let index = next.unwrap();
+            chain.push(index);
+            next = clips[index].parent;
+        }
+        if next.is_none() {
+            for part in self.mask.data_mut().chunks_mut(65536) {
+                cancelled(cancel)?;
+                part.fill(255);
+            }
+        }
+        for index in chain.into_iter().rev() {
+            cancelled(cancel)?;
+            self.pixel_work += self.mask.data().len() as u64;
+            if self.pixel_work > (1u64 << 31) {
+                return Err("Native frame exceeds two billion clip pixel operations".into());
+            }
+            for part in self.scratch.data_mut().chunks_mut(65536) {
+                cancelled(cancel)?;
+                part.fill(0);
+            }
+            let clip = &clips[index];
+            if let Some(path) = &clip.path {
+                self.scratch.fill_path(
+                    path,
+                    FillRule::Winding,
+                    true,
+                    raster_transform(clip.world.view(scale))?,
+                );
+            }
+            intersect_masks(&mut self.mask, &self.scratch, cancel)?;
+        }
+        self.current = Some(id);
+        Ok(&self.mask)
+    }
+}
 impl NativeFrame {
     pub(crate) fn resize_output(&mut self, height: u32) -> Result<()> {
         dimension(height as f64)?;
@@ -1076,13 +1214,22 @@ impl NativeFrame {
         } else {
             round_frame(height as f64 * 1e6 / self.canvas[1]) / 1e6
         };
-        let transform = raster_transform(Mat2D::scale(scale, scale))?;
-        let mut mask = raster_mask(width, height)?;
-        if let Some(clip) = &self.clip {
-            mask.fill_path(clip, FillRule::Winding, true, transform);
-        }
+        let mut clips = None;
         for draw in &self.draws {
             cancelled(cancel)?;
+            let mask = if let Some(id) = draw.clip {
+                if clips.is_none() {
+                    clips = Some(ClipRaster::new(width, height)?);
+                }
+                Some(
+                    clips
+                        .as_mut()
+                        .unwrap()
+                        .resolve(id, &self.clips, scale, cancel)?,
+                )
+            } else {
+                None
+            };
             match &draw.ink {
                 Ink::Solid(_) | Ink::Gradient { .. } => {
                     let shader = match &draw.ink {
@@ -1106,7 +1253,7 @@ impl NativeFrame {
                             &paint,
                             stroke,
                             raster_transform(draw.world.view(scale))?,
-                            draw.clipped.then_some(&mask),
+                            mask,
                         );
                     } else {
                         pixels.fill_path(
@@ -1114,7 +1261,7 @@ impl NativeFrame {
                             &paint,
                             FillRule::Winding,
                             raster_transform(draw.world.view(scale))?,
-                            draw.clipped.then_some(&mask),
+                            mask,
                         );
                     }
                 }
@@ -1152,18 +1299,8 @@ impl NativeFrame {
                         true,
                         raster_transform(draw.world.view(scale))?,
                     );
-                    if draw.clipped {
-                        for (part, scene) in clip
-                            .data_mut()
-                            .chunks_mut(65536)
-                            .zip(mask.data().chunks(65536))
-                        {
-                            cancelled(cancel)?;
-                            for (a, b) in part.iter_mut().zip(scene) {
-                                let product = u32::from(*a) * u32::from(*b) + 128;
-                                *a = (((product >> 8) + product) >> 8) as u8;
-                            }
-                        }
+                    if let Some(mask) = mask {
+                        intersect_masks(&mut clip, mask, cancel)?;
                     }
                     let paint = Paint {
                         blend_mode: draw.blend,
@@ -1221,6 +1358,119 @@ impl NativeFrame {
 #[cfg(test)]
 mod text_geometry_tests {
     use super::*;
+    #[test]
+    fn rotated_mask_world_matrix_and_edge_match_the_canvas_oracle() {
+        let fixture: serde_json::Value =
+            serde_json::from_str(include_str!("../tests/fixtures/masks.json")).unwrap();
+        let case = fixture["cases"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|c| c["name"] == "rotated@0")
+            .unwrap();
+        let doc=crate::source::SourceDocument::parse("mask-matrix.tsx".into(),format!(
+            "export default <stage><scene id=\"s\" width={{128}} height={{128}} end={{30}}>{}</scene></stage>",case["source"].as_str().unwrap())).unwrap();
+        let timeline = Timeline::resolve(&doc.root, &Default::default()).unwrap();
+        let frame = Compositor::default()
+            .frame(
+                doc.root.find("s").unwrap(),
+                &timeline,
+                0.0,
+                30.0,
+                false,
+                None,
+            )
+            .unwrap();
+        let matrix = frame.clips[1].world.view(1.5);
+        for (key, actual) in [
+            ("a", matrix.a),
+            ("b", matrix.b),
+            ("c", matrix.c),
+            ("d", matrix.d),
+            ("e", matrix.e),
+            ("f", matrix.f),
+        ] {
+            assert!((actual - case["matrices"][3][key].as_f64().unwrap()).abs() < 1e-10);
+        }
+        let pixels = frame.rgba(192, 192, false, None).unwrap();
+        let expected = case["samples"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|s| s["x"] == 51 && s["y"] == 51)
+            .unwrap()["rgba"][3]
+            .as_u64()
+            .unwrap() as i32;
+        assert!((pixels[(51 * 192 + 51) * 4 + 3] as i32 - expected).abs() <= 2);
+    }
+    #[test]
+    fn clip_raster_reuses_extends_and_restores_stacks_with_bounded_work() {
+        let path = |x, w| {
+            Some(PathBuilder::from_rect(
+                Rect::from_xywh(x, 0.0, w, 4.0).unwrap(),
+            ))
+        };
+        let clips = vec![
+            Clip {
+                parent: None,
+                path: path(0.0, 4.0),
+                world: Mat2D::IDENTITY,
+            },
+            Clip {
+                parent: Some(0),
+                path: path(0.0, 2.0),
+                world: Mat2D::IDENTITY,
+            },
+            Clip {
+                parent: Some(0),
+                path: path(2.0, 2.0),
+                world: Mat2D::IDENTITY,
+            },
+            Clip {
+                parent: Some(2),
+                path: None,
+                world: Mat2D::IDENTITY,
+            },
+        ];
+        let mut raster = ClipRaster::new(4, 4).unwrap();
+        assert_eq!(
+            raster.resolve(0, &clips, 1.0, None).unwrap().data(),
+            &[255; 16]
+        );
+        assert_eq!(raster.pixel_work, 16);
+        raster.resolve(0, &clips, 1.0, None).unwrap();
+        assert_eq!(raster.pixel_work, 16);
+        assert_eq!(
+            &raster.resolve(1, &clips, 1.0, None).unwrap().data()[..4],
+            &[255, 255, 0, 0]
+        );
+        assert_eq!(raster.pixel_work, 32);
+        assert_eq!(
+            &raster.resolve(2, &clips, 1.0, None).unwrap().data()[..4],
+            &[0, 0, 255, 255]
+        );
+        assert_eq!(raster.pixel_work, 64);
+        assert_eq!(
+            raster.resolve(3, &clips, 1.0, None).unwrap().data(),
+            &[0; 16]
+        );
+        let cancel = AtomicBool::new(true);
+        assert!(
+            raster
+                .resolve(3, &clips, 1.0, Some(&cancel))
+                .err()
+                .unwrap()
+                .contains("cancelled")
+        );
+        raster.pixel_work = 1u64 << 31;
+        assert!(
+            raster
+                .resolve(0, &clips, 1.0, None)
+                .err()
+                .unwrap()
+                .contains("clip pixel")
+        );
+    }
     #[test]
     fn raster_buffers_reject_excessive_sizes_before_allocation() {
         assert!(raster_bytes(usize::MAX).is_err());

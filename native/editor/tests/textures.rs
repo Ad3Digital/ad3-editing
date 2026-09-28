@@ -69,6 +69,23 @@ fn frame(project: &Project, body: &str) -> Vec<u8> {
 }
 
 #[test]
+fn image_masks_intersect_media_geometry_and_parent_clips() {
+    let p = Project::new();
+    p.png("mask.png", 8, 4, |_, _| [255, 0, 0, 255]);
+    let bytes = frame(
+        &p,
+        r#"<rect x={8} y={4} width={48} height={36}>
+      <rect mask x={16} width={32} height={36}/>
+      <image src="mask.png" width={48} height={36} objectFit="fill">
+        <rect mask x={12} y={8} width={20} height={20}/>
+      </image></rect>"#,
+    );
+    assert_eq!(pixel(&bytes, 22, 15), [0, 0, 0, 0]);
+    assert_eq!(pixel(&bytes, 25, 15), [255, 0, 0, 255]);
+    assert_eq!(pixel(&bytes, 40, 15), [0, 0, 0, 0]);
+    assert_eq!(pixel(&bytes, 25, 32), [0, 0, 0, 0]);
+}
+#[test]
 fn cancellation_reaches_image_and_video_probing_before_io() {
     let p = Project::new();
     p.png("image.png", 8, 4, |_, _| [255, 0, 0, 255]);

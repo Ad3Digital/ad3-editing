@@ -82,6 +82,22 @@ fn native_video_textures_keep_source_clock_alpha_transform_and_export_frames() {
         .frame(&tools, &folder)
         .unwrap();
     assert_eq!(&pixels[..4], &[0, 40, 179, 128]);
+    let mask_doc=SourceDocument::parse(folder.join("masked.tsx"),r#"export default <stage><scene id="s" active width={16} height={8} workarea={[0,0.25]}><video src="no-rate.mkv" width={16} height={8}><rect mask x={4} width={4} height={8} end={0.125}/></video></scene></stage>"#.into()).unwrap();
+    let mut mask_renderer = ProjectRenderer::new(&mask_doc, &folder, tools.clone(), true).unwrap();
+    let masked = mask_renderer
+        .frame_plan("s", 0.0, 8.0, false)
+        .unwrap()
+        .frame(&tools, &folder)
+        .unwrap();
+    assert_eq!(&masked[..4], &[0, 0, 0, 0]);
+    assert_eq!(&masked[4 * 4..5 * 4], &pixels[4 * 4..5 * 4]);
+    assert_eq!(&masked[8 * 4..9 * 4], &[0, 0, 0, 0]);
+    let released = mask_renderer
+        .frame_plan("s", 0.125, 8.0, false)
+        .unwrap()
+        .frame(&tools, &folder)
+        .unwrap();
+    assert_eq!(released, pixels);
     // Container start timestamps must not lengthen the source's content clock.
     checked_output(
         command(&tools.ffmpeg)
