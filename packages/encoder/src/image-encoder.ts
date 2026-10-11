@@ -7,7 +7,7 @@ import {
 	assetSystem, playbackSystem, motionSystem, transformSystem, renderSystem,
 	Muted, Workarea, Playback, Computed,
 	Time, FrameRate, RenderSurface, AudioEngine,
-} from '@diffusionstudio/runtime';
+} from '@ad3-editing/runtime';
 
 import { captureScene, normalizeSceneTransform, resolverSystem, warmupAssets } from './encoder';
 

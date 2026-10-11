@@ -9,8 +9,11 @@ use tiny_skia::{
 pub(crate) fn is_fill(tag: &str) -> bool {
     matches!(
         tag,
-        "solidPaint" | "linearGradientPaint" | "radialGradientPaint"
+        "solidPaint" | "linearGradientPaint" | "radialGradientPaint" | "imagePaint" | "videoPaint"
     )
+}
+pub(crate) fn is_media(tag: &str) -> bool {
+    matches!(tag, "imagePaint" | "videoPaint")
 }
 pub(crate) fn is_style(tag: &str) -> bool {
     is_fill(tag)

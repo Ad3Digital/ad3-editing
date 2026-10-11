@@ -7,7 +7,7 @@ import { ALL_FORMATS, AudioSampleSink, BlobSource, Input } from 'mediabunny';
 import { assert } from '../utils/assert';
 import { getAssetFile } from '../actions/assets';
 
-import type { Asset } from '@diffusionstudio/assets';
+import type { Asset } from '@ad3-editing/assets';
 
 // Envelope sample rate. 500 Hz → 2 ms resolution (well under one video frame),
 // and keeps the FFT small enough for multi-minute clips. Parabolic

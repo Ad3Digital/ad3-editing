@@ -51,26 +51,26 @@ import {
   writeProject,
 } from "./projects";
 import type { DeepLinkChannel } from "./main-channels";
-import type { LogEntry } from "@diffusionstudio/cli/protocol";
+import type { LogEntry } from "@ad3-editing/cli/protocol";
 
 const DEV_URL = "http://localhost:5173";
-const AUTH_PROTOCOL = "diffusion";
+const AUTH_PROTOCOL = "ad3-editing";
 const MACOS_CORNER_RADIUS = 18;
 const MACOS_BACKDROP = { blur: 80, red: 0.07, green: 0.07, blue: 0.07, alpha: 0.9 };
 
-// Keep the established user-data directory and Squirrel AUMID. Renaming either
-// would split existing preferences, project roots, taskbar pins, and notifications.
+// User-data directory and Squirrel AUMID follow the AD3 Editing rebrand (2026-09-28). Renaming splits from
+// older Diffusion Studio profiles: back up and move projects explicitly.
 // Electron's explicit profile must win so a smoke instance cannot attach to a
 // user's existing editor.
 const hasExplicitUserDataDir = process.argv.some(
   (arg) => arg === "--user-data-dir" || arg.startsWith("--user-data-dir="),
 );
 if (!hasExplicitUserDataDir) {
-  app.setPath("userData", join(app.getPath("appData"), "Diffusion Studio"));
+  app.setPath("userData", join(app.getPath("appData"), "AD3 Editing"));
 }
 app.setName("AD3 Editing");
 if (process.platform === "win32") {
-  app.setAppUserModelId("com.squirrel.DiffusionStudio.DiffusionStudio");
+  app.setAppUserModelId("com.squirrel.AD3Editing.AD3Editing");
 }
 if (electronSquirrelStartup) {
   app.quit();
@@ -144,7 +144,7 @@ function isHiddenLaunch(argv: string[]): boolean {
   return argv.includes("--hidden");
 }
 
-// diffusion://auth/callback → auth, diffusion://checkout/callback → checkout.
+// ad3-editing://auth/callback → auth, ad3-editing://checkout/callback → checkout.
 function deepLinkChannel(url: string): DeepLinkChannel | null {
   let host: string;
   try {

@@ -26,7 +26,7 @@ import {
 	isSequence,
 	findAssetDuration,
 	store,
-} from '@diffusionstudio/runtime';
+} from '@ad3-editing/runtime';
 import { Or } from 'koota';
 
 import { clamp } from '@/utils';

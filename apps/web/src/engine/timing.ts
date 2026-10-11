@@ -24,12 +24,12 @@ import {
 	getSourceFrameAt,
 	getTimelineOrigin,
 	secondsToFrames,
-} from '@diffusionstudio/runtime';
-import { parseTime } from '@diffusionstudio/jsx';
+} from '@ad3-editing/runtime';
+import { parseTime } from '@ad3-editing/jsx';
 
 import { getDocumentEditor } from './editor';
 
-import type { Time } from '@diffusionstudio/jsx';
+import type { Time } from '@ad3-editing/jsx';
 import type { Entity, World } from 'koota';
 
 /** The time a node authors, in the vocabulary of the JSX rather than the traits'. */

@@ -2,8 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { AssetId } from "@diffusionstudio/runtime";
-import { useQuery, useWorld } from "@diffusionstudio/koota-solid";
+import { AssetId } from "@ad3-editing/runtime";
+import { useQuery, useWorld } from "@ad3-editing/koota-solid";
 import { DEFAULT_HYPERFRAMES_SETTINGS, generateTemplate } from "@ad3/hyperframes-engine/templates";
 import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 
@@ -24,7 +24,7 @@ import { forgetAssetMedia } from "@/engine/timeline/media";
 import { forgetAssetPeaks } from "@/engine/timeline/peaks";
 import { revealPath } from "@/lib/shell";
 
-import type { Asset, AssetLibrary } from "@diffusionstudio/assets";
+import type { Asset, AssetLibrary } from "@ad3-editing/assets";
 import type {
   HyperframesComposition,
   HyperframesDraft,

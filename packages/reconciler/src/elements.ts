@@ -46,7 +46,7 @@ import type {
   TextProps,
   TextRangeProps,
   VideoProps,
-} from "@diffusionstudio/jsx";
+} from "@ad3-editing/jsx";
 
 /**
  * A component wrapping one host element: creates the node, routes `ref`

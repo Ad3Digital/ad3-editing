@@ -4,7 +4,7 @@
 
 import { createMemo, createSignal, Show } from "solid-js";
 import { toast } from "somoto";
-import { basename } from "@diffusionstudio/assets";
+import { basename } from "@ad3-editing/assets";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -16,7 +16,7 @@ import {
 import { Icon } from "../ui/icon";
 import { useLibrary } from "@/engine/library";
 
-import type { AssetLibrary } from "@diffusionstudio/assets";
+import type { AssetLibrary } from "@ad3-editing/assets";
 
 /** Drag payloads: comma-separated asset ids, or one folder path. */
 export const ASSET_DRAG_TYPE = "application/x-asset-id";

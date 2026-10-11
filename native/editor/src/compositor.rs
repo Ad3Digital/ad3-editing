@@ -71,6 +71,18 @@ struct TextGeometry {
 pub struct Compositor {
     scene: String,
     previous: BTreeMap<String, GeometryState>,
+    edit_geometry: BTreeMap<String, EditGeometry>,
+    runtime_skews: BTreeMap<String, [f64; 2]>,
+}
+
+/// Geometry of the last successfully prepared frame, in authored parent space.
+/// Editing uses this snapshot rather than recomputing animated or group sizes.
+#[derive(Clone, Copy, Debug)]
+pub struct EditGeometry {
+    pub transform: TransformValues,
+    pub frame: Frame,
+    pub local: Mat2D,
+    pub world: Mat2D,
 }
 
 struct Layer<'a> {
@@ -160,13 +172,7 @@ fn alpha(parent: f64, own: f64) -> f64 {
     }
 }
 
-fn validate(node: &Node, root: bool) -> Result<()> {
-    if node.tag == "scene" && !root {
-        return Err(format!(
-            "{}: nested scene clipping is not ported yet",
-            node.id
-        ));
-    }
+fn validate(node: &Node) -> Result<()> {
     let common = [
         "id",
         "name",
@@ -174,6 +180,7 @@ fn validate(node: &Node, root: bool) -> Result<()> {
         "end",
         "sourceIn",
         "sourceOut",
+        "syncTo",
         "playbackRate",
         "hidden",
         "muted",
@@ -235,6 +242,7 @@ fn validate(node: &Node, root: bool) -> Result<()> {
         ],
         "image" | "video" => &[
             "src",
+            "frameRate",
             "objectFit",
             "fill",
             "color",
@@ -246,6 +254,7 @@ fn validate(node: &Node, root: bool) -> Result<()> {
         ],
         "group" | "sequence" => &[],
         "solidPaint" => &["color", "fill"],
+        "imagePaint" | "videoPaint" => &["src", "frameRate", "objectFit", "color", "fill"],
         "linearGradientPaint" | "radialGradientPaint" => &[],
         "colorStop" => &["color", "fill", "offset"],
         "stroke" => &["color", "fill", "join", "cap", "miterLimit"],
@@ -265,18 +274,6 @@ fn validate(node: &Node, root: bool) -> Result<()> {
                 node.id
             ));
         }
-    }
-    if node.flag("keepAspectRatio") {
-        return Err(format!(
-            "{}: native aspect constraints are not ported yet",
-            node.id
-        ));
-    }
-    if node.flag("mask") && node.tag != "rect" {
-        return Err(format!(
-            "{}: native masks currently require <rect>",
-            node.id
-        ));
     }
     Ok(())
 }
@@ -304,7 +301,7 @@ fn validate_children(
     let mut pending = vec![(scene, None::<&Node>)];
     while let Some((node, parent)) = pending.pop() {
         cancelled(cancel).map_err(FrameError::transient)?;
-        validate(node, parent.is_none())?;
+        validate(node)?;
         let valid = match node.tag.as_str() {
             "textRange" => parent.is_some_and(|p| p.tag == "text"),
             "colorStop" => parent.is_some_and(|p| {
@@ -333,7 +330,13 @@ fn validate_children(
         }
         if matches!(
             node.tag.as_str(),
-            "solidPaint" | "stroke" | "colorStop" | "shadow" | "effect"
+            "solidPaint"
+                | "stroke"
+                | "colorStop"
+                | "shadow"
+                | "effect"
+                | "imagePaint"
+                | "videoPaint"
         ) && !node.children.is_empty()
         {
             return Err(
@@ -363,13 +366,67 @@ struct Brushes<'a> {
     gradients: BTreeMap<String, Arc<Gradient>>,
     points: usize,
     stops: usize,
+    media: Option<MediaContext<'a>>,
+    timeline: &'a Timeline,
+    time: f64,
+    fps: f64,
 }
 impl Brushes<'_> {
     fn authored<'a>(&'a self, node: &'a Node) -> &'a Node {
         self.original.get(node.id.as_str()).copied().unwrap_or(node)
     }
-    fn ink(&mut self, node: &Node, size: [f64; 2], origin: [f64; 2], text: bool) -> Result<Ink> {
-        if matches!(node.tag.as_str(), "solidPaint" | "stroke") {
+    fn media_ink(&self, source: &Node, holder: &Node, size: [f64; 2]) -> Result<Ink> {
+        let media = self
+            .media
+            .as_ref()
+            .ok_or("Media composition needs its source library")?;
+        let probe = media
+            .library
+            .probes
+            .get(&source.id)
+            .ok_or("Unprobed texture source")?
+            .clone();
+        let path = media
+            .library
+            .sources
+            .get(&source.id)
+            .ok_or("Unresolved texture source")?
+            .clone();
+        let frame = if probe.still {
+            TextureFrame::Image
+        } else {
+            let span = self.timeline.get(&holder.id)?;
+            TextureFrame::VideoClock {
+                time: self.time,
+                origin: span.origin,
+                rate: span.playback_rate,
+                fps: self.fps,
+            }
+        };
+        Ok(Ink::Media {
+            request: Box::new(TextureRequest { path, probe, frame }),
+            store: media.store.clone(),
+            size,
+            fit: Fit::from_prop(source.string("objectFit")),
+        })
+    }
+    fn ink(
+        &mut self,
+        node: &Node,
+        holder: &Node,
+        size: [f64; 2],
+        origin: [f64; 2],
+        text: bool,
+    ) -> Result<Ink> {
+        if paints::is_media(&node.tag) && !text {
+            return self.media_ink(node, holder, size);
+        }
+        // renderTokens uses authored Color fallback for every non-gradient fill,
+        // including image/video paints; it never draws media into glyphs.
+        if matches!(
+            node.tag.as_str(),
+            "solidPaint" | "stroke" | "imagePaint" | "videoPaint"
+        ) {
             Ok(Ink::Solid(paints::color(if text {
                 self.authored(node)
             } else {
@@ -431,7 +488,7 @@ fn draw_style(
         if brushes.points > 8_000_000 {
             return Err("Native frame exceeds eight million styled path points".into());
         }
-        let ink = brushes.ink(node, layer.state.frame.size, origin, text)?;
+        let ink = brushes.ink(node, layer.node, layer.state.frame.size, origin, text)?;
         push_draw(
             draws,
             Draw {
@@ -527,6 +584,8 @@ impl Compositor {
                     | "stroke"
                     | "shadow"
                     | "effect"
+                    | "imagePaint"
+                    | "videoPaint"
             ) {
                 return false;
             }
@@ -536,7 +595,23 @@ impl Compositor {
     }
     pub fn reset(&mut self) {
         self.previous.clear();
+        self.edit_geometry.clear();
+        self.runtime_skews.clear();
         self.scene.clear();
+    }
+
+    pub fn edit_geometry(&self, id: &str) -> Option<EditGeometry> {
+        self.edit_geometry.get(id).copied()
+    }
+    pub fn edit_geometries(&self) -> &BTreeMap<String, EditGeometry> {
+        &self.edit_geometry
+    }
+    pub fn set_runtime_skews(&mut self, skews: BTreeMap<String, [f64; 2]>) -> Result<()> {
+        if skews.values().flatten().any(|value| !value.is_finite()) {
+            return Err("Runtime skew must be finite".into());
+        }
+        self.runtime_skews = skews;
+        Ok(())
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -597,6 +672,10 @@ impl Compositor {
             gradients: BTreeMap::new(),
             points: 0,
             stops: 0,
+            media,
+            timeline,
+            time,
+            fps,
         };
         let sampled_nodes = checked_nodes(scene, cancel)?
             .into_iter()
@@ -607,7 +686,7 @@ impl Compositor {
         let global_frame = round_frame(time * fps);
         while let Some((node, parent)) = pending.pop() {
             cancelled(cancel).map_err(FrameError::transient)?;
-            validate(node, parent.is_none())?;
+            validate(node)?;
             if paints::is_style(&node.tag) {
                 continue;
             }
@@ -641,8 +720,29 @@ impl Compositor {
                             if let Some(value) = value
                                 && (old.text.is_none() || previous_authored[i] != Some(*value))
                             {
+                                if node.flag("keepAspectRatio") {
+                                    let ratio = match state.authored {
+                                        [Some(width), Some(height)]
+                                            if width > 0.0 && height > 0.0 =>
+                                        {
+                                            Some(width / height)
+                                        }
+                                        _ if computed[0] > 0.0 && computed[1] > 0.0 => {
+                                            Some(computed[0] / computed[1])
+                                        }
+                                        _ => None,
+                                    };
+                                    if let Some(ratio) = ratio {
+                                        size[1 - i] = round_frame(if i == 0 {
+                                            *value / ratio
+                                        } else {
+                                            *value * ratio
+                                        });
+                                    }
+                                }
                                 size[i] = round_frame(*value);
                                 changed = true;
+                                computed = size;
                             }
                         }
                         state.size = Some(size);
@@ -667,7 +767,13 @@ impl Compositor {
                     node.number("width", defaults[0])?,
                     node.number("height", defaults[1])?,
                 ];
-                if sizes_resolved_by_motion {
+                if node.flag("keepAspectRatio") && !sizes_resolved_by_motion {
+                    crate::geometry::locked_size(
+                        node.props.get("width").and_then(serde_json::Value::as_f64),
+                        node.props.get("height").and_then(serde_json::Value::as_f64),
+                        defaults,
+                    )
+                } else if sizes_resolved_by_motion {
                     raw
                 } else {
                     raw.map(round_frame)
@@ -685,6 +791,11 @@ impl Compositor {
                 offset: [node.number("offsetX", 0.0)?, node.number("offsetY", 0.0)?],
                 rotation: node.number("rotation", 0.0)?,
                 scale,
+                skew: self
+                    .runtime_skews
+                    .get(&node.id)
+                    .copied()
+                    .unwrap_or_default(),
                 ..Default::default()
             };
             // Offline capture normalizes the scene every frame after motion.
@@ -807,7 +918,7 @@ impl Compositor {
                 }
             }
             layers[index].clip = current;
-            if layers[index].parent.is_none() {
+            if layers[index].node.tag == "scene" {
                 current = Some(push_clip(&mut clips, current, &layers[index])?);
             }
             layers[index].child_clip = current;
@@ -1008,34 +1119,6 @@ impl Compositor {
             if matches!(layer.node.tag.as_str(), "image" | "video")
                 && let Some(path) = &path
             {
-                let media = media
-                    .as_ref()
-                    .ok_or("Media composition needs its source library")?;
-                let probe = media
-                    .library
-                    .probes
-                    .get(&layer.node.id)
-                    .ok_or("Unprobed texture source")?
-                    .clone();
-                let source = media
-                    .library
-                    .sources
-                    .get(&layer.node.id)
-                    .ok_or("Unresolved texture source")?
-                    .clone();
-                let frame = if layer.node.tag == "image" {
-                    TextureFrame::Image
-                } else if probe.still {
-                    TextureFrame::Video(0.0)
-                } else {
-                    let span = timeline.get(&layer.node.id)?;
-                    TextureFrame::VideoClock {
-                        time,
-                        origin: span.origin,
-                        rate: span.playback_rate,
-                        fps,
-                    }
-                };
                 push_draw(
                     &mut draws,
                     Draw {
@@ -1047,16 +1130,7 @@ impl Compositor {
                         stroke: None,
                         filters: layer.filters.clone(),
                         shadow: None,
-                        ink: Ink::Media {
-                            request: Box::new(TextureRequest {
-                                path: source,
-                                probe,
-                                frame,
-                            }),
-                            store: media.store.clone(),
-                            size: layer.state.frame.size,
-                            fit: Fit::from_prop(layer.node.string("objectFit")),
-                        },
+                        ink: brushes.media_ink(layer.node, layer.node, layer.state.frame.size)?,
                     },
                 )?;
             }
@@ -1088,12 +1162,23 @@ impl Compositor {
             layer.line = line;
         }
         let mut previous = BTreeMap::new();
+        let mut edit_geometry = BTreeMap::new();
         for layer in &layers {
             cancelled(cancel).map_err(FrameError::transient)?;
             previous.insert(layer.node.id.clone(), layer.state);
+            edit_geometry.insert(
+                layer.node.id.clone(),
+                EditGeometry {
+                    transform: layer.values,
+                    frame: layer.state.frame,
+                    local: layer.state.local,
+                    world: layer.world,
+                },
+            );
         }
         cancelled(cancel).map_err(FrameError::transient)?;
         self.previous = previous;
+        self.edit_geometry = edit_geometry;
         self.scene = scene.id.clone();
         Ok(NativeFrame {
             width,
@@ -1176,12 +1261,8 @@ fn shape_path(node: &Node, size: [f64; 2]) -> Result<Option<Path>> {
         )
         .map(PathBuilder::from_rect));
     }
-    if w < 0.0 || h < 0.0 {
-        return Err(format!(
-            "{}: rounded shapes with negative size are not ported yet",
-            node.id
-        ));
-    }
+    let signs = [w.signum() as f32, h.signum() as f32];
+    let (w, h) = (w.abs(), h.abs());
     let edge = |sum: f64| if sum == 0.0 { 1.0 } else { sum };
     let scale = (w / edge(radii[0] + radii[1]))
         .min(h / edge(radii[1] + radii[2]))
@@ -1212,7 +1293,8 @@ fn shape_path(node: &Node, size: [f64; 2]) -> Result<Option<Path>> {
     p.line_to(0.0, tl);
     corner(&mut p, [tl, tl], tl, 180.0);
     p.close();
-    Ok(p.finish())
+    Ok(p.finish()
+        .and_then(|path| path.transform(Transform::from_scale(signs[0], signs[1]))))
 }
 
 fn corner(path: &mut PathBuilder, center: [f32; 2], radius: f32, start: f64) {

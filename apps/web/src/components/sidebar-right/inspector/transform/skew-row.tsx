@@ -12,7 +12,7 @@ import {
   ContextMenuContent,
   ContextMenuItem,
 } from "@/components/ui/context-menu";
-import { Computed, Skew } from "@diffusionstudio/runtime";
+import { Computed, Skew } from "@ad3-editing/runtime";
 import { useDerived } from "@/engine/hooks";
 
 import type { Entity } from "koota";

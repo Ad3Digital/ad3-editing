@@ -4,7 +4,7 @@
 
 // Moving into a sequence never trims its neighbours. New sequence creation
 // retains its separate, authored precedence rule below.
-import { AdjustmentLayer, ChildOf, Computed, Geometry, Group, Sequential, getParentNode, isGroup, store } from '@diffusionstudio/runtime';
+import { AdjustmentLayer, ChildOf, Computed, Geometry, Group, Sequential, getParentNode, isGroup, store } from '@ad3-editing/runtime';
 import { Or } from 'koota';
 
 import { getDocumentEditor } from './editor';

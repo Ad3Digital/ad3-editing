@@ -2,11 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Library } from '@diffusionstudio/runtime';
-import { WAVEFORM_PEAKS_PER_SECOND, downsamplePeaks } from '@diffusionstudio/assets';
+import { Library } from '@ad3-editing/runtime';
+import { WAVEFORM_PEAKS_PER_SECOND, downsamplePeaks } from '@ad3-editing/assets';
 
 import type { World } from 'koota';
-import type { AssetCache, AudioAsset, VideoAsset } from '@diffusionstudio/assets';
+import type { AssetCache, AudioAsset, VideoAsset } from '@ad3-editing/assets';
 
 /** How wide one drawn sample is, in pixels. */
 export const SAMPLE_WIDTH = 1;

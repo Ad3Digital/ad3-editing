@@ -7,7 +7,7 @@ import { observable } from "@trpc/server/observable";
 import { supabase } from "./supabase";
 import { showUpgradeDialog } from "@/components/upgrade-dialog";
 
-import type { AppRouter } from "@diffusionstudio/api-contract";
+import type { AppRouter } from "@ad3-editing/api-contract";
 
 const paymentRequiredLink: TRPCLink<AppRouter> = () => ({ next, op }) =>
   observable((observer) => {

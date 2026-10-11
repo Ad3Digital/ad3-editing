@@ -4,7 +4,7 @@ The desktop video preview uses a Rust sidecar and the bundled FFmpeg. The Electr
 
 ## Build
 
-Install Rust with the MSVC toolchain and Visual Studio C++ build tools, then run `npm run build:preview --workspace=@diffusionstudio/desktop`. The normal desktop build also runs this step on Windows. Cargo uses the committed lockfile; the executable is staged under `apps/desktop/dist` and included by the existing packager. Other platforms retain WebCodecs for now.
+Install Rust with the MSVC toolchain and Visual Studio C++ build tools, then run `npm run build:preview --workspace=@ad3-editing/desktop`. The normal desktop build also runs this step on Windows. Cargo uses the committed lockfile; the executable is staged under `apps/desktop/dist` and included by the existing packager. Other platforms retain WebCodecs for now.
 
 The installed worker uses `resources/hyperframes-engine/ffmpeg/ffmpeg.exe`, already staged with the app and its license notices. Development can set `AD3_FFMPEG_PATH`; `CARGO` can select a Cargo executable. `AD3_NATIVE_PREVIEW=0` before launching the app disables the native preview for troubleshooting.
 

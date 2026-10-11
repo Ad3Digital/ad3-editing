@@ -6,7 +6,7 @@ import { createContext, createMemo, useContext } from "solid-js";
 import { createRenderer } from "solid-js/universal";
 
 import type { JSX } from "solid-js";
-import type { Ticker } from "@diffusionstudio/jsx";
+import type { Ticker } from "@ad3-editing/jsx";
 import type { ProjectDocument } from "./host";
 
 // Compiled project modules call the static runtime exports below
@@ -88,7 +88,7 @@ export function use(fn: (target: unknown, arg?: unknown) => void, node: unknown,
 
 /**
  * The live `useTicker` — substituted for the throwing declaration in
- * @diffusionstudio/jsx (see "./runtime"), so a mounted project's import
+ * @ad3-editing/jsx (see "./runtime"), so a mounted project's import
  * resolves to this one. Each accessor only propagates when its value changes,
  * so a paused scene re-runs nothing.
  *

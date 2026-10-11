@@ -16,7 +16,7 @@ export function PurchaseSuccess() {
   onMount(() => {
     if (!window.desktop) return;
 
-    // Desktop returns from Stripe through a diffusion:// deep link rather than a
+    // Desktop returns from Stripe through a ad3-editing:// deep link rather than a
     // query param — the app window never navigates away in the first place.
     const handleCallbackUrl = (url: string | null) => {
       if (!url) return;

@@ -10,8 +10,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Show } from "solid-js";
 import { usePromptInput } from "@/context/prompt-input";
-import { useWorld } from "@diffusionstudio/koota-solid";
-import { Tool, ToolType } from "@diffusionstudio/runtime";
+import { useWorld } from "@ad3-editing/koota-solid";
+import { Tool, ToolType } from "@ad3-editing/runtime";
 import { isLocalOnlyDesktop } from "@/lib/local-mode";
 import { splitAtPlayhead, trimLeftAtPlayhead, trimRightAtPlayhead } from "@/engine/split";
 

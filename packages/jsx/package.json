@@ -1,7 +1,7 @@
 {
-  "name": "@diffusionstudio/jsx",
+  "name": "@ad3-editing/jsx",
   "version": "0.200.0",
-  "description": "Types and authoring API for Diffusion Studio compositions: the JSX element vocabulary, declarative generated assets (`generate.*`), and the hooks the editor implements when a project is mounted via `dapi mount`.",
+  "description": "Types and authoring API for AD3 Editing compositions: the JSX element vocabulary, declarative generated assets (`generate.*`), and the hooks the editor implements when a project is mounted via `dapi mount`.",
   "license": "MPL-2.0",
   "type": "module",
   "sideEffects": false,
@@ -24,7 +24,7 @@
     "postpack": "node scripts/postpack.mjs"
   },
   "keywords": [
-    "diffusion-studio",
+    "ad3-editing",
     "solid-js",
     "jsx",
     "generative-ai",

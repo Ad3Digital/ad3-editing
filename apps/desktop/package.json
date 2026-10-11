@@ -1,5 +1,5 @@
 {
-  "name": "@diffusionstudio/desktop",
+  "name": "@ad3-editing/desktop",
   "private": true,
   "version": "0.203.1",
   "license": "MPL-2.0",
@@ -39,8 +39,8 @@
     "@babel/core": "^7.29.7",
     "@babel/preset-typescript": "^7.27.1",
     "@ad3/hyperframes-engine": "*",
-    "@diffusionstudio/cli": "*",
-    "@diffusionstudio/jsx": "*",
+    "@ad3-editing/cli": "*",
+    "@ad3-editing/jsx": "*",
     "babel-preset-solid": "^1.9.12",
     "electron-squirrel-startup": "^1.0.1",
     "esbuild": "^0.28.1",

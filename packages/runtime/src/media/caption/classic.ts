@@ -12,7 +12,7 @@ import { createEntity } from '../../actions/entities';
 import { appendChild } from '../../actions/hierarchy';
 
 import type { Entity, World } from 'koota';
-import type { Asset } from '@diffusionstudio/assets';
+import type { Asset } from '@ad3-editing/assets';
 import type { CaptionDecoder, CaptionPresetStyle } from './types';
 
 export const CLASSIC_PRESET_WIDTH = 600;

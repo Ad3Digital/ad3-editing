@@ -21,12 +21,12 @@ const config: ForgeConfig = {
   packagerConfig: {
     name: 'AD3 Editing',
     executableName: 'AD3 Editing',
-    appBundleId: 'studio.diffusion.editor',
+    appBundleId: 'studio.ad3.editing',
     appCategoryType: 'public.app-category.video',
     appVersion: version,
     appCopyright: 'Copyright (c) 2026 AD3 Editing contributors. Includes MPL-2.0 components.',
     icon: './assets/icon',
-    protocols: [{ name: 'AD3 Editing', schemes: ['diffusion'] }],
+    protocols: [{ name: 'AD3 Editing', schemes: ['ad3-editing'] }],
     prune: false,
     ignore: (path) =>
       path !== '' &&

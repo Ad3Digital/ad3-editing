@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Group as GroupElement, Scene as SceneElement, Sequence as SequenceElement } from '@diffusionstudio/reconciler';
+import { Group as GroupElement, Scene as SceneElement, Sequence as SequenceElement } from '@ad3-editing/reconciler';
 import {
 	AdjustmentLayer,
 	Computed,
@@ -30,7 +30,7 @@ import {
 	multiply2D,
 	store,
 	translate2D,
-} from '@diffusionstudio/runtime';
+} from '@ad3-editing/runtime';
 import { Not, Or } from 'koota';
 
 import { getDocumentEditor } from './editor';
@@ -41,7 +41,7 @@ import { authoredTime } from './timing';
 
 import type { DocumentEditor } from './editor';
 import type { TransformWrite } from './input/interactions';
-import type { Mat2D } from '@diffusionstudio/runtime';
+import type { Mat2D } from '@ad3-editing/runtime';
 import type { Entity, World } from 'koota';
 
 /** The node kinds a group holds; a mask belongs to its target, not the group. */

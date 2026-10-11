@@ -10,7 +10,7 @@
  * project, so nothing should observe it and nothing reaches the file.
  */
 
-import { Computed, FrameRate, Timeline, getActiveEntity, store } from '@diffusionstudio/runtime';
+import { Computed, FrameRate, Timeline, getActiveEntity, store } from '@ad3-editing/runtime';
 
 import { DEFAULT_TIMELINE_RESOLUTION, RULER_HEIGHT, TIMELINE_PADDING_LEFT } from './config';
 

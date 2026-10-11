@@ -32,7 +32,7 @@
     <script>
       (function () {
         var params = new URLSearchParams(window.location.search);
-        var target = "diffusion://checkout/callback?" + params.toString();
+        var target = "ad3-editing://checkout/callback?" + params.toString();
         var link = document.getElementById("link");
         if (link) link.setAttribute("href", target);
         window.location.replace(target);

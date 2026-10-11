@@ -1,12 +1,12 @@
 # `<html>`
 
-An element whose children are **real HTML**: the browser lays them out at the element's box size and the result is drawn into the box via the [html-in-canvas](https://github.com/WICG/html-in-canvas) API. The Diffusion Studio app ships with this API enabled, so `<html>` is always available — reach for it liberally. It is the recommended way to build motion graphics, overlays, and any UI-heavy content: styled cards, tables, code blocks, flex/grid layouts — anything painful to assemble from `<rect>` and `<text>`.
+An element whose children are **real HTML**: the browser lays them out at the element's box size and the result is drawn into the box via the [html-in-canvas](https://github.com/WICG/html-in-canvas) API. The AD3 Editing app ships with this API enabled, so `<html>` is always available — reach for it liberally. It is the recommended way to build motion graphics, overlays, and any UI-heavy content: styled cards, tables, code blocks, flex/grid layouts — anything painful to assemble from `<rect>` and `<text>`.
 
 Driving the markup with an [anime.js](https://animejs.com) timeline is **recommended** — it keeps the animation frame-accurate: build the timeline with `autoplay: false`, then `seek` it from the [`useTicker`](./lifecycle.md#useticker) playhead so it follows scrubbing and exports rather than the wall clock. anime.js works in milliseconds, so the playhead is scaled by 1000 on the way into `seek`.
 
 ```tsx
 import { createTimeline, type Timeline } from "animejs";
-import { useTicker } from "@diffusionstudio/jsx";
+import { useTicker } from "@ad3-editing/jsx";
 import { createEffect, onMount } from "solid-js";
 
 export default function Intro() {

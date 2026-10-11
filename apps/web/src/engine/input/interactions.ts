@@ -27,7 +27,7 @@ import {
 	multiply2D, quadCenter, quadContainsQuad, quadsIntersect, rectToQuad,
 	rotate2D, scale2D,
 	store, syncInteractiveState, togglePlayback, transformPoint, translate2D,
-} from '@diffusionstudio/runtime';
+} from '@ad3-editing/runtime';
 import { Not, Or } from 'koota';
 
 import { getDocumentEditor } from '../editor';
@@ -44,7 +44,7 @@ import {
 
 import type { DocumentEditor } from '../editor';
 import type { Entity, World } from 'koota';
-import type { DispatchedPointerEvent, Mat2D, Point, Quad } from '@diffusionstudio/runtime';
+import type { DispatchedPointerEvent, Mat2D, Point, Quad } from '@ad3-editing/runtime';
 
 /** How close, in CSS pixels, a candidate has to be before a gesture snaps to it. */
 const SNAP_DISTANCE = 6;

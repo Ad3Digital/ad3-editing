@@ -2,7 +2,7 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "jsx": "preserve",
-    "jsxImportSource": "@diffusionstudio/jsx",
+    "jsxImportSource": "@ad3-editing/jsx",
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "types": ["@webgpu/types"]
   },

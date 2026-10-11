@@ -4,7 +4,7 @@
 
 import { spawn, spawnSync } from "node:child_process";
 
-// Resolve the binary once. YT_DLP_PATH mirrors DIFFUSION_APP_PATH: an escape
+// Resolve the binary once. YT_DLP_PATH mirrors AD3_APP_PATH: an escape
 // hatch for pinned or non-PATH installs.
 const BIN = process.env.YT_DLP_PATH ?? "yt-dlp";
 

@@ -15,9 +15,9 @@ import {
 import { Icon } from "@/components/ui/icon";
 import { ItemRow } from "@/components/ui/item-row";
 import { PanelSection } from "@/components/ui/panel-section";
-import { useHas, useTrait } from "@diffusionstudio/koota-solid";
-import { Effect as EffectElement } from "@diffusionstudio/reconciler";
-import { Cache, Effect, Hidden } from "@diffusionstudio/runtime";
+import { useHas, useTrait } from "@ad3-editing/koota-solid";
+import { Effect as EffectElement } from "@ad3-editing/reconciler";
+import { Cache, Effect, Hidden } from "@ad3-editing/runtime";
 import { useDerived, useEditor } from "@/engine/hooks";
 import { DEFAULT_EFFECT, effectOption } from "./effect-types";
 import { EffectsInspector } from "./effects-inspector";

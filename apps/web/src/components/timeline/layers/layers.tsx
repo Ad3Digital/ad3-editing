@@ -4,8 +4,8 @@
 
 import { createEffect, createMemo, Index, onCleanup, onMount, Show } from 'solid-js';
 import { toast } from 'somoto';
-import { useTrait, useWorld } from '@diffusionstudio/koota-solid';
-import { Sequence as SequenceElement } from '@diffusionstudio/reconciler';
+import { useTrait, useWorld } from '@ad3-editing/koota-solid';
+import { Sequence as SequenceElement } from '@ad3-editing/reconciler';
 import {
   ClipHeight,
   Computed,
@@ -14,7 +14,7 @@ import {
   Playback,
   Source,
   togglePlayback,
-} from '@diffusionstudio/runtime';
+} from '@ad3-editing/runtime';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import {
@@ -44,7 +44,7 @@ import { LayerContextProvider } from './context';
 import { DropIndicator } from './drop-indicator';
 import { formatFrames, TIME_FORMAT_OPTIONS, type TimeFormat } from '../time-format';
 
-import type { TimelineNode } from '@diffusionstudio/runtime';
+import type { TimelineNode } from '@ad3-editing/runtime';
 import type { Entity } from 'koota';
 
 /** The row heights the height menu offers, tightest first. */

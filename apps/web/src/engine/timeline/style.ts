@@ -15,11 +15,11 @@ import {
 	isScene,
 	isSequence,
 	isText,
-} from '@diffusionstudio/runtime';
+} from '@ad3-editing/runtime';
 
 import { COLORS } from './constants';
 
-import type { Asset } from '@diffusionstudio/assets';
+import type { Asset } from '@ad3-editing/assets';
 import type { Entity, World } from 'koota';
 
 export type ClipStyle = {

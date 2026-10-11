@@ -239,6 +239,29 @@ impl Aabb {
     }
 }
 
+/// Select intersecting timeline regions in either drag direction, retaining
+/// the original selection for additive gestures.
+pub fn marquee_selection(
+    start: Point,
+    end: Point,
+    regions: &[(String, Aabb)],
+    base: &[String],
+) -> Vec<String> {
+    let area = Aabb {
+        min_x: start.x.min(end.x),
+        min_y: start.y.min(end.y),
+        max_x: start.x.max(end.x),
+        max_y: start.y.max(end.y),
+    };
+    let mut selected = base.to_vec();
+    for (id, bounds) in regions {
+        if area.intersects(*bounds) && !selected.contains(id) {
+            selected.push(id.clone());
+        }
+    }
+    selected
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Decomposed {
@@ -280,6 +303,51 @@ impl Default for TransformValues {
     }
 }
 impl TransformValues {
+    /// Bake a dissolved container into this child's transform, using the
+    /// original editor's pivot folding and authored-property rounding.
+    /// Skew is retained here for the runtime; it has no authored JSX spelling.
+    pub fn bake_container(self, container: Mat2D) -> Self {
+        let identity = Mat2D::IDENTITY;
+        if [
+            container.a - identity.a,
+            container.b,
+            container.c,
+            container.d - identity.d,
+            container.e,
+            container.f,
+        ]
+        .into_iter()
+        .all(|value| value.abs() < 1e-6)
+        {
+            return self;
+        }
+        let pivot = [
+            self.anchor[0].unwrap_or(0.5) * self.size[0],
+            self.anchor[1].unwrap_or(0.5) * self.size[1],
+        ];
+        let decomposed = container
+            .multiply(self.local_matrix())
+            .multiply(Mat2D::translate(pivot[0], pivot[1]))
+            .decompose();
+        let rounded = |value: f64, places: f64| crate::timing::round_frame(value * places) / places;
+        Self {
+            position: [
+                crate::timing::round_frame(decomposed.x - pivot[0] - self.offset[0]),
+                crate::timing::round_frame(decomposed.y - pivot[1] - self.offset[1]),
+            ],
+            rotation: rounded(decomposed.rotation, 100.0),
+            scale: [
+                rounded(decomposed.scale_x / self.flip[0].unwrap_or(1.0), 10000.0),
+                rounded(decomposed.scale_y / self.flip[1].unwrap_or(1.0), 10000.0),
+            ],
+            skew: [
+                rounded(decomposed.skew_x, 100.0),
+                rounded(decomposed.skew_y, 100.0),
+            ],
+            ..self
+        }
+    }
+
     pub fn local_matrix(self) -> Mat2D {
         let pivot_x = self.anchor[0].unwrap_or(0.5) * self.size[0];
         let pivot_y = self.anchor[1].unwrap_or(0.5) * self.size[1];
@@ -425,4 +493,25 @@ pub fn quad_center(q: Quad) -> Point {
         x: (q[0].x + q[1].x + q[2].x + q[3].x) / 4.0,
         y: (q[0].y + q[1].y + q[2].y + q[3].y) / 4.0,
     }
+}
+/// Authored resize with an aspect lock; motion tracks run after this step.
+pub fn locked_size(width: Option<f64>, height: Option<f64>, defaults: [f64; 2]) -> [f64; 2] {
+    let ratio = match (width, height) {
+        (Some(w), Some(h)) if w > 0.0 && h > 0.0 => w / h,
+        _ => defaults[0] / defaults[1],
+    };
+    let mut size = defaults;
+    if let Some(width) = width {
+        size = [
+            crate::timing::round_frame(width),
+            crate::timing::round_frame(width / ratio),
+        ];
+    }
+    if let Some(height) = height {
+        size = [
+            crate::timing::round_frame(height * ratio),
+            crate::timing::round_frame(height),
+        ];
+    }
+    size
 }

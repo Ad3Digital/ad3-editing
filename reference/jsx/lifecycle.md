@@ -21,7 +21,7 @@ What the editor writes is what it changed. Elements it inserted or moved are wri
 A project can subscribe to the timeline instead of reaching for wall-clock timers:
 
 ```tsx
-import { useTicker } from "@diffusionstudio/jsx";
+import { useTicker } from "@ad3-editing/jsx";
 
 export default function Project() {
   const { time, frame } = useTicker();

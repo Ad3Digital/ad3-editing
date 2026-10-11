@@ -7,9 +7,9 @@
 // through these via an envelope carrying the logical MAIN_CHANNELS name and
 // (for requests) a UUID for correlation.
 //
-// CLI traffic uses a separate wire pair (CLI_WIRE in @diffusionstudio/cli/protocol);
+// CLI traffic uses a separate wire pair (CLI_WIRE in @ad3-editing/cli/protocol);
 // main forwards it opaquely without inspecting channel names.
-import type { LogEntry, ScreenshotResult } from "@diffusionstudio/cli/protocol";
+import type { LogEntry, ScreenshotResult } from "@ad3-editing/cli/protocol";
 import type { SourceEdit, WriteResult } from "./edit";
 import type {
   HyperframesComposition,
@@ -118,7 +118,7 @@ export type { SourceEdit, WriteResult };
 
 export type MainChannel = (typeof MAIN_CHANNELS)[keyof typeof MAIN_CHANNELS];
 
-// Events fed by a `diffusion://` deep link. Main routes each link to exactly
+// Events fed by a `ad3-editing://` deep link. Main routes each link to exactly
 // one of these by its host, so auth and checkout never consume each other's.
 export type DeepLinkChannel =
   | typeof MAIN_CHANNELS.AUTH_CALLBACK

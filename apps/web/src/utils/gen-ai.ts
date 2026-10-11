@@ -2,15 +2,15 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { getAssetSpec, isAssetRef, parseSource } from "@diffusionstudio/jsx";
+import { getAssetSpec, isAssetRef, parseSource } from "@ad3-editing/jsx";
 import {
   Ai, AssetId, Audio, GenAi, getAssetFile, getEntityTree, Hidden, Muted,
   Paint, PaintType, Project, Source,
-} from "@diffusionstudio/runtime";
-import type { SourceModifierValues } from "@diffusionstudio/runtime";
-import { createEncoder } from "@diffusionstudio/encoder";
+} from "@ad3-editing/runtime";
+import type { SourceModifierValues } from "@ad3-editing/runtime";
+import { createEncoder } from "@ad3-editing/encoder";
 import { createCapture } from "@/engine/capture";
-import { assetName, GENERATED_DIR } from "@diffusionstudio/assets";
+import { assetName, GENERATED_DIR } from "@ad3-editing/assets";
 import {
   PROMPT_INPUT_AUDIO_MODEL_OPTIONS,
   PROMPT_INPUT_IMAGE_MODEL_OPTIONS,
@@ -24,10 +24,10 @@ import { track } from "@/lib/analytics";
 import { trpc } from "@/lib/trpc";
 import { toast } from "somoto";
 
-import type { AspectRatio, AssetInput, AssetRef, AssetSpecInput } from "@diffusionstudio/jsx";
-import type { Asset, AssetLibrary, AssetType } from "@diffusionstudio/assets";
-import type { FileRef } from "@diffusionstudio/api-contract";
-import type { ExportResult } from "@diffusionstudio/encoder";
+import type { AspectRatio, AssetInput, AssetRef, AssetSpecInput } from "@ad3-editing/jsx";
+import type { Asset, AssetLibrary, AssetType } from "@ad3-editing/assets";
+import type { FileRef } from "@ad3-editing/api-contract";
+import type { ExportResult } from "@ad3-editing/encoder";
 import type { Entity, World } from "koota";
 
 /** What a failure is called where the user reads about it. */

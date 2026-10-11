@@ -423,9 +423,201 @@ pub(crate) fn children_value(value: JsValue, context: &mut Context) -> JsResult<
     children_api(&JsValue::undefined(), &[factory.into()], context)
 }
 
+pub fn match_api(_: &JsValue, args: &[JsValue], _: &mut Context) -> JsResult<JsValue> {
+    Ok(object(args.first().cloned().unwrap_or_default())?.into())
+}
+
+pub fn switch_api(_: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
+    let props = object(args.first().cloned().unwrap_or_default())?;
+    let read = reactive::function(
+        context,
+        NativeFunction::from_copy_closure_with_captures(
+            |_, _, props, context| get(props, "children", context),
+            props.clone(),
+        ),
+        0,
+    );
+    let children = children_api(&JsValue::undefined(), &[read.into()], context)?;
+    let build = reactive::function(
+        context,
+        NativeFunction::from_copy_closure_with_captures(
+            |_, _, children, context| {
+                let value = reactive::callable(Some(children))?.call(
+                    &JsValue::undefined(),
+                    &[],
+                    context,
+                )?;
+                let matches = if value.as_object().is_some_and(|value| value.is_array()) {
+                    values(&value, context)?
+                } else {
+                    vec![value]
+                };
+                let mut select = reactive::function(
+                    context,
+                    NativeFunction::from_fn_ptr(|_, _, _| Ok(JsValue::undefined())),
+                    0,
+                );
+                for (index, value) in matches.into_iter().enumerate() {
+                    let props = object(value)?;
+                    let keyed = get(&props, "keyed", context)?.to_boolean();
+                    let read = reactive::function(
+                        context,
+                        NativeFunction::from_copy_closure_with_captures(
+                            |_, _, data: &Vec<JsValue>, context| {
+                                let previous = reactive::callable(Some(&data[0]))?.call(
+                                    &JsValue::undefined(),
+                                    &[],
+                                    context,
+                                )?;
+                                if previous.to_boolean() {
+                                    return Ok(JsValue::undefined());
+                                }
+                                get(&object(data[1].clone())?, "when", context)
+                            },
+                            vec![select.clone().into(), props.clone().into()],
+                        ),
+                        0,
+                    );
+                    let condition_value =
+                        reactive::memo(read, JsValue::undefined(), None, false, context)?;
+                    let condition = if keyed {
+                        condition_value.clone()
+                    } else {
+                        let equals = reactive::function(
+                            context,
+                            NativeFunction::from_fn_ptr(|_, args, _| {
+                                Ok((args[0].to_boolean() == args[1].to_boolean()).into())
+                            }),
+                            2,
+                        );
+                        reactive::memo(
+                            condition_value.clone(),
+                            JsValue::undefined(),
+                            Some(equals.into()),
+                            false,
+                            context,
+                        )?
+                    };
+                    select = reactive::function(
+                        context,
+                        NativeFunction::from_copy_closure_with_captures(
+                            |_, _, data: &Vec<JsValue>, context| {
+                                let previous = reactive::callable(Some(&data[0]))?.call(
+                                    &JsValue::undefined(),
+                                    &[],
+                                    context,
+                                )?;
+                                if previous.to_boolean() {
+                                    return Ok(previous);
+                                }
+                                if !reactive::callable(Some(&data[1]))?
+                                    .call(&JsValue::undefined(), &[], context)?
+                                    .to_boolean()
+                                {
+                                    return Ok(JsValue::undefined());
+                                }
+                                Ok(JsArray::from_iter(data[2..].iter().cloned(), context).into())
+                            },
+                            vec![
+                                select.into(),
+                                condition.into(),
+                                JsValue::from(index as u32),
+                                condition_value.into(),
+                                props.into(),
+                            ],
+                        ),
+                        0,
+                    );
+                }
+                Ok(select.into())
+            },
+            children,
+        ),
+        0,
+    );
+    let switch = reactive::memo(build, JsValue::undefined(), None, false, context)?;
+    let render = reactive::function(
+        context,
+        NativeFunction::from_copy_closure_with_captures(
+            |_, _, data: &Vec<JsValue>, context| {
+                let switch = reactive::callable(Some(&data[0]))?;
+                let select = switch.call(&JsValue::undefined(), &[], context)?;
+                let selected =
+                    reactive::callable(Some(&select))?.call(&JsValue::undefined(), &[], context)?;
+                if !selected.to_boolean() {
+                    return get(&object(data[1].clone())?, "fallback", context);
+                }
+                let selected = object(selected)?;
+                let index = selected.get(0u32, context)?;
+                let condition = selected.get(1u32, context)?;
+                let props = object(selected.get(2u32, context)?)?;
+                let child = get(&props, "children", context)?;
+                if let Some(render) = child.as_callable()
+                    && get(&render, "length", context)?.to_length(context)? > 0
+                {
+                    let argument =
+                        if get(&props, "keyed", context)?.to_boolean() {
+                            reactive::callable(Some(&condition))?.call(
+                                &JsValue::undefined(),
+                                &[],
+                                context,
+                            )?
+                        } else {
+                            reactive::function(
+                                context,
+                                NativeFunction::from_copy_closure_with_captures(
+                                    |_, _, data: &Vec<JsValue>, context| {
+                                        let selected =
+                                            reactive::untracked(context, |context| {
+                                                let select = reactive::callable(Some(&data[0]))?
+                                                    .call(&JsValue::undefined(), &[], context)?;
+                                                reactive::callable(Some(&select))?.call(
+                                                    &JsValue::undefined(),
+                                                    &[],
+                                                    context,
+                                                )
+                                            })?;
+                                        if !selected
+                                            .as_object()
+                                            .map(|value| value.get(0u32, context))
+                                            .transpose()?
+                                            .is_some_and(|index| index.strict_equals(&data[1]))
+                                        {
+                                            return Err(error(
+                                                "Match accessor read outside its active branch",
+                                            ));
+                                        }
+                                        reactive::callable(Some(&data[2]))?.call(
+                                            &JsValue::undefined(),
+                                            &[],
+                                            context,
+                                        )
+                                    },
+                                    vec![switch.into(), index, condition],
+                                ),
+                                0,
+                            )
+                            .into()
+                        };
+                    reactive::untracked(context, |context| {
+                        render.call(&JsValue::undefined(), &[argument], context)
+                    })
+                } else {
+                    Ok(child)
+                }
+            },
+            vec![switch.into(), props.into()],
+        ),
+        0,
+    );
+    Ok(reactive::memo(render, JsValue::undefined(), None, false, context)?.into())
+}
+
 pub const FUNCTIONS: &[(&str, boa_engine::native_function::NativeFunctionPointer)] = &[
     ("For", for_api),
     ("Index", index_api),
     ("Show", show_api),
+    ("Switch", switch_api),
+    ("Match", match_api),
     ("children", children_api),
 ];

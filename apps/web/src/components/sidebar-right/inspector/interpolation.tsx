@@ -17,8 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SegmentedIconTabs } from "@/components/ui/segmented-icon-tabs";
-import { useTrait } from "@diffusionstudio/koota-solid";
-import { Keyframe } from "@diffusionstudio/runtime";
+import { useTrait } from "@ad3-editing/koota-solid";
+import { Keyframe } from "@ad3-editing/runtime";
 import { useEditor } from "@/engine/hooks";
 import {
   DEFAULT_SPRING,

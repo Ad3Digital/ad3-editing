@@ -4,7 +4,7 @@
 
 import type { Entity, World } from 'koota';
 import type { CaptionType, FontStyle, TextAlign, TextBaseline, TextCase } from '../../constants';
-import type { WordGroup } from '@diffusionstudio/assets';
+import type { WordGroup } from '@ad3-editing/assets';
 
 /**
  * A preset's complete base TextStyle. The document writes it onto the

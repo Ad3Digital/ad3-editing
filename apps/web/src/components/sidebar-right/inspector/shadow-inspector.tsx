@@ -19,8 +19,8 @@ import { ColorOpacityPicker } from "@/components/ui/color-opacity-picker";
 import { ControlledTextField } from "@/components/ui/text-field";
 import { IncrementDecrementControl } from "@/components/ui/increment-decrement-control";
 import { Keyframe } from "@/components/ui/keyframe";
-import { useWorld } from "@diffusionstudio/koota-solid";
-import { Computed, colorToHex } from "@diffusionstudio/runtime";
+import { useWorld } from "@ad3-editing/koota-solid";
+import { Computed, colorToHex } from "@ad3-editing/runtime";
 import { useDerived, useEditor } from "@/engine/hooks";
 import { syncKeyframe } from "@/engine/keyframes";
 

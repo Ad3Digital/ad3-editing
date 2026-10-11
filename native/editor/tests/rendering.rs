@@ -13,6 +13,1242 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+// Pixel regressions request small canvases explicitly; production exports use
+// the original encoder's 1080p default when no resolution is saved.
+fn export_height(folder: &std::path::Path, scene: &str, height: u32) {
+    let path = folder.join("package.json");
+    let mut config: serde_json::Value = fs::read(&path)
+        .ok()
+        .map(|bytes| serde_json::from_slice(&bytes).unwrap())
+        .unwrap_or_else(|| serde_json::json!({}));
+    config["diffusion"]["export"][scene]["video"]["resolution"] = serde_json::json!(height);
+    fs::write(path, config.to_string()).unwrap();
+}
+
+#[test]
+#[ignore = "requires installed FFmpeg and FFprobe; run with --ignored"]
+fn cli_export_uses_saved_fps_audio_and_explicit_fps_override() {
+    let folder = std::env::temp_dir().join(format!(
+        "ad3-cli-export-prefs-{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&folder).unwrap();
+    let tools = Tools::default();
+    checked_output(
+        command(&tools.ffmpeg)
+            .args([
+                "-v",
+                "error",
+                "-nostdin",
+                "-n",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=440:duration=0.2",
+            ])
+            .arg(folder.join("tone.wav")),
+    )
+    .unwrap();
+    let source = r#"export default <stage><scene id="s" active width={32} height={16} fill="red" workarea={[0,1/120]}><audio src="tone.wav"/></scene></stage>;"#;
+    fs::write(folder.join("index.tsx"), source).unwrap();
+    let package = r#"{"diffusion":{"export":{"s":{"video":{"fps":120,"resolution":16},"audio":{"enabled":false,"codec":"unused"}}}}}"#;
+    fs::write(folder.join("package.json"), package).unwrap();
+    for (name, override_fps, frames) in [("saved", None, 1), ("override", Some("240"), 2)] {
+        let output = folder.join(format!("{name}.mp4"));
+        let mut cli = std::process::Command::new(env!("CARGO_BIN_EXE_dapi-rust"));
+        cli.arg("export").arg(&folder).arg(&output);
+        if let Some(fps) = override_fps {
+            cli.arg(fps);
+        }
+        let result = cli.output().unwrap();
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        let report: serde_json::Value = serde_json::from_slice(&result.stdout).unwrap();
+        assert_eq!(
+            report["fps"],
+            if override_fps.is_some() { 240.0 } else { 120.0 }
+        );
+        assert_eq!(report["frames"], frames);
+        assert!(!tools.probe(&output).unwrap().has_audio);
+    }
+    fs::write(
+        folder.join("package.json"),
+        package.replace("\"fps\":120", "\"fps\":0"),
+    )
+    .unwrap();
+    let invalid = folder.join("invalid.mp4");
+    let result = std::process::Command::new(env!("CARGO_BIN_EXE_dapi-rust"))
+        .arg("export")
+        .arg(&folder)
+        .arg(&invalid)
+        .output()
+        .unwrap();
+    assert!(!result.status.success());
+    assert!(!invalid.exists());
+    assert_eq!(
+        fs::read_to_string(folder.join("index.tsx")).unwrap(),
+        source
+    );
+    fs::remove_dir_all(folder).unwrap();
+}
+
+#[test]
+#[ignore = "requires installed FFmpeg and FFprobe; run with --ignored"]
+fn audio_only_capture_preserves_reactive_gain_workarea_and_cancellation() {
+    let folder = std::env::temp_dir().join(format!(
+        "ad3-audio-only-live-{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&folder).unwrap();
+    let tools = Tools::default();
+    checked_output(
+        command(&tools.ffmpeg)
+            .args([
+                "-v",
+                "error",
+                "-nostdin",
+                "-n",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=440:sample_rate=48000:duration=2",
+                "-c:a",
+                "pcm_s16le",
+            ])
+            .arg(folder.join("tone.wav")),
+    )
+    .unwrap();
+    let source = r#"import {useTicker} from '@ad3-editing/jsx';
+        export default ()=>{ const t=useTicker(); return <stage><scene id="s" active width={32} height={16} workarea={[0.2,1.2]}>
+        <audio id="a" src="tone.wav" volume={t.time()<0.7?0:-12} end={2}/>
+        </scene></stage>; };"#;
+    fs::write(folder.join("index.tsx"), source).unwrap();
+    let package = r#"{"diffusion":{"export":{"s":{"video":{"enabled":false}}}}}"#;
+    fs::write(folder.join("package.json"), package).unwrap();
+    let document = SourceDocument::open(&folder).unwrap();
+    let output = folder.join("live.mp4");
+    let report = ProjectRenderer::export(
+        &document,
+        &folder,
+        tools.clone(),
+        &output,
+        30.0,
+        None,
+        |_, _| {},
+    )
+    .unwrap();
+    assert!((report.workarea_duration - 1.0).abs() < 1e-9);
+    let decoded = checked_output(
+        command(&tools.ffmpeg)
+            .args(["-v", "error", "-i"])
+            .arg(&output)
+            .args(["-vn", "-ar", "48000", "-ac", "1", "-f", "f32le", "pipe:1"]),
+    )
+    .unwrap();
+    let samples: Vec<_> = decoded
+        .stdout
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|bytes| f32::from_le_bytes(*bytes) as f64)
+        .collect();
+    let rms = |from: usize, to: usize| {
+        (samples[from..to]
+            .iter()
+            .map(|sample| sample * sample)
+            .sum::<f64>()
+            / (to - from) as f64)
+            .sqrt()
+    };
+    let ratio = rms(4800, 14400) / rms(33600, 43200);
+    assert!(
+        (3.4..4.6).contains(&ratio),
+        "Trimmed output must retain the 0 to -12 dB change halfway through: {ratio}"
+    );
+    let cancelled = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let cancellation = cancelled.clone();
+    let incomplete = folder.join("cancelled.mp4");
+    let result = ProjectRenderer::export(
+        &document,
+        &folder,
+        tools,
+        &incomplete,
+        30.0,
+        Some(cancelled),
+        |frame, _| {
+            if frame == 5 {
+                cancellation.store(true, std::sync::atomic::Ordering::Relaxed);
+            }
+        },
+    );
+    assert!(result.unwrap_err().contains("cancelled"));
+    assert!(!incomplete.exists());
+    assert_eq!(
+        fs::read_dir(folder.join(".diffusion/native-render"))
+            .unwrap()
+            .count(),
+        0
+    );
+    assert_eq!(
+        fs::read_to_string(folder.join("index.tsx")).unwrap(),
+        source
+    );
+    assert_eq!(
+        fs::read_to_string(folder.join("package.json")).unwrap(),
+        package
+    );
+    fs::remove_dir_all(folder).unwrap();
+}
+
+#[test]
+#[ignore = "requires installed FFmpeg and FFprobe; run with --ignored"]
+fn video_disabled_exports_only_audio_and_skips_graphics_settings() {
+    let folder = std::env::temp_dir().join(format!(
+        "ad3-audio-only-{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&folder).unwrap();
+    let tools = Tools::default();
+    checked_output(
+        command(&tools.ffmpeg)
+            .args([
+                "-v",
+                "error",
+                "-nostdin",
+                "-n",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=440:duration=0.5",
+            ])
+            .arg(folder.join("tone.wav")),
+    )
+    .unwrap();
+    let source = r#"export default <stage><scene id="s" active width={32} height={16} workarea={[0,0.5]}><audio src="tone.wav"/><rect width={32} height={16} unportedRenderProp="ignored"/></scene></stage>;"#;
+    let document = SourceDocument::parse(folder.join("index.tsx"), source.into()).unwrap();
+    let package = r#"{"diffusion":{"export":{"s":{"video":{"enabled":false,"codec":"unknown","bitrate":0,"resolution":0}}}}}"#;
+    fs::write(folder.join("package.json"), package).unwrap();
+    for (extension, codec) in [
+        ("mp4", "aac"),
+        ("mov", "aac"),
+        ("webm", "opus"),
+        ("ogg", "opus"),
+        ("webm", "vorbis"),
+        ("ogg", "vorbis"),
+        ("ogg", "flac"),
+    ] {
+        let settings = if matches!(codec, "vorbis" | "flac") {
+            let mut settings: serde_json::Value = serde_json::from_str(package).unwrap();
+            settings["diffusion"]["export"]["s"]["audio"] = serde_json::json!({"codec":codec});
+            if codec == "flac" {
+                settings["diffusion"]["export"]["s"]["audio"]["bitrate"] =
+                    serde_json::json!("unused");
+            }
+            settings.to_string()
+        } else {
+            package.into()
+        };
+        fs::write(folder.join("package.json"), &settings).unwrap();
+        let output = folder.join(format!("audio-only-{codec}.{extension}"));
+        let mut progress = Vec::new();
+        let report = ProjectRenderer::export(
+            &document,
+            &folder,
+            tools.clone(),
+            &output,
+            30.0,
+            None,
+            |frame, total| progress.push((frame, total)),
+        )
+        .unwrap();
+        assert_eq!((report.width, report.height, report.frames), (0, 0, 0));
+        assert_eq!(progress.last(), Some(&(15, 15)));
+        let probe = checked_output(
+            command(&tools.ffprobe)
+                .args(["-v", "error", "-show_streams", "-of", "json"])
+                .arg(&output),
+        )
+        .unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&probe.stdout).unwrap();
+        let streams = value["streams"].as_array().unwrap();
+        assert_eq!(streams.len(), 1);
+        assert_eq!(streams[0]["codec_type"], "audio");
+        assert_eq!(streams[0]["codec_name"], codec);
+        let decoded = checked_output(
+            command(&tools.ffmpeg)
+                .args(["-v", "error", "-i"])
+                .arg(&output)
+                .args(["-vn", "-ac", "1", "-f", "f32le", "pipe:1"]),
+        )
+        .unwrap();
+        let samples = decoded.stdout.as_chunks::<4>().0;
+        let rms = (samples
+            .iter()
+            .map(|bytes| f32::from_le_bytes(*bytes) as f64)
+            .map(|sample| sample * sample)
+            .sum::<f64>()
+            / samples.len() as f64)
+            .sqrt();
+        assert!(
+            rms > 0.02,
+            "Audio-only output must retain the audible source: {rms}"
+        );
+        assert_eq!(
+            fs::read_to_string(folder.join("package.json")).unwrap(),
+            settings
+        );
+    }
+    fs::write(folder.join("package.json"), package).unwrap();
+    let empty = folder.join("disabled.mp4");
+    assert!(
+        ProjectRenderer::export_with_audio(
+            &document,
+            &folder,
+            tools,
+            &empty,
+            30.0,
+            false,
+            None,
+            |_, _| {}
+        )
+        .unwrap_err()
+        .contains("Enable video or audio")
+    );
+    assert!(!empty.exists());
+    assert_eq!(
+        fs::read_to_string(folder.join("package.json")).unwrap(),
+        package
+    );
+    assert_eq!(document.source, source);
+    fs::remove_dir_all(folder).unwrap();
+}
+
+#[test]
+#[ignore = "requires installed FFmpeg and FFprobe; run with --ignored"]
+fn absent_export_resolution_defaults_to_1080p_with_or_without_package() {
+    let folder = std::env::temp_dir().join(format!(
+        "ad3-default-resolution-{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&folder).unwrap();
+    let document = SourceDocument::parse(folder.join("index.tsx"), r#"export default <stage><scene id="s" active width={32} height={32} fill="red" workarea={[0,1/30]}/></stage>;"#.into()).unwrap();
+    let tools = Tools::default();
+    for with_package in [false, true] {
+        if with_package {
+            fs::write(folder.join("package.json"), "{}").unwrap();
+        }
+        let output = folder.join(format!("default-{with_package}.mp4"));
+        let report = ProjectRenderer::export(
+            &document,
+            &folder,
+            tools.clone(),
+            &output,
+            30.0,
+            None,
+            |_, _| {},
+        )
+        .unwrap();
+        assert_eq!(
+            (report.width, report.height, report.frames),
+            (1080, 1080, 1)
+        );
+        let probe = tools.probe(&output).unwrap();
+        assert_eq!((probe.width, probe.height), (1080, 1080));
+        // x264 embeds the requested rate-control settings in its SEI message.
+        // Measured bitrate on a static one-frame clip cannot prove the target.
+        let stream = checked_output(
+            command(&tools.ffmpeg)
+                .args(["-v", "error", "-i"])
+                .arg(&output)
+                .args([
+                    "-map",
+                    "0:v:0",
+                    "-c:v",
+                    "copy",
+                    "-bsf:v",
+                    "h264_mp4toannexb",
+                    "-f",
+                    "h264",
+                    "pipe:1",
+                ]),
+        )
+        .unwrap();
+        let settings = String::from_utf8_lossy(&stream.stdout);
+        assert!(
+            settings.contains("bitrate=10000"),
+            "Missing default 10 Mbit/s encoder target"
+        );
+        assert!(
+            settings.contains("rc=abr"),
+            "Default export must use bitrate rate control"
+        );
+    }
+    fs::remove_dir_all(folder).unwrap();
+}
+
+#[test]
+#[ignore = "requires installed FFmpeg and FFprobe; run with --ignored"]
+fn saved_audio_bitrate_changes_encoded_stream_and_disabled_audio_ignores_bad_setting() {
+    let folder = std::env::temp_dir().join(format!(
+        "ad3-audio-bitrate-{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&folder).unwrap();
+    let tools = Tools::default();
+    checked_output(
+        command(&tools.ffmpeg)
+            .args([
+                "-v",
+                "error",
+                "-nostdin",
+                "-n",
+                "-f",
+                "lavfi",
+                "-i",
+                "anoisesrc=duration=2:sample_rate=48000:seed=17",
+                "-ac",
+                "2",
+            ])
+            .arg(folder.join("noise.wav")),
+    )
+    .unwrap();
+    let source = r#"export default <stage><scene id="s" active width={32} height={16} workarea={[0,2]}><audio src="noise.wav"/><rect width={32} height={16} fill="red"/></scene></stage>;"#;
+    let document = SourceDocument::parse(folder.join("index.tsx"), source.into()).unwrap();
+    let mut measured = Vec::new();
+    for (bitrate, extension, sample_rate) in [
+        (32000, "mp4", 44100),
+        (192000, "mp4", 44100),
+        (128000, "mp4", 32000),
+        (64000, "webm", 24000),
+        (96000, "mp4", 24000),
+        (128000, "mov", 48000),
+        (128000, "mp4", 48000),
+        (128000, "mp4", 96000),
+        (128000, "webm", 48000),
+    ] {
+        let channels = if sample_rate == 44100 { 2 } else { 1 };
+        let audio_codec = match sample_rate {
+            96000 => "flac",
+            24000 => "opus",
+            48000 if extension == "webm" => "vorbis",
+            48000 => "mp3",
+            _ => "aac",
+        };
+        let saved_bitrate = if audio_codec == "flac" {
+            serde_json::json!("unused")
+        } else {
+            serde_json::json!(bitrate)
+        };
+        let package =
+            serde_json::json!({"diffusion":{"export":{"s":{"video":{"resolution":16},"audio":{"bitrate":saved_bitrate,"sampleRate":sample_rate,"numberOfChannels":channels,"codec":audio_codec}}}}})
+                .to_string();
+        fs::write(folder.join("package.json"), &package).unwrap();
+        let output = folder.join(format!("audio-{bitrate}-{sample_rate}.{extension}"));
+        ProjectRenderer::export(
+            &document,
+            &folder,
+            tools.clone(),
+            &output,
+            30.0,
+            None,
+            |_, _| {},
+        )
+        .unwrap();
+        let probe = checked_output(
+            command(&tools.ffprobe)
+                .args(["-v", "error", "-show_streams", "-of", "json"])
+                .arg(&output),
+        )
+        .unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&probe.stdout).unwrap();
+        let audio = value["streams"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|stream| stream["codec_type"] == "audio")
+            .unwrap();
+        assert_eq!(audio["codec_name"], audio_codec);
+        assert_eq!(audio["channels"], channels);
+        if audio_codec == "flac" {
+            assert_eq!(audio["bits_per_raw_sample"], "32");
+        }
+        if audio_codec != "opus" {
+            assert_eq!(audio["sample_rate"], sample_rate.to_string());
+            if sample_rate == 44100 {
+                measured.push(audio["bit_rate"].as_str().unwrap().parse::<u64>().unwrap());
+            }
+        } else {
+            // Opus uses a 48 kHz decoder clock even with a 24 kHz encoder input.
+            assert_eq!(audio["sample_rate"], "48000");
+        }
+        assert_eq!(
+            fs::read_to_string(folder.join("package.json")).unwrap(),
+            package
+        );
+    }
+    assert!(
+        measured[1] > measured[0] * 3,
+        "Requested audio rates should change actual encoded bitrate: {measured:?}"
+    );
+    fs::write(
+        folder.join("package.json"),
+        r#"{"diffusion":{"export":{"s":{"audio":{"bitrate":0}}}}}"#,
+    )
+    .unwrap();
+    let output = folder.join("invalid.mp4");
+    assert!(
+        ProjectRenderer::export(
+            &document,
+            &folder,
+            tools.clone(),
+            &output,
+            30.0,
+            None,
+            |_, _| {}
+        )
+        .unwrap_err()
+        .contains("audio bitrate")
+    );
+    assert!(!output.exists());
+    fs::write(
+        folder.join("package.json"),
+        r#"{"diffusion":{"export":{"s":{"audio":{"sampleRate":44100}}}}}"#,
+    )
+    .unwrap();
+    let unsupported = folder.join("unsupported.webm");
+    assert!(
+        ProjectRenderer::export(
+            &document,
+            &folder,
+            tools.clone(),
+            &unsupported,
+            30.0,
+            None,
+            |_, _| {}
+        )
+        .unwrap_err()
+        .contains("sampleRate")
+    );
+    assert!(!unsupported.exists());
+    fs::write(
+        folder.join("package.json"),
+        r#"{"diffusion":{"export":{"s":{"audio":{"numberOfChannels":6}}}}}"#,
+    )
+    .unwrap();
+    let surround = folder.join("surround.mp4");
+    assert!(
+        ProjectRenderer::export(
+            &document,
+            &folder,
+            tools.clone(),
+            &surround,
+            30.0,
+            None,
+            |_, _| {}
+        )
+        .unwrap_err()
+        .contains("numberOfChannels")
+    );
+    assert!(!surround.exists());
+    fs::write(
+        folder.join("package.json"),
+        r#"{"diffusion":{"export":{"s":{"audio":{"codec":"opus"}}}}}"#,
+    )
+    .unwrap();
+    let opus_mov = folder.join("opus.mov");
+    assert!(
+        ProjectRenderer::export(
+            &document,
+            &folder,
+            tools.clone(),
+            &opus_mov,
+            30.0,
+            None,
+            |_, _| {}
+        )
+        .unwrap_err()
+        .contains("codec")
+    );
+    assert!(!opus_mov.exists());
+    let silent = folder.join("silent.mp4");
+    export_height(&folder, "s", 16);
+    ProjectRenderer::export_with_audio(
+        &document,
+        &folder,
+        tools,
+        &silent,
+        30.0,
+        false,
+        None,
+        |_, _| {},
+    )
+    .unwrap();
+    assert_eq!(document.source, source);
+    fs::remove_dir_all(folder).unwrap();
+}
+
+#[test]
+#[ignore = "requires installed FFmpeg and FFprobe; run with --ignored"]
+fn saved_video_bitrate_exports_both_codecs_and_invalid_setting_creates_no_output() {
+    let folder = std::env::temp_dir().join(format!(
+        "ad3-bitrate-{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&folder).unwrap();
+    let package = r#"{"diffusion":{"export":{"s":{"video":{"bitrate":500000,"resolution":24}}}}}"#;
+    fs::write(folder.join("package.json"), package).unwrap();
+    let document = SourceDocument::parse(folder.join("index.tsx"), r#"export default <stage><scene id="s" active width={32} height={16} workarea={[0,0.2]}><rect width={32} height={16} fill="red"/></scene></stage>;"#.into()).unwrap();
+    let tools = Tools::default();
+    for (extension, codec) in [("mov", "h264"), ("webm", "vp9")] {
+        let output = folder.join(format!("export.{extension}"));
+        let report = ProjectRenderer::export(
+            &document,
+            &folder,
+            tools.clone(),
+            &output,
+            30.0,
+            None,
+            |_, _| {},
+        )
+        .unwrap();
+        assert_eq!(report.frames, 6);
+        assert_eq!((report.width, report.height), (48, 24));
+        let probe = checked_output(
+            command(&tools.ffprobe)
+                .args(["-v", "error", "-show_streams", "-of", "json"])
+                .arg(&output),
+        )
+        .unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&probe.stdout).unwrap();
+        assert_eq!(value["streams"][0]["codec_name"], codec);
+        assert_eq!(value["streams"][0]["width"], 48);
+        assert_eq!(value["streams"][0]["height"], 24);
+    }
+    assert_eq!(
+        fs::read_to_string(folder.join("package.json")).unwrap(),
+        package
+    );
+    let vp8_package = package.replace("\"resolution\":24", "\"resolution\":24,\"codec\":\"vp8\"");
+    let av1_package = package.replace("\"resolution\":24", "\"resolution\":24,\"codec\":\"av1\"");
+    fs::write(folder.join("package.json"), &av1_package).unwrap();
+    for extension in ["mp4", "webm"] {
+        let output = folder.join(format!("av1.{extension}"));
+        let report = ProjectRenderer::export(
+            &document,
+            &folder,
+            tools.clone(),
+            &output,
+            30.0,
+            None,
+            |_, _| {},
+        )
+        .unwrap();
+        assert_eq!((report.width, report.height, report.frames), (48, 24, 6));
+        let probe = checked_output(
+            command(&tools.ffprobe)
+                .args(["-v", "error", "-show_streams", "-of", "json"])
+                .arg(&output),
+        )
+        .unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&probe.stdout).unwrap();
+        assert_eq!(value["streams"][0]["codec_name"], "av1");
+        assert_eq!(value["streams"][0]["width"], 48);
+        assert_eq!(value["streams"][0]["height"], 24);
+    }
+    assert_eq!(
+        fs::read_to_string(folder.join("package.json")).unwrap(),
+        av1_package
+    );
+    let av1_mov = folder.join("av1.mov");
+    assert!(
+        ProjectRenderer::export(
+            &document,
+            &folder,
+            tools.clone(),
+            &av1_mov,
+            30.0,
+            None,
+            |_, _| {}
+        )
+        .unwrap_err()
+        .contains("codec")
+    );
+    assert!(!av1_mov.exists());
+    let hevc_package = package.replace("\"resolution\":24", "\"resolution\":24,\"codec\":\"hevc\"");
+    fs::write(folder.join("package.json"), &hevc_package).unwrap();
+    for extension in ["mp4", "mov"] {
+        let output = folder.join(format!("hevc.{extension}"));
+        ProjectRenderer::export(
+            &document,
+            &folder,
+            tools.clone(),
+            &output,
+            30.0,
+            None,
+            |_, _| {},
+        )
+        .unwrap();
+        let probe = checked_output(
+            command(&tools.ffprobe)
+                .args(["-v", "error", "-show_streams", "-of", "json"])
+                .arg(&output),
+        )
+        .unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&probe.stdout).unwrap();
+        assert_eq!(value["streams"][0]["codec_name"], "hevc");
+        assert_eq!(value["streams"][0]["codec_tag_string"], "hvc1");
+        assert_eq!(value["streams"][0]["width"], 48);
+        assert_eq!(value["streams"][0]["height"], 24);
+        assert_eq!(value["streams"][0]["nb_frames"], "6");
+    }
+    assert_eq!(
+        fs::read_to_string(folder.join("package.json")).unwrap(),
+        hevc_package
+    );
+    fs::write(folder.join("package.json"), &vp8_package).unwrap();
+    let vp8 = folder.join("vp8.webm");
+    ProjectRenderer::export(
+        &document,
+        &folder,
+        tools.clone(),
+        &vp8,
+        30.0,
+        None,
+        |_, _| {},
+    )
+    .unwrap();
+    let probe = checked_output(
+        command(&tools.ffprobe)
+            .args(["-v", "error", "-show_streams", "-of", "json"])
+            .arg(&vp8),
+    )
+    .unwrap();
+    let value: serde_json::Value = serde_json::from_slice(&probe.stdout).unwrap();
+    assert_eq!(value["streams"][0]["codec_name"], "vp8");
+    assert_eq!(
+        fs::read_to_string(folder.join("package.json")).unwrap(),
+        vp8_package
+    );
+    let incompatible = folder.join("incompatible.mp4");
+    assert!(
+        ProjectRenderer::export(
+            &document,
+            &folder,
+            tools.clone(),
+            &incompatible,
+            30.0,
+            None,
+            |_, _| {}
+        )
+        .unwrap_err()
+        .contains("codec")
+    );
+    assert!(!incompatible.exists());
+    fs::write(folder.join("package.json"), package.replace("500000", "0")).unwrap();
+    let output = folder.join("invalid.mp4");
+    assert!(
+        ProjectRenderer::export(
+            &document,
+            &folder,
+            tools.clone(),
+            &output,
+            30.0,
+            None,
+            |_, _| {}
+        )
+        .unwrap_err()
+        .contains("bitrate")
+    );
+    assert!(!output.exists());
+    fs::write(
+        folder.join("package.json"),
+        package.replace("\"resolution\":24", "\"resolution\":0"),
+    )
+    .unwrap();
+    let invalid_size = folder.join("invalid-resolution.mp4");
+    assert!(
+        ProjectRenderer::export(
+            &document,
+            &folder,
+            tools,
+            &invalid_size,
+            30.0,
+            None,
+            |_, _| {}
+        )
+        .unwrap_err()
+        .contains("resolution")
+    );
+    assert!(!invalid_size.exists());
+    fs::remove_dir_all(folder).unwrap();
+}
+
+#[test]
+#[ignore = "requires installed FFmpeg and FFprobe; run with --ignored"]
+fn synced_fractional_audio_origin_exports_silence_before_recording() {
+    let folder = std::env::temp_dir().join(format!(
+        "ad3-fractional-sync-{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&folder).unwrap();
+    export_height(&folder, "s", 24);
+    let mut state = 17u32;
+    let levels = (0..1500)
+        .map(|_| {
+            state = state.wrapping_mul(1664525).wrapping_add(1013904223);
+            0.05 + 0.7 * (state >> 8) as f64 / 16777216.0
+        })
+        .collect::<Vec<_>>();
+    for (name, bins) in [
+        ("reference.wav", &levels[..]),
+        ("audio.wav", &levels[201..1201]),
+    ] {
+        let mut data = Vec::new();
+        for level in bins {
+            for sample in 0..96 {
+                let value = (32767.0
+                    * level
+                    * (std::f64::consts::TAU * 1000.0 * sample as f64 / 48000.0).sin())
+                    as i16;
+                data.extend(value.to_le_bytes());
+                data.extend((-value).to_le_bytes());
+            }
+        }
+        let mut wav = Vec::new();
+        wav.extend(b"RIFF");
+        wav.extend((36 + data.len() as u32).to_le_bytes());
+        wav.extend(b"WAVEfmt ");
+        wav.extend(16u32.to_le_bytes());
+        wav.extend(1u16.to_le_bytes());
+        wav.extend(2u16.to_le_bytes());
+        wav.extend(48000u32.to_le_bytes());
+        wav.extend(192000u32.to_le_bytes());
+        wav.extend(4u16.to_le_bytes());
+        wav.extend(16u16.to_le_bytes());
+        wav.extend(b"data");
+        wav.extend((data.len() as u32).to_le_bytes());
+        wav.extend(data);
+        fs::write(folder.join(name), wav).unwrap();
+    }
+    let doc = SourceDocument::parse(folder.join("index.tsx"), r#"export default <stage><scene id="s" active width={32} height={24} workarea={[0,3]}><audio id="audio" src="audio.wav" syncTo="reference"/><audio id="reference" src="reference.wav" muted/><rect id="r" width={16} height={16} fill="red"/></scene></stage>;"#.into()).unwrap();
+    let tools = Tools::default();
+    let mut renderer = ProjectRenderer::new(&doc, &folder, tools.clone(), false).unwrap();
+    let span = renderer.timeline.get("audio").unwrap();
+    assert!((span.origin - 0.402).abs() < 0.002);
+    assert!(span.start < span.origin);
+    renderer.frame_plan("s", 1.0, 30.0, false).unwrap();
+    let output = folder.join("synced.mov");
+    ProjectRenderer::export_with_audio(
+        &doc,
+        &folder,
+        tools.clone(),
+        &output,
+        30.0,
+        true,
+        None,
+        |_, _| {},
+    )
+    .unwrap();
+    // Decode stereo channel 0 instead of downmixing the deliberately opposing channels.
+    let pcm = checked_output(
+        command(&tools.ffmpeg)
+            .args(["-v", "error", "-i"])
+            .arg(&output)
+            .args([
+                "-map",
+                "0:a:0",
+                "-af",
+                "pan=mono|c0=c0",
+                "-ar",
+                "48000",
+                "-f",
+                "f32le",
+                "pipe:1",
+            ]),
+    )
+    .unwrap();
+    let channel = pcm
+        .stdout
+        .chunks_exact(4)
+        .map(|bytes| f32::from_le_bytes(bytes.try_into().unwrap()))
+        .collect::<Vec<_>>();
+    assert!(channel.len() >= 3 * 48000);
+    let rms = |slice: &[f32]| {
+        (slice
+            .iter()
+            .map(|value| (*value as f64).powi(2))
+            .sum::<f64>()
+            / slice.len() as f64)
+            .sqrt()
+    };
+    assert!(rms(&channel[4800..14400]) < 1e-5);
+    assert!(rms(&channel[24000..48000]) > 0.01);
+    assert!(doc.root.find("audio").unwrap().props.contains_key("syncTo"));
+    fs::remove_dir_all(folder).unwrap();
+}
+
+#[test]
+#[ignore = "requires installed FFmpeg and FFprobe; run with --ignored"]
+fn runtime_skew_reaches_exported_pixels_without_changing_source() {
+    let folder = std::env::temp_dir().join(format!(
+        "ad3-runtime-skew-{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&folder).unwrap();
+    export_height(&folder, "s", 24);
+    let doc = SourceDocument::parse(folder.join("index.tsx"), r#"export default <stage><scene id="s" active width={32} height={24} workarea={[0,0.1]}><rect id="r" x={8} y={8} width={12} height={8} fill="red"/></scene></stage>;"#.into()).unwrap();
+    let source = doc.source.clone();
+    let tools = Tools::default();
+    let mut decoded = Vec::new();
+    for (name, skew) in [
+        ("plain.mov", std::collections::BTreeMap::new()),
+        (
+            "skew.mov",
+            std::collections::BTreeMap::from([("r".into(), [45.0, 0.0])]),
+        ),
+    ] {
+        let output = folder.join(name);
+        ProjectRenderer::export_with_runtime(
+            &doc,
+            &folder,
+            tools.clone(),
+            &output,
+            30.0,
+            false,
+            skew,
+            None,
+            |_, _| {},
+        )
+        .unwrap();
+        let frame = checked_output(
+            command(&tools.ffmpeg)
+                .args(["-v", "error", "-i"])
+                .arg(&output)
+                .args([
+                    "-frames:v",
+                    "1",
+                    "-f",
+                    "rawvideo",
+                    "-pix_fmt",
+                    "rgba",
+                    "pipe:1",
+                ]),
+        )
+        .unwrap();
+        assert_eq!(frame.stdout.len(), 32 * 24 * 4);
+        decoded.push(frame.stdout);
+    }
+    let difference: u64 = decoded[0]
+        .iter()
+        .zip(&decoded[1])
+        .map(|(a, b)| u64::from(a.abs_diff(*b)))
+        .sum();
+    assert!(difference > 2000, "skew did not change encoded pixels");
+    assert_eq!(doc.source, source);
+    let resolved = folder.canonicalize().unwrap();
+    assert_eq!(
+        resolved.parent().unwrap(),
+        std::env::temp_dir().canonicalize().unwrap()
+    );
+    assert!(
+        folder
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .starts_with("ad3-runtime-skew-")
+    );
+    fs::remove_dir_all(resolved).unwrap();
+}
+
+#[test]
+#[ignore = "requires installed FFmpeg and FFprobe; run with --ignored"]
+fn mov_and_webm_exports_use_matching_containers_and_codecs() {
+    let folder = std::env::temp_dir().join(format!(
+        "ad3-rust-mov-{}-{}",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    fs::create_dir(&folder).unwrap();
+    export_height(&folder, "s", 16);
+    let document = SourceDocument::parse(folder.join("index.tsx"), r#"export default <stage><scene id="s" active width={32} height={16} workarea={[0,0.2]}><rect id="r" width={32} height={16} fill="red"/></scene></stage>;"#.into()).unwrap();
+    let output = folder.join("export.mov");
+    let tools = Tools::default();
+    let report = ProjectRenderer::export(
+        &document,
+        &folder,
+        tools.clone(),
+        &output,
+        30.0,
+        None,
+        |_, _| {},
+    )
+    .unwrap();
+    assert_eq!(report.frames, 6);
+    let probe = checked_output(
+        command(&tools.ffprobe)
+            .args([
+                "-v",
+                "error",
+                "-show_format",
+                "-show_streams",
+                "-of",
+                "json",
+            ])
+            .arg(&output),
+    )
+    .unwrap();
+    let value: serde_json::Value = serde_json::from_slice(&probe.stdout).unwrap();
+    assert_eq!(
+        value["format"]["tags"]["major_brand"]
+            .as_str()
+            .unwrap()
+            .trim(),
+        "qt"
+    );
+    assert_eq!(value["streams"][0]["codec_name"], "h264");
+    assert_eq!(value["streams"][0]["nb_frames"], "6");
+    assert_eq!(value["streams"][0]["width"], 32);
+    checked_output(
+        command(&tools.ffmpeg)
+            .args([
+                "-v",
+                "error",
+                "-nostdin",
+                "-n",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=440:duration=0.2",
+            ])
+            .arg(folder.join("tone.wav")),
+    )
+    .unwrap();
+    let with_audio = SourceDocument::parse(
+        folder.join("index.tsx"),
+        document.source.replace(
+            "</scene>",
+            "<audio id=\"a\" src=\"tone.wav\" end={0.2}/></scene>",
+        ),
+    )
+    .unwrap();
+    let output = folder.join("audio.mov");
+    ProjectRenderer::export(
+        &with_audio,
+        &folder,
+        tools.clone(),
+        &output,
+        30.0,
+        None,
+        |_, _| {},
+    )
+    .unwrap();
+    let probe = checked_output(
+        command(&tools.ffprobe)
+            .args([
+                "-v",
+                "error",
+                "-show_format",
+                "-show_streams",
+                "-of",
+                "json",
+            ])
+            .arg(&output),
+    )
+    .unwrap();
+    let value: serde_json::Value = serde_json::from_slice(&probe.stdout).unwrap();
+    assert_eq!(
+        value["format"]["tags"]["major_brand"]
+            .as_str()
+            .unwrap()
+            .trim(),
+        "qt"
+    );
+    assert!(
+        value["streams"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|stream| stream["codec_name"] == "aac")
+    );
+    for (source, name) in [(&document, "silent.webm"), (&with_audio, "audio.webm")] {
+        let output = folder.join(name);
+        ProjectRenderer::export(
+            source,
+            &folder,
+            tools.clone(),
+            &output,
+            30.0,
+            None,
+            |_, _| {},
+        )
+        .unwrap();
+        let probe = checked_output(
+            command(&tools.ffprobe)
+                .args([
+                    "-v",
+                    "error",
+                    "-show_format",
+                    "-show_streams",
+                    "-of",
+                    "json",
+                ])
+                .arg(&output),
+        )
+        .unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&probe.stdout).unwrap();
+        assert!(
+            value["format"]["format_name"]
+                .as_str()
+                .unwrap()
+                .contains("webm")
+        );
+        let streams = value["streams"].as_array().unwrap();
+        assert!(streams.iter().any(|stream| stream["codec_name"] == "vp9"));
+        if name == "audio.webm" {
+            assert!(streams.iter().any(|stream| stream["codec_name"] == "opus"));
+        }
+    }
+    let library = MediaLibrary::load(&with_audio.root, &folder, &tools).unwrap();
+    let timeline = Timeline::resolve(&with_audio.root, &library.durations).unwrap();
+    let output = folder.join("filter.webm");
+    RenderPlan::build(&with_audio.root, &timeline, &library, "s", 30.0, None)
+        .unwrap()
+        .export(&tools, &folder, &output)
+        .unwrap();
+    let probe = checked_output(
+        command(&tools.ffprobe)
+            .args(["-v", "error", "-show_streams", "-of", "json"])
+            .arg(output),
+    )
+    .unwrap();
+    let value: serde_json::Value = serde_json::from_slice(&probe.stdout).unwrap();
+    let streams = value["streams"].as_array().unwrap();
+    assert!(streams.iter().any(|stream| stream["codec_name"] == "vp9"));
+    assert!(streams.iter().any(|stream| stream["codec_name"] == "opus"));
+    let odd = SourceDocument::parse(
+        folder.join("odd.tsx"),
+        document
+            .source
+            .replace("width={32}", "width={33}")
+            .replace("height={16}", "height={17}"),
+    )
+    .unwrap();
+    export_height(&folder, "s", 17);
+    let output = folder.join("odd.webm");
+    ProjectRenderer::export(&odd, &folder, tools.clone(), &output, 30.0, None, |_, _| {}).unwrap();
+    let probe = checked_output(
+        command(&tools.ffprobe)
+            .args(["-v", "error", "-show_streams", "-of", "json"])
+            .arg(&output),
+    )
+    .unwrap();
+    let value: serde_json::Value = serde_json::from_slice(&probe.stdout).unwrap();
+    assert_eq!(value["streams"][0]["width"], 34);
+    assert_eq!(value["streams"][0]["height"], 18);
+    assert_eq!(value["streams"][0]["codec_name"], "vp9");
+    let library = MediaLibrary::load(&odd.root, &folder, &tools).unwrap();
+    let timeline = Timeline::resolve(&odd.root, &library.durations).unwrap();
+    let plan = RenderPlan::build(&odd.root, &timeline, &library, "s", 30.0, None).unwrap();
+    let output = folder.join("odd-filter.webm");
+    plan.export(&tools, &folder, &output).unwrap();
+    let probe = checked_output(
+        command(&tools.ffprobe)
+            .args(["-v", "error", "-show_streams", "-of", "json"])
+            .arg(&output),
+    )
+    .unwrap();
+    let value: serde_json::Value = serde_json::from_slice(&probe.stdout).unwrap();
+    assert_eq!(value["streams"][0]["width"], 33);
+    assert_eq!(value["streams"][0]["height"], 17);
+    assert!(
+        plan.export(&tools, &folder, &folder.join("odd-filter.mp4"))
+            .unwrap_err()
+            .contains("even dimensions")
+    );
+    let mut resized = plan;
+    resized.resize_output(17).unwrap();
+    assert_eq!((resized.width, resized.height), (34, 18));
+    let normalized = folder.join("normalized-filter.mp4");
+    resized.export(&tools, &folder, &normalized).unwrap();
+    let probe = tools.probe(&normalized).unwrap();
+    assert_eq!((probe.width, probe.height), (34, 18));
+    export_height(&folder, "s", 16);
+    for extension in ["mp4", "mov", "webm"] {
+        let output = folder.join(format!("disabled-audio.{extension}"));
+        ProjectRenderer::export_with_audio(
+            &with_audio,
+            &folder,
+            tools.clone(),
+            &output,
+            30.0,
+            false,
+            None,
+            |_, _| {},
+        )
+        .unwrap();
+        let probe = checked_output(
+            command(&tools.ffprobe)
+                .args(["-v", "error", "-show_streams", "-of", "json"])
+                .arg(&output),
+        )
+        .unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&probe.stdout).unwrap();
+        let streams = value["streams"].as_array().unwrap();
+        assert_eq!(streams.len(), 1);
+        assert_eq!(streams[0]["codec_type"], "video");
+        assert!(!with_audio.root.find("a").unwrap().flag("muted"));
+    }
+    let resolved = fs::canonicalize(&folder).unwrap();
+    assert!(resolved.starts_with(fs::canonicalize(std::env::temp_dir()).unwrap()));
+    assert!(
+        resolved
+            .file_name()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .starts_with("ad3-rust-mov-")
+    );
+    fs::remove_dir_all(resolved).unwrap();
+}
+
 #[test]
 #[ignore = "requires installed FFmpeg and FFprobe; run with --ignored"]
 fn native_video_textures_keep_source_clock_alpha_transform_and_export_frames() {
@@ -25,6 +1261,7 @@ fn native_video_textures_keep_source_clock_alpha_transform_and_export_frames() {
         std::process::id()
     ));
     fs::create_dir(&folder).unwrap();
+    export_height(&folder, "s", 48);
     for index in 0..8u8 {
         image::RgbaImage::from_pixel(16, 8, image::Rgba([index * 30, 40, 180, 128]))
             .save(folder.join(format!("frame{index:02}.png")))
@@ -308,6 +1545,7 @@ fn preset_and_keyframe_motion_is_sampled_for_capture_reverse_seek_and_export() {
         std::process::id()
     ));
     fs::create_dir(&folder).unwrap();
+    export_height(&folder, "s", 32);
     let source = r#"export default <stage><scene id="s" active width={64} height={32} workarea={[0,1]}>
       <rect id="r" width={16} height={16} fill="red" end={1}>
         <animation type="fade" duration={1}/>
@@ -435,6 +1673,7 @@ fn preset_and_keyframe_motion_is_sampled_for_capture_reverse_seek_and_export() {
             .into(),
     )
     .unwrap();
+    export_height(&folder, "s", 16);
     let late_output = folder.join("late.mp4");
     let late_report = ProjectRenderer::export(
         &late,
@@ -478,6 +1717,8 @@ fn native_export_preserves_trims_speed_audio_workarea_and_composition() {
     let folder =
         std::env::temp_dir().join(format!("ad3-rust-render-{}-{stamp}", std::process::id()));
     fs::create_dir(&folder).unwrap();
+    export_height(&folder, "s", 90);
+    export_height(&folder, "main", 90);
     let tools = Tools::default();
     // The glyph paint is color (not rect fill), has no default, ignores color
     // alpha, and applies the separate opacity property.
@@ -730,6 +1971,7 @@ fn reactive_export_advances_video_and_mixes_dynamic_gain_with_frozen_modules() {
         std::process::id()
     ));
     fs::create_dir(&folder).unwrap();
+    export_height(&folder, "s", 90);
     let tools = Tools::default();
     checked_output(
         command(&tools.ffmpeg)
@@ -748,7 +1990,7 @@ fn reactive_export_advances_video_and_mixes_dynamic_gain_with_frozen_modules() {
     )
     .unwrap();
     let source = r#"
-        import {useTicker} from '@diffusionstudio/jsx';
+        import {useTicker} from '@ad3-editing/jsx';
         import {color} from './palette';
         export default ()=>{
             const t=useTicker();

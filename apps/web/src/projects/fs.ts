@@ -11,9 +11,9 @@ import { MAIN_CHANNELS } from '@desktop/main-channels';
 import { mainBridge } from '@/lib/ipc';
 import { ElectronFileHandle } from '@/lib/electron-file-handle';
 import { ElectronWritableFileHandle } from '@/lib/electron-file-writable';
-import { isAbsoluteSource } from '@diffusionstudio/assets';
+import { isAbsoluteSource } from '@ad3-editing/assets';
 
-import type { Manifest, ProjectFS } from '@diffusionstudio/assets';
+import type { Manifest, ProjectFS } from '@ad3-editing/assets';
 
 /** Streams `blob` to an absolute path in chunks. */
 async function writeBlob(path: string, blob: Blob): Promise<void> {

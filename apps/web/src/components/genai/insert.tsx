@@ -2,12 +2,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Ai, getNextName, Name, Root } from "@diffusionstudio/runtime";
-import { assetName } from "@diffusionstudio/assets";
+import { Ai, getNextName, Name, Root } from "@ad3-editing/runtime";
+import { assetName } from "@ad3-editing/assets";
 import { findEmptyPlacement } from "@/engine/placement";
 import { toast } from "somoto";
 
-import type { AssetRef } from "@diffusionstudio/jsx";
+import type { AssetRef } from "@ad3-editing/jsx";
 import type { DocumentEditor } from "@/engine/editor";
 import type { Entity, World } from "koota";
 

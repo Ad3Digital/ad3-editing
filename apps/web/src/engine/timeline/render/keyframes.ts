@@ -12,7 +12,7 @@ import {
 	findClosestParentGeometry,
 	framesToSeconds,
 	store,
-} from '@diffusionstudio/runtime';
+} from '@ad3-editing/runtime';
 
 import { getDocumentEditor } from '../../editor';
 import { KEYFRAME_TRACK_HEIGHT } from '../config';

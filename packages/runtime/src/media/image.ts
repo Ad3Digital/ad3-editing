@@ -6,7 +6,7 @@ import { AssetId, ImageDecoderHandle } from '../traits';
 import { getAsset, getAssetFile } from '../actions/assets';
 
 import type { Entity, World } from 'koota';
-import type { ImageAsset } from '@diffusionstudio/assets';
+import type { ImageAsset } from '@ad3-editing/assets';
 
 export type DecodedImage = ImageBitmap | HTMLImageElement;
 

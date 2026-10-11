@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Caption, CaptionType, Chars, ClipDragOrigin, Computed, Hidden, Name, Selected, TrimDragOrigin, fitsChildren, getGeneratingColor, getSourceFailure, isCaption, isGenerating, isGroup, isText, store } from '@diffusionstudio/runtime';
+import { Caption, CaptionType, Chars, ClipDragOrigin, Computed, Hidden, Name, Selected, TrimDragOrigin, fitsChildren, getGeneratingColor, getSourceFailure, isCaption, isGenerating, isGroup, isText, store } from '@ad3-editing/runtime';
 
 import { getDocumentEditor } from '../../editor';
 import { ProjectConfig } from '../../traits';
@@ -26,7 +26,7 @@ import { renderStillThumbnails, renderVideoThumbnails } from './thumbnails';
 import { renderWaveform } from './waveform';
 
 import type { Entity, World } from 'koota';
-import type { Asset } from '@diffusionstudio/assets';
+import type { Asset } from '@ad3-editing/assets';
 import type { ClipStyle } from '../style';
 import type { RowCursor } from '../layout';
 import type { TimelineSurfaceState } from '../surface';

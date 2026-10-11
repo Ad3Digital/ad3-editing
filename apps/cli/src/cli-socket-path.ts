@@ -12,5 +12,5 @@ import { join } from "node:path";
 // registry and envelope types without pulling in node:os / node:path.
 export const SOCKET_PATH =
   platform() === "win32"
-    ? "\\\\.\\pipe\\diffusion-studio"
-    : join(tmpdir(), "diffusion-studio.sock");
+    ? "\\\\.\\pipe\\ad3-editing"
+    : join(tmpdir(), "ad3-editing.sock");

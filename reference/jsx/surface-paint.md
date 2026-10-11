@@ -23,7 +23,7 @@ onMount(() => {
 ## The ref and the canvas
 
 ```ts
-import type { SceneNode } from "@diffusionstudio/jsx";
+import type { SceneNode } from "@ad3-editing/jsx";
 // { readonly element: HTMLCanvasElement | null, tag, props, parent, children }
 ```
 

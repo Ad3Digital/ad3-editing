@@ -196,7 +196,7 @@ async function reclaimPort(port) {
 
 // 1. Build the CLI (blocking) so `dapi` and the app agree on the latest code.
 console.log("[dev:desktop] building CLI…");
-runNpm(["run", "build", "--workspace=@diffusionstudio/cli"]);
+runNpm(["run", "build", "--workspace=@ad3-editing/cli"]);
 
 // 2. Start the web dev server, on a port that is free.
 await reclaimPort(DEV_PORT);
@@ -212,6 +212,6 @@ try {
   shutdown(1);
 }
 console.log("[dev:desktop] building desktop app…");
-runNpm(["run", "build", "--workspace=@diffusionstudio/desktop"]);
+runNpm(["run", "build", "--workspace=@ad3-editing/desktop"]);
 console.log("[dev:desktop] starting desktop app…");
 run("desktop", "electron-forge", ["start"], join(ROOT, "apps", "desktop"));

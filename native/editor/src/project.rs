@@ -8,7 +8,9 @@ use crate::{
     document::Node,
     encoder::{Encoder, cancelled, publish},
     evaluator::LiveProject,
-    media::{MediaLibrary, ProbeCache, Tools, checked_output_cancellable, command, is_mp4},
+    media::{
+        MediaLibrary, ProbeCache, Tools, checked_output_cancellable, command, export_extension,
+    },
     render::{JobDirectory, RenderPlan},
     source::SourceDocument,
     timing::Timeline,
@@ -22,6 +24,18 @@ use std::{
     sync::{Arc, atomic::AtomicBool},
     time::Duration,
 };
+
+#[derive(Default)]
+pub struct ExportOverrides {
+    pub resolution: Option<u32>,
+    pub video_enabled: Option<bool>,
+    pub video_codec: Option<String>,
+    pub audio_codec: Option<String>,
+    pub audio_channels: Option<u32>,
+    pub audio_sample_rate: Option<u32>,
+    pub video_bitrate: Option<u32>,
+    pub audio_bitrate: Option<u32>,
+}
 
 enum SceneBackend {
     Native(crate::compositor::Compositor),
@@ -39,12 +53,14 @@ pub struct ProjectRenderer {
     current_authored: Node,
     motion: crate::motion::Motion,
     has_motion: bool,
+    runtime_skews: BTreeMap<String, [f64; 2]>,
     scenes: BTreeMap<String, SceneState>,
     textures: Arc<crate::texture::TextureStore>,
     fonts: crate::fonts::FontBook,
     cancel: Option<Arc<AtomicBool>>,
     offline: bool,
     cache: ProbeCache,
+    sync_cache: crate::audio_sync::AudioSyncCache,
     pub project: PathBuf,
     pub root: Node,
     pub library: MediaLibrary,
@@ -73,7 +89,7 @@ impl ProjectRenderer {
     ) -> Result<Self> {
         Self::new_cancellable(document, project, tools, offline, 30.0, None)
     }
-    fn new_cancellable(
+    pub fn new_cancellable(
         document: &SourceDocument,
         project: &Path,
         tools: Tools,
@@ -98,12 +114,14 @@ impl ProjectRenderer {
             current_authored: document.root.clone(),
             motion: Default::default(),
             has_motion: false,
+            runtime_skews: BTreeMap::new(),
             scenes: BTreeMap::new(),
             textures: Arc::new(crate::texture::TextureStore::new(tools.clone())),
             fonts: Default::default(),
             cancel,
             offline,
             cache: ProbeCache::default(),
+            sync_cache: Default::default(),
             project: project.into(),
             root: document.root.clone(),
             library: MediaLibrary {
@@ -136,8 +154,14 @@ impl ProjectRenderer {
             &mut self.cache,
             self.cancel.as_deref(),
         )?;
+        let offsets = self.sync_cache.offsets(
+            &authored,
+            &self.library,
+            &self.tools,
+            self.cancel.as_deref(),
+        )?;
         let timeline =
-            Timeline::resolve_at_rate(&authored, &self.library.durations, self.frame_rate)?;
+            Timeline::resolve_with_media_sync(&authored, &self.library, self.frame_rate, &offsets)?;
         self.scenes
             .retain(|id, _| timeline.workareas.contains_key(id));
         for id in timeline.workareas.keys() {
@@ -165,7 +189,7 @@ impl ProjectRenderer {
             authored
         };
         self.timeline = if self.has_motion {
-            Timeline::resolve_at_rate(&self.root, &self.library.durations, self.frame_rate)?
+            Timeline::resolve_with_media_sync(&self.root, &self.library, self.frame_rate, &offsets)?
         } else {
             timeline
         };
@@ -182,6 +206,24 @@ impl ProjectRenderer {
         self.sample(time, playing)?;
         self.current_frame_plan(scene, time, fps)
     }
+    pub fn set_runtime_skews(&mut self, skews: BTreeMap<String, [f64; 2]>) -> Result<()> {
+        if skews.values().flatten().any(|value| !value.is_finite()) {
+            return Err("Runtime skew must be finite".into());
+        }
+        self.runtime_skews = skews;
+        Ok(())
+    }
+
+    pub fn edit_geometries(
+        &self,
+        scene: &str,
+    ) -> Option<&BTreeMap<String, crate::compositor::EditGeometry>> {
+        match self.scenes.get(scene)?.backend.as_ref()? {
+            SceneBackend::Native(compositor) => Some(compositor.edit_geometries()),
+            _ => None,
+        }
+    }
+
     fn current_frame_plan(&mut self, scene: &str, time: f64, fps: f64) -> Result<RenderPlan> {
         let node = self
             .root
@@ -207,6 +249,7 @@ impl ProjectRenderer {
             return Err(error.clone());
         }
         if let SceneBackend::Native(compositor) = backend {
+            compositor.set_runtime_skews(self.runtime_skews.clone())?;
             let no_text_motion = Default::default();
             let mut texts = crate::text::prepare(
                 node,
@@ -306,13 +349,144 @@ impl ProjectRenderer {
         output: &Path,
         fps: f64,
         cancel_token: Option<Arc<AtomicBool>>,
+        progress: impl FnMut(u64, u64),
+    ) -> Result<ExportReport> {
+        Self::export_with_audio(
+            document,
+            project,
+            tools,
+            output,
+            fps,
+            true,
+            cancel_token,
+            progress,
+        )
+    }
+
+    pub fn export_with_audio(
+        document: &SourceDocument,
+        project: &Path,
+        tools: Tools,
+        output: &Path,
+        fps: f64,
+        audio_enabled: bool,
+        cancel_token: Option<Arc<AtomicBool>>,
+        progress: impl FnMut(u64, u64),
+    ) -> Result<ExportReport> {
+        Self::export_with_runtime(
+            document,
+            project,
+            tools,
+            output,
+            fps,
+            audio_enabled,
+            BTreeMap::new(),
+            cancel_token,
+            progress,
+        )
+    }
+
+    pub fn export_with_runtime(
+        document: &SourceDocument,
+        project: &Path,
+        tools: Tools,
+        output: &Path,
+        fps: f64,
+        audio_enabled: bool,
+        runtime_skews: BTreeMap<String, [f64; 2]>,
+        cancel_token: Option<Arc<AtomicBool>>,
+        progress: impl FnMut(u64, u64),
+    ) -> Result<ExportReport> {
+        Self::export_with_resolution(
+            document,
+            project,
+            tools,
+            output,
+            fps,
+            audio_enabled,
+            runtime_skews,
+            None,
+            cancel_token,
+            progress,
+        )
+    }
+
+    pub fn export_with_resolution(
+        document: &SourceDocument,
+        project: &Path,
+        tools: Tools,
+        output: &Path,
+        fps: f64,
+        audio_enabled: bool,
+        runtime_skews: BTreeMap<String, [f64; 2]>,
+        resolution_override: Option<u32>,
+        cancel_token: Option<Arc<AtomicBool>>,
+        progress: impl FnMut(u64, u64),
+    ) -> Result<ExportReport> {
+        Self::export_with_tracks(
+            document,
+            project,
+            tools,
+            output,
+            fps,
+            audio_enabled,
+            runtime_skews,
+            resolution_override,
+            None,
+            cancel_token,
+            progress,
+        )
+    }
+
+    pub fn export_with_tracks(
+        document: &SourceDocument,
+        project: &Path,
+        tools: Tools,
+        output: &Path,
+        fps: f64,
+        audio_enabled: bool,
+        runtime_skews: BTreeMap<String, [f64; 2]>,
+        resolution_override: Option<u32>,
+        video_enabled_override: Option<bool>,
+        cancel_token: Option<Arc<AtomicBool>>,
+        progress: impl FnMut(u64, u64),
+    ) -> Result<ExportReport> {
+        Self::export_with_overrides(
+            document,
+            project,
+            tools,
+            output,
+            fps,
+            audio_enabled,
+            runtime_skews,
+            ExportOverrides {
+                resolution: resolution_override,
+                video_enabled: video_enabled_override,
+                ..Default::default()
+            },
+            cancel_token,
+            progress,
+        )
+    }
+
+    pub fn export_with_overrides(
+        document: &SourceDocument,
+        project: &Path,
+        tools: Tools,
+        output: &Path,
+        fps: f64,
+        audio_enabled: bool,
+        runtime_skews: BTreeMap<String, [f64; 2]>,
+        overrides: ExportOverrides,
+        cancel_token: Option<Arc<AtomicBool>>,
         mut progress: impl FnMut(u64, u64),
     ) -> Result<ExportReport> {
+        let resolution_override = overrides.resolution;
+        let video_enabled_override = overrides.video_enabled;
         let cancel = cancel_token.as_deref();
         cancelled(cancel)?;
-        if !is_mp4(output) {
-            return Err("Native export currently supports .mp4".into());
-        }
+        let extension = export_extension(output)
+            .ok_or("Native export currently supports .mp4, .mov and .webm")?;
         let output = std::path::absolute(output).map_err(|e| e.to_string())?;
         if output.exists() {
             return Err("Export destination already exists".into());
@@ -322,7 +496,192 @@ impl ProjectRenderer {
         }
         let mut renderer =
             Self::new_cancellable(document, project, tools, true, fps, cancel_token.clone())?;
+        renderer.set_runtime_skews(runtime_skews)?;
         let scene = renderer.timeline.active.clone();
+        if audio_enabled
+            && overrides
+                .audio_channels
+                .is_some_and(|channels| !matches!(channels, 1 | 2))
+        {
+            return Err("Export audio currently supports mono or stereo channels".into());
+        }
+        let mut config = if project.join("package.json").exists() {
+            Some(crate::project_config::ProjectConfig::load(project)?)
+        } else {
+            None
+        };
+        if audio_enabled && let Some(codec) = &overrides.audio_codec {
+            crate::project_config::ProjectConfig::validate_audio_codec(codec, extension)?;
+            if let Some(config) = &mut config {
+                config.set_export_audio_codec(&scene, extension, Some(codec))?;
+            }
+        }
+        let sample_rate_override = if audio_enabled {
+            match overrides.audio_sample_rate {
+                Some(rate) => {
+                    let codec = match &overrides.audio_codec {
+                        Some(codec) => codec.clone(),
+                        None => match &config {
+                            Some(config) => config.audio_codec(&scene, extension)?,
+                            None => if matches!(extension, "webm" | "ogg") {
+                                "opus"
+                            } else {
+                                "aac"
+                            }
+                            .into(),
+                        },
+                    };
+                    Some(
+                        crate::project_config::ProjectConfig::validate_audio_sample_rate(
+                            rate as f64,
+                            &codec,
+                        )?,
+                    )
+                }
+                None => None,
+            }
+        } else {
+            None
+        };
+        let audio_bitrate_override = if audio_enabled {
+            let codec = match &overrides.audio_codec {
+                Some(codec) => codec.clone(),
+                None => match &config {
+                    Some(config) => config.audio_codec(&scene, extension)?,
+                    None => if matches!(extension, "webm" | "ogg") {
+                        "opus"
+                    } else {
+                        "aac"
+                    }
+                    .into(),
+                },
+            };
+            if codec == "flac" {
+                None
+            } else {
+                if overrides.audio_bitrate == Some(0) {
+                    return Err("Audio bitrate must be positive".into());
+                }
+                overrides.audio_bitrate
+            }
+        } else {
+            None
+        };
+        let video_enabled = match video_enabled_override {
+            Some(enabled) => enabled,
+            None => config
+                .as_ref()
+                .map_or(Ok(true), |config| config.video_enabled(&scene))?,
+        };
+        if extension == "ogg" && video_enabled {
+            return Err("Ogg currently supports audio-only export; disable video".into());
+        }
+        if video_enabled && overrides.video_bitrate == Some(0) {
+            return Err("Video bitrate must be positive".into());
+        }
+        if video_enabled && resolution_override.is_some_and(|height| !(1..=8192).contains(&height))
+        {
+            return Err("Video resolution must be between 1 and 8192 pixels".into());
+        }
+        if !video_enabled && !audio_enabled {
+            return Err("Enable video or audio before exporting".into());
+        }
+        let (
+            bitrate,
+            audio_bitrate,
+            audio_sample_rate,
+            resolution,
+            audio_channels,
+            video_codec,
+            audio_codec,
+        ) = if let Some(config) = &config {
+            (
+                if video_enabled {
+                    Some(match overrides.video_bitrate {
+                        Some(bitrate) => bitrate,
+                        None => config.video_bitrate(&scene)?.unwrap_or(10_000_000),
+                    })
+                } else {
+                    None
+                },
+                if audio_enabled {
+                    match audio_bitrate_override {
+                        Some(bitrate) => Some(bitrate),
+                        None => config.audio_encoding_bitrate(&scene, extension)?,
+                    }
+                } else {
+                    None
+                },
+                if audio_enabled {
+                    match sample_rate_override {
+                        Some(rate) => rate,
+                        None => config.audio_sample_rate(&scene, extension)?,
+                    }
+                } else {
+                    48_000
+                },
+                if video_enabled {
+                    Some(match resolution_override {
+                        Some(height) => height,
+                        None => config.video_resolution(&scene)?.unwrap_or(1080),
+                    })
+                } else {
+                    None
+                },
+                if audio_enabled {
+                    match overrides.audio_channels {
+                        Some(channels) => channels,
+                        None => config.audio_channels(&scene)?,
+                    }
+                } else {
+                    2
+                },
+                if video_enabled {
+                    Some(match &overrides.video_codec {
+                        Some(codec) => {
+                            crate::project_config::ProjectConfig::validate_video_codec(
+                                codec, extension,
+                            )?;
+                            codec.clone()
+                        }
+                        None => config.video_codec(&scene, extension)?,
+                    })
+                } else {
+                    None
+                },
+                if audio_enabled {
+                    Some(config.audio_codec(&scene, extension)?)
+                } else {
+                    None
+                },
+            )
+        } else {
+            (
+                Some(overrides.video_bitrate.unwrap_or(10_000_000)),
+                audio_bitrate_override,
+                sample_rate_override.unwrap_or(48_000),
+                Some(resolution_override.unwrap_or(1080)),
+                overrides.audio_channels.unwrap_or(2),
+                if video_enabled {
+                    match &overrides.video_codec {
+                        Some(codec) => {
+                            crate::project_config::ProjectConfig::validate_video_codec(
+                                codec, extension,
+                            )?;
+                            Some(codec.clone())
+                        }
+                        None => None,
+                    }
+                } else {
+                    None
+                },
+                if audio_enabled {
+                    overrides.audio_codec.clone()
+                } else {
+                    None
+                },
+            )
+        };
         let area = *renderer
             .timeline
             .workareas
@@ -341,7 +700,94 @@ impl ProjectRenderer {
         if duration > 24.0 * 3600.0 {
             return Err("Native render workarea exceeds the current 24-hour job limit".into());
         }
-        let plan = renderer.current_frame_plan(&scene, area[0], fps)?;
+        if !video_enabled {
+            let mut directory = JobDirectory::new(project)?;
+            let audio = directory.file("audio-only.f32");
+            let encoded = directory.file(&format!("audio-only.{extension}"));
+            let mut file = fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&audio)
+                .map_err(|e| e.to_string())?;
+            let mut mixer = Mixer::default();
+            let samples = (frames as f64 * SAMPLE_RATE / fps).ceil() as u64;
+            let mut first_sample = 0;
+            for frame in 0..frames {
+                cancelled(cancel)?;
+                if frame > 0 {
+                    renderer.sample(area[0] + frame as f64 / fps, true)?;
+                }
+                let last_sample = if frame + 1 == frames {
+                    samples
+                } else {
+                    (((frame + 1) as f64 * SAMPLE_RATE / fps).round() as u64).min(samples)
+                };
+                while first_sample < last_sample {
+                    let end = (first_sample + 48_000).min(last_sample);
+                    file.write_all(&mixer.mix(
+                        &renderer.root,
+                        &renderer.timeline,
+                        &renderer.library,
+                        &scene,
+                        area[0],
+                        first_sample..end,
+                        &mut directory,
+                        &renderer.tools,
+                        cancel,
+                    )?)
+                    .map_err(|e| e.to_string())?;
+                    first_sample = end;
+                }
+                progress(frame + 1, frames);
+            }
+            file.sync_all().map_err(|e| e.to_string())?;
+            drop(file);
+            drop(mixer);
+            let mut command = command(&renderer.tools.ffmpeg);
+            command
+                .args([
+                    "-v", "error", "-nostdin", "-n", "-f", "f32le", "-ar", "48000", "-ac", "2",
+                    "-i",
+                ])
+                .arg(&audio)
+                .args([
+                    "-vn",
+                    "-c:a",
+                    crate::encoder::audio_encoder(extension, audio_codec.as_deref()),
+                    "-b:a",
+                    &audio_bitrate.unwrap_or(128_000).to_string(),
+                    "-ar",
+                    &audio_sample_rate.to_string(),
+                    "-ac",
+                    &audio_channels.to_string(),
+                    "-t",
+                    &(frames as f64 / fps).to_string(),
+                ]);
+            crate::encoder::configure_lossless_audio(&mut command, audio_codec.as_deref());
+            if matches!(extension, "mp4" | "mov") {
+                command.args(["-movflags", "+faststart"]);
+            }
+            command.arg(&encoded);
+            checked_output_cancellable(&mut command, cancel, Duration::from_secs(24 * 3600))?;
+            publish(&encoded, &output, cancel)?;
+            return Ok(ExportReport {
+                width: 0,
+                height: 0,
+                duration: samples as f64 / SAMPLE_RATE,
+                fps,
+                frames: 0,
+                warnings: renderer.warnings(),
+                workarea_duration: duration,
+                video_duration: 0.0,
+            });
+        }
+        let mut plan = renderer.current_frame_plan(&scene, area[0], fps)?;
+        if let Some(height) = resolution {
+            plan.resize_output(height)?;
+        }
+        if !renderer.runtime_skews.is_empty() && !plan.is_native() {
+            return Err("Runtime skew export requires the native compositor".into());
+        }
         let (width, height) = (plan.width, plan.height);
         let video_duration = frames as f64 / fps;
         let mut report = ExportReport {
@@ -359,24 +805,46 @@ impl ProjectRenderer {
             && !renderer.live.as_ref().is_some_and(LiveProject::uses_ticker)
             && (video_duration - duration).abs() < 1e-9
         {
-            let plan = RenderPlan::build(
+            let mut export_timeline = renderer.timeline.clone();
+            if !audio_enabled {
+                for span in export_timeline.spans.values_mut() {
+                    span.muted = true;
+                }
+            }
+            let mut plan = RenderPlan::build(
                 &renderer.root,
-                &renderer.timeline,
+                &export_timeline,
                 &renderer.library,
                 &scene,
                 fps,
                 Some(area),
             )?;
-            plan.export_cancellable(&renderer.tools, project, &output, cancel)?;
+            if let Some(height) = resolution {
+                plan.resize_output(height)?;
+            }
+            plan.export_with_bitrate(
+                &renderer.tools,
+                project,
+                &output,
+                cancel,
+                bitrate,
+                audio_bitrate,
+                audio_sample_rate,
+                audio_channels,
+                video_codec.as_deref(),
+                audio_codec.as_deref(),
+            )?;
             progress(frames, frames);
         } else {
-            if !plan.width.is_multiple_of(2) || !plan.height.is_multiple_of(2) {
+            if extension != "webm"
+                && (!plan.width.is_multiple_of(2) || !plan.height.is_multiple_of(2))
+            {
                 return Err("H.264 export requires even dimensions".into());
             }
             let mut directory = JobDirectory::new(project)?;
-            let video = directory.file("video.mp4");
+            let video = directory.file(&format!("video.{extension}"));
             let audio = directory.file("audio.f32");
-            let muxed = directory.file("output.mp4");
+            let muxed = directory.file(&format!("output.{extension}"));
             let mut audio_file = fs::OpenOptions::new()
                 .write(true)
                 .create_new(true)
@@ -390,6 +858,8 @@ impl ProjectRenderer {
                 fps,
                 &video,
                 &mut directory,
+                bitrate,
+                video_codec.as_deref(),
             )?;
             let samples = (frames as f64 * SAMPLE_RATE / fps).ceil() as u64;
             let mut first_sample = 0;
@@ -400,7 +870,11 @@ impl ProjectRenderer {
                 let frame_plan = if frame == 0 {
                     first_plan.take().expect("First frame plan")
                 } else {
-                    renderer.frame_plan(&scene, time, fps, true)?
+                    let mut plan = renderer.frame_plan(&scene, time, fps, true)?;
+                    if let Some(height) = resolution {
+                        plan.resize_output(height)?;
+                    }
+                    plan
                 };
                 if frame_plan.width != width || frame_plan.height != height {
                     return Err("Scene dimensions changed during export".into());
@@ -413,7 +887,7 @@ impl ProjectRenderer {
                 } else {
                     (((frame + 1) as f64 * SAMPLE_RATE / fps).round() as u64).min(samples)
                 };
-                while first_sample < last_sample {
+                while audio_enabled && first_sample < last_sample {
                     let end = (first_sample + 48_000).min(last_sample);
                     let bytes = mixer.mix(
                         &renderer.root,
@@ -457,19 +931,32 @@ impl ProjectRenderer {
                         "-c:v",
                         "copy",
                         "-c:a",
-                        "aac",
+                        crate::encoder::audio_encoder(extension, audio_codec.as_deref()),
                         "-b:a",
-                        "192k",
+                        &audio_bitrate.unwrap_or(128_000).to_string(),
+                        "-ar",
+                        &audio_sample_rate.to_string(),
+                        "-ac",
+                        &audio_channels.to_string(),
                         "-t",
                         &video_duration.to_string(),
-                        "-movflags",
-                        "+faststart",
-                    ])
-                    .arg(&muxed);
+                    ]);
+                crate::encoder::configure_lossless_audio(&mut mux, audio_codec.as_deref());
+                if extension != "webm" {
+                    mux.args(["-movflags", "+faststart"]);
+                }
+                mux.arg(&muxed);
                 checked_output_cancellable(&mut mux, cancel, Duration::from_secs(24 * 3600))?;
                 publish(&muxed, &output, cancel)?;
             } else {
-                publish(&video, &output, cancel)?;
+                crate::encoder::publish_video(
+                    &renderer.tools,
+                    &video,
+                    &output,
+                    &mut directory,
+                    cancel,
+                    video_codec.as_deref(),
+                )?;
             }
         }
         report.warnings = renderer.warnings();

@@ -3,7 +3,7 @@
 //! Rust implementation of the project reactive host. JavaScript values are
 //! rooted by Context-owned state; native callbacks capture only generation keys.
 use boa_engine::{
-    Context, JsNativeError, JsResult, JsValue, NativeFunction, js_string,
+    Context, JsNativeError, JsResult, JsSymbol, JsValue, NativeFunction, js_string,
     object::{
         FunctionObjectBuilder, JsObject, ObjectInitializer,
         builtins::{JsArray, JsPromise},
@@ -93,6 +93,8 @@ impl<T> Arena<T> {
 #[derive(Default)]
 struct Owner {
     parent: Option<Key>,
+    computation: Option<Key>,
+    contexts: Vec<(JsValue, JsValue)>,
     children: Vec<Key>,
     signals: Vec<Key>,
     computations: Vec<Key>,
@@ -252,10 +254,14 @@ fn dispose_contents(owner: Key, context: &mut Context) -> JsResult<()> {
             return Ok(());
         };
         let parent = owner.parent;
+        let computation = owner.computation;
+        let contexts = std::mem::take(&mut owner.contexts);
         std::mem::replace(
             owner,
             Owner {
                 parent,
+                computation,
+                contexts,
                 ..Owner::default()
             },
         )
@@ -413,6 +419,37 @@ fn update_bounded(key: Key, context: &mut Context) -> JsResult<()> {
 
 fn update_inner(key: Key, context: &mut Context) -> JsResult<()> {
     let state = host(context)?;
+    // A branch's parent must settle before its children: it may dispose them
+    // when a control-flow condition changes in the same batch.
+    let ancestors = {
+        let state = state.borrow();
+        let Some(computation) = state.computations.get(key) else {
+            return Ok(());
+        };
+        let mut owner = state
+            .owners
+            .get(computation.owner)
+            .and_then(|owner| owner.parent);
+        let mut ancestors = Vec::new();
+        while let Some(current) = owner.and_then(|key| state.owners.get(key)) {
+            if let Some(parent) = current.computation
+                && state
+                    .computations
+                    .get(parent)
+                    .is_some_and(|parent| !parent.running)
+            {
+                ancestors.push(parent);
+            }
+            owner = current.parent;
+        }
+        ancestors
+    };
+    for ancestor in ancestors.into_iter().rev() {
+        update(ancestor, context)?;
+        if state.borrow().computations.get(key).is_none() {
+            return Ok(());
+        }
+    }
     // A downstream memo can be read inside a batch before its upstream memo
     // reaches the queue. Pull producers first; equality still suppresses effects.
     let dependencies = {
@@ -585,6 +622,7 @@ fn computation(
         dirty: true,
         running: false,
     });
+    state.owners.get_mut(owner).unwrap().computation = Some(key);
     state.owners.get_mut(parent).unwrap().computations.push(key);
     if let Some(output) = output {
         state.signals.get_mut(output).unwrap().computation = Some(key);
@@ -696,6 +734,81 @@ pub fn on_mount(_: &JsValue, args: &[JsValue], context: &mut Context) -> JsResul
     create_effect(&JsValue::undefined(), &[callback.into()], context)
 }
 
+pub fn on_api(_: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
+    let dependencies = args.first().cloned().unwrap_or_default();
+    let callback = callable(args.get(1))?;
+    let array = dependencies
+        .as_object()
+        .is_some_and(|value| value.is_array());
+    if !array {
+        callable(Some(&dependencies))?;
+    }
+    let defer = if let Some(options) = args.get(2).and_then(JsValue::as_object) {
+        options.get(js_string!("defer"), context)?.to_boolean()
+    } else {
+        false
+    };
+    let data = ObjectInitializer::new(context)
+        .property(js_string!("deps"), dependencies, Attribute::all())
+        .property(js_string!("callback"), callback, Attribute::all())
+        .property(js_string!("array"), array, Attribute::all())
+        .property(js_string!("defer"), defer, Attribute::all())
+        .property(
+            js_string!("previous"),
+            JsValue::undefined(),
+            Attribute::all(),
+        )
+        .build();
+    Ok(function(
+        context,
+        NativeFunction::from_copy_closure_with_captures(
+            |_, args, data, context| {
+                let dependencies = data.get(js_string!("deps"), context)?;
+                let input = if data.get(js_string!("array"), context)?.to_boolean() {
+                    let dependencies = dependencies.as_object().unwrap();
+                    let length = dependencies
+                        .get(js_string!("length"), context)?
+                        .to_length(context)?;
+                    if length > 100_000 {
+                        return Err(error("on dependencies exceed 100,000 items"));
+                    }
+                    let mut values = Vec::new();
+                    for index in 0..length {
+                        let dependency = dependencies.get(index, context)?;
+                        values.push(callable(Some(&dependency))?.call(
+                            &JsValue::undefined(),
+                            &[],
+                            context,
+                        )?);
+                    }
+                    JsArray::from_iter(values, context).into()
+                } else {
+                    callable(Some(&dependencies))?.call(&JsValue::undefined(), &[], context)?
+                };
+                let previous_value = args.first().cloned().unwrap_or_default();
+                if data.get(js_string!("defer"), context)?.to_boolean() {
+                    data.set(js_string!("defer"), false, true, context)?;
+                    return Ok(previous_value);
+                }
+                let previous_input = data.get(js_string!("previous"), context)?;
+                let callback = data.get(js_string!("callback"), context)?;
+                let result = untracked(context, |context| {
+                    callable(Some(&callback))?.call(
+                        &JsValue::undefined(),
+                        &[input.clone(), previous_input, previous_value],
+                        context,
+                    )
+                })?;
+                data.set(js_string!("previous"), input, true, context)?;
+                Ok(result)
+            },
+            data,
+        ),
+        1,
+    )
+    .into())
+}
+
 pub fn batch<T>(
     context: &mut Context,
     run: impl FnOnce(&mut Context) -> JsResult<T>,
@@ -737,6 +850,115 @@ pub fn create_root(_: &JsValue, args: &[JsValue], context: &mut Context) -> JsRe
     with_owner(Some(owner), None, context, |context| {
         callback.call(&JsValue::undefined(), &[dispose.into()], context)
     })
+}
+
+pub fn create_context(_: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
+    let id: JsValue = JsSymbol::new(Some(js_string!("context")))
+        .ok_or_else(|| error("Context symbol allocation failed"))?
+        .into();
+    let provider = function(
+        context,
+        NativeFunction::from_copy_closure_with_captures(
+            |_, args, id, context| {
+                let props = args
+                    .first()
+                    .and_then(JsValue::as_object)
+                    .ok_or_else(|| error("Expected Provider props"))?;
+                let result = ObjectInitializer::new(context).build();
+                let mount = function(
+                    context,
+                    NativeFunction::from_copy_closure_with_captures(
+                        |_, _, data: &Vec<JsValue>, context| {
+                            untracked(context, |context| {
+                                let props = data[0].as_object().unwrap();
+                                let value = props.get(js_string!("value"), context)?;
+                                let state = host(context)?;
+                                {
+                                    let mut state = state.borrow_mut();
+                                    let owner = state.owner.unwrap_or(state.root);
+                                    let owner = state
+                                        .owners
+                                        .get_mut(owner)
+                                        .ok_or_else(|| error("Provider owner has been disposed"))?;
+                                    owner.contexts.retain(|(id, _)| !id.strict_equals(&data[1]));
+                                    owner.contexts.push((data[1].clone(), value));
+                                }
+                                let read = function(
+                                    context,
+                                    NativeFunction::from_copy_closure_with_captures(
+                                        |_, _, props, context| {
+                                            props.get(js_string!("children"), context)
+                                        },
+                                        props,
+                                    ),
+                                    0,
+                                );
+                                let children = crate::control::children_api(
+                                    &JsValue::undefined(),
+                                    &[read.into()],
+                                    context,
+                                )?;
+                                data[2].as_object().unwrap().set(
+                                    js_string!("children"),
+                                    children,
+                                    true,
+                                    context,
+                                )?;
+                                Ok(JsValue::undefined())
+                            })
+                        },
+                        vec![props.into(), id.clone(), result.clone().into()],
+                    ),
+                    0,
+                );
+                create_render_effect(&JsValue::undefined(), &[mount.into()], context)?;
+                result.get(js_string!("children"), context)
+            },
+            id.clone(),
+        ),
+        1,
+    );
+    Ok(ObjectInitializer::new(context)
+        .property(js_string!("id"), id, Attribute::all())
+        .property(js_string!("Provider"), provider, Attribute::all())
+        .property(
+            js_string!("defaultValue"),
+            args.first().cloned().unwrap_or_default(),
+            Attribute::all(),
+        )
+        .build()
+        .into())
+}
+
+pub fn use_context(_: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
+    let supplied = args
+        .first()
+        .and_then(JsValue::as_object)
+        .ok_or_else(|| error("Expected a context object"))?;
+    let id = supplied.get(js_string!("id"), context)?;
+    let value = {
+        let state = host(context)?;
+        let state = state.borrow();
+        let mut owner = state.owner;
+        let mut found = None;
+        while let Some(current) = owner.and_then(|key| state.owners.get(key)) {
+            if let Some((_, value)) = current
+                .contexts
+                .iter()
+                .find(|(key, _)| key.strict_equals(&id))
+            {
+                found = Some(value.clone());
+                break;
+            }
+            owner = current.parent;
+        }
+        found
+    };
+    if let Some(value) = value.filter(|value| !value.is_undefined()) {
+        Ok(value)
+    } else {
+        supplied.get(js_string!("defaultValue"), context)
+    }
 }
 
 pub fn use_ticker(_: &JsValue, _: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
@@ -829,7 +1051,10 @@ pub const SOLID_FUNCTIONS: &[(&str, boa_engine::native_function::NativeFunctionP
     ("createComputed", create_render_effect),
     ("onCleanup", on_cleanup),
     ("onMount", on_mount),
+    ("on", on_api),
     ("batch", batch_api),
     ("untrack", untrack_api),
     ("createRoot", create_root),
+    ("createContext", create_context),
+    ("useContext", use_context),
 ];

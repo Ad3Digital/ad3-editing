@@ -17,12 +17,12 @@ import {
 	ChildOf, Computed, Culled, Geometry, Group, Hidden, Root, Scale,
 	entityLocalMat, entityQuad, entityWorldMat, getParentEntity, getSelection,
 	getSelectionMask, isStage, quadCenter, store,
-} from '@diffusionstudio/runtime';
+} from '@ad3-editing/runtime';
 
 import { Hud, Pointer } from '../traits';
 
 import type { Entity, World } from 'koota';
-import type { Mat2D, Point, Quad, SelectionMask } from '@diffusionstudio/runtime';
+import type { Mat2D, Point, Quad, SelectionMask } from '@ad3-editing/runtime';
 
 export type NodeSnapshot = {
 	localTransform: Mat2D;

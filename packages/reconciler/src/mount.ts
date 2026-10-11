@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Tickers } from '@diffusionstudio/runtime';
+import { Tickers } from '@ad3-editing/runtime';
 
 import { createRuntimeDocument } from './document';
 import { evaluate } from './evaluate';

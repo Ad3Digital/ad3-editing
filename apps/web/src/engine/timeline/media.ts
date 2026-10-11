@@ -23,12 +23,12 @@
  */
 
 import { CanvasSink } from 'mediabunny';
-import { getAssetFile, getVideoTrack, secondsToFrames } from '@diffusionstudio/runtime';
+import { getAssetFile, getVideoTrack, secondsToFrames } from '@ad3-editing/runtime';
 
 import { MAX_CLIP_HEIGHT } from './config';
 
 import type { InputVideoTrack } from 'mediabunny';
-import type { Asset, VideoAsset } from '@diffusionstudio/assets';
+import type { Asset, VideoAsset } from '@ad3-editing/assets';
 
 /** One decoded picture, and where in the source it came from (source frames). */
 export type Frame = {

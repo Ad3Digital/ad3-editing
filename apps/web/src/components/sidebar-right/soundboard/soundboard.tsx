@@ -12,8 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useQuery, useTrait, useWorld } from '@diffusionstudio/koota-solid';
-import { AudioBusHandle, Computed, Name, Volume } from '@diffusionstudio/runtime';
+import { useQuery, useTrait, useWorld } from '@ad3-editing/koota-solid';
+import { AudioBusHandle, Computed, Name, Volume } from '@ad3-editing/runtime';
 import { Or } from 'koota';
 import { useDerived, useEditor, useTimelineIndex } from '@/engine/hooks';
 import { syncKeyframe } from '@/engine/keyframes';

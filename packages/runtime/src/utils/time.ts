@@ -11,7 +11,7 @@ import { getParentNode } from '../queries/hierarchy';
 import { getSourceDuration } from '../actions/assets';
 
 import type { Entity, World } from 'koota';
-import type { Asset } from '@diffusionstudio/assets';
+import type { Asset } from '@ad3-editing/assets';
 
 export function snapToMs(seconds: number) {
 	return Math.round(seconds * CONONICAL_TIME_BASE) / CONONICAL_TIME_BASE;

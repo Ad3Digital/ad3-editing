@@ -2,8 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Active } from '@diffusionstudio/runtime';
-import { useQuery } from '@diffusionstudio/koota-solid';
+import { Active } from '@ad3-editing/runtime';
+import { useQuery } from '@ad3-editing/koota-solid';
 
 import type { Entity } from 'koota';
 import type { Accessor } from 'solid-js';

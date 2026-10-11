@@ -13,7 +13,7 @@
  * through `@/hooks/use-cursor`, which is where the trim cursors live.
  */
 
-import { RenderSurface, Tool, ToolType } from '@diffusionstudio/runtime';
+import { RenderSurface, Tool, ToolType } from '@ad3-editing/runtime';
 
 import type { World } from 'koota';
 

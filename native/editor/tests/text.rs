@@ -94,7 +94,7 @@ fn animated_text_color_tracks_cannot_create_a_color_trait() {
 
 #[test]
 fn temporary_font_errors_recover_and_dynamic_text_keeps_native_backend() {
-    let source = r#"import {useTicker} from '@diffusionstudio/jsx';export default ()=>{const t=useTicker();return <stage><scene id="s" active width={240} height={160} workarea={[0,3]}><rect width={10} height={10} fill="blue"/>{t.time()>0?<text x={20} fontSize={32} color="red">{t.time()<2?'❤\uFE0F':'Hello'}</text>:null}</scene></stage>}"#;
+    let source = r#"import {useTicker} from '@ad3-editing/jsx';export default ()=>{const t=useTicker();return <stage><scene id="s" active width={240} height={160} workarea={[0,3]}><rect width={10} height={10} fill="blue"/>{t.time()>0?<text x={20} fontSize={32} color="red">{t.time()<2?'❤\uFE0F':'Hello'}</text>:null}</scene></stage>}"#;
     let path = std::path::absolute(PathBuf::from("dynamic-native-text.tsx")).unwrap();
     let evaluated = ad3_editor::evaluator::evaluate(&path, source).unwrap();
     let doc = SourceDocument {

@@ -3,10 +3,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 
-import { generate } from "@diffusionstudio/jsx";
-import { ImagePaint, Rect } from "@diffusionstudio/reconciler";
-import { Library } from "@diffusionstudio/runtime";
-import { useWorld } from "@diffusionstudio/koota-solid";
+import { generate } from "@ad3-editing/jsx";
+import { ImagePaint, Rect } from "@ad3-editing/reconciler";
+import { Library } from "@ad3-editing/runtime";
+import { useWorld } from "@ad3-editing/koota-solid";
 import { useEditor } from "@/engine/hooks";
 import { ASPECT_RATIO_DIMENSIONS } from "./config";
 import { insertGenerated, randomSeed } from "./insert";

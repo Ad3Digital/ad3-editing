@@ -1,4 +1,4 @@
-/* @jsxImportSource @diffusionstudio/jsx */
+/* @jsxImportSource @ad3-editing/jsx */
 /* A shader paint post-processing a video: chromatic aberration pulsing with
  * the playhead plus a vignette, driven by two uniforms.
  *

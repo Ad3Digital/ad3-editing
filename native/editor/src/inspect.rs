@@ -373,7 +373,7 @@ fn transform(file: &Path, source: &str, rewrite: bool) -> Result<(String, Vec<Bi
     };
     output.insert_str(
         at,
-        &format!("\nimport {{ __inspect as {helper} }} from '@diffusionstudio/jsx';\n"),
+        &format!("\nimport {{ __inspect as {helper} }} from '@ad3-editing/jsx';\n"),
     );
     Ok((output, bindings))
 }

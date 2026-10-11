@@ -17,7 +17,7 @@ pub struct Motion {
     easings: BTreeMap<String, Easing>,
     pub(crate) text_sizes: crate::text::TextSizes,
 }
-const PROPERTIES: &[&str] = &[
+pub(crate) const PROPERTIES: &[&str] = &[
     "x",
     "y",
     "offsetX",
@@ -122,6 +122,20 @@ impl Motion {
             original.tag.as_str(),
             "scene" | "rect" | "image" | "video" | "audio" | "adjustmentLayer" | "html" | "surface"
         ) {
+            if original.flag("keepAspectRatio") {
+                let defaults = match original.tag.as_str() {
+                    "scene" | "image" | "video" => [1920.0, 1080.0],
+                    "audio" => [500.0, 150.0],
+                    _ => [100.0; 2],
+                };
+                let size = crate::geometry::locked_size(
+                    original.props.get("width").and_then(Value::as_f64),
+                    original.props.get("height").and_then(Value::as_f64),
+                    defaults,
+                );
+                output.props.insert("width".into(), size[0].into());
+                output.props.insert("height".into(), size[1].into());
+            }
             for property in ["width", "height"] {
                 if let Some(value) = output
                     .props

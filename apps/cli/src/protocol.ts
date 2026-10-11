@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 // Public wire protocol consumed by both the CLI binary and any host that
-// embeds the CLI socket server (the Diffusion Studio desktop app). Importing
-// from `@diffusionstudio/cli/protocol` is the OSS-friendly seam: this module has no
+// embeds the CLI socket server (the AD3 Editing desktop app). Importing
+// from `@ad3-editing/cli/protocol` is the OSS-friendly seam: this module has no
 // dependency on proprietary code, so the package stays extractable into its
 // own repo.
 export * from "./cli-channels";

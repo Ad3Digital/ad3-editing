@@ -20,12 +20,27 @@ const HELP: &str = "AD3 Editing — native Rust CLI (migration in progress)
   dapi-rust set <project> <id> <prop> <json>     Edit one JSX property
   dapi-rust unset <project> <id> <prop>          Remove one JSX property
   dapi-rust split <project> <id> <scene-time>   Split without losing source alignment
+  dapi-rust cut <project> <scene> <time> [ids...]  Cut visible clips at the playhead
+  dapi-rust close-gap <project> <scene> <sequence> <in> <out>  Close an empty interval
+  dapi-rust restack <project> <front|back> <ids...>  Change sibling draw order
+  dapi-rust duplicate <project> <ids...>        Duplicate selected subtrees
+  dapi-rust group <project> <ids...>            Wrap selected siblings in a group
+  dapi-rust sequence <project> <ids...>         Wrap siblings and resolve overlaps
+  dapi-rust scene <project> <time> <ids...>     Frame selected siblings in a scene
+  dapi-rust nudge <project> <time> <dx> <dy> <ids...>  Move sampled positions
+  dapi-rust keyframe <project> <id> <prop> <time> <json>  Toggle a keyframe
+  dapi-rust remove-track <project> <id> <prop>  Remove a property's keyframe track
   dapi-rust trim <project> <id> <in> <out>       Trim using scene times
+  dapi-rust ripple <project> <scene> <left|right> <time> [ids...]  Ripple trim at playhead
   dapi-rust remove <project> <id>              Remove a source element
-  dapi-rust export <project> <output.mp4> [fps] Export the active scene workarea
+  dapi-rust export <project> <output> [fps]     Export using saved scene preferences
   dapi-rust capture <project> <scene> <time> <output.png>  Capture at workarea-relative time
   dapi-rust media probe <file>                 Read FFprobe metadata
-  dapi-rust media waveform <file> <output.png> Render an audio waveform
+  dapi-rust media sync <audio> <reference>     Measure recording alignment locally
+  dapi-rust media waveform <file> [options]    Render waveform, rulers and silence ranges
+  dapi-rust media filmstrip <file> [options]   Render video thumbnails and time rulers
+  dapi-rust media grab <file> [options]        Render labelled contact sheets
+  dapi-rust fonts [options]                   List local fonts without a project
 
 Time accepts seconds, 45f (at 30 fps), MM:SS or HH:MM:SS.
 Projects use their existing package.json main or index.tsx.
@@ -39,12 +54,34 @@ fn run(args: &[String]) -> Result<Value> {
         && group == "media"
     {
         return match (action.as_str(), rest) {
+            ("filmstrip" | "film", args) => {
+                let path = ad3_editor::filmstrip::command(args, &tools, None)?;
+                Ok(json!({"path": path}))
+            }
+            ("sync", [audio, reference]) => {
+                let result = ad3_editor::audio_sync::align_files(
+                    &tools,
+                    Path::new(audio),
+                    Path::new(reference),
+                    None,
+                )?;
+                Ok(json!({"offsetSeconds": result.offset_seconds, "confidence": result.confidence}))
+            }
             ("probe", [path]) => {
                 serde_json::to_value(tools.probe(Path::new(path))?).map_err(|e| e.to_string())
             }
-            ("waveform", [path, output]) => {
-                tools.waveform(Path::new(path), Path::new(output))?;
-                Ok(json!({"path": output}))
+            ("waveform", args) => {
+                let legacy;
+                let args = if let [path, output] = args
+                    && !output.starts_with('-')
+                {
+                    legacy = vec![path.clone(), "--output".into(), output.clone()];
+                    legacy.as_slice()
+                } else {
+                    args
+                };
+                let (path, silences) = ad3_editor::waveform::command(args, &tools, None)?;
+                Ok(json!({"path": path, "silences": silences}))
             }
             _ => Err(HELP.into()),
         };
@@ -60,6 +97,26 @@ fn run(args: &[String]) -> Result<Value> {
     }
     if action == "controls" && rest.is_empty() {
         return Ok(json!({"controls": document.controls()?}));
+    }
+    if action == "duplicate" {
+        if rest.is_empty() {
+            return Err("Duplicate requires at least one node id".into());
+        }
+        let (next, copies) = document.duplicate(rest)?;
+        if !copies.is_empty() {
+            next.save_over(&document)?;
+        }
+        return Ok(json!({"ok": true, "entry": next.path, "copies": copies}));
+    }
+    if action == "group" {
+        if rest.is_empty() {
+            return Err("Group requires at least one node id".into());
+        }
+        let (next, group) = document.group(rest)?;
+        if group.is_some() {
+            next.save_over(&document)?;
+        }
+        return Ok(json!({"ok": true, "entry": next.path, "group": group}));
     }
     let next = match (action.as_str(), rest) {
         ("control", [file, name, value]) => Some(document.set_control(
@@ -78,6 +135,13 @@ fn run(args: &[String]) -> Result<Value> {
             )?,
         ),
         ("unset", [id, name]) => Some(document.set(id, name, None)?),
+        ("remove-track", [id, name]) => Some(document.remove_keyframe_track(id, name)?),
+        ("restack", [side, ids @ ..]) => {
+            if ids.is_empty() || !matches!(side.as_str(), "front" | "back") {
+                return Err("Restack requires front/back and at least one node id".into());
+            }
+            Some(document.restack(ids, side == "front")?)
+        }
         ("remove", [id]) => Some(document.remove(id)?),
         _ => None,
     };
@@ -94,18 +158,38 @@ fn run(args: &[String]) -> Result<Value> {
     // would reject sub-frame workareas that are valid at a higher output rate.
     if action == "export" && (rest.len() == 1 || rest.len() == 2) {
         let output = &rest[0];
-        let fps = rest
+        let scene = document
+            .root
+            .children
+            .iter()
+            .rfind(|node| node.tag == "scene" && node.flag("active"))
+            .ok_or("No active scene")?;
+        let config = if project.join("package.json").exists() {
+            Some(ad3_editor::project_config::ProjectConfig::load(project)?)
+        } else {
+            None
+        };
+        let fps_override = rest
             .get(1)
             .map(|v| v.parse::<f64>())
             .transpose()
-            .map_err(|_| "Invalid FPS")?
-            .unwrap_or(30.0);
-        let report = ProjectRenderer::export(
+            .map_err(|_| "Invalid FPS")?;
+        let fps = match fps_override {
+            Some(fps) => fps,
+            None => config
+                .as_ref()
+                .map_or(Ok(30.0), |config| config.export_frame_rate(&scene.id))?,
+        };
+        let audio_enabled = config
+            .as_ref()
+            .map_or(Ok(true), |config| config.audio_enabled(&scene.id))?;
+        let report = ProjectRenderer::export_with_audio(
             &document,
             project,
             tools,
             Path::new(output),
             fps,
+            audio_enabled,
             None,
             |_, _| {},
         )?;
@@ -114,8 +198,94 @@ fn run(args: &[String]) -> Result<Value> {
         );
     }
     let library = MediaLibrary::load(&document.root, project, &tools)?;
-    let timeline = Timeline::resolve(&document.root, &library.durations)?;
+    let offsets = ad3_editor::audio_sync::AudioSyncCache::default().offsets(
+        &document.root,
+        &library,
+        &tools,
+        None,
+    )?;
+    let timeline = Timeline::resolve_with_media_sync(&document.root, &library, 30.0, &offsets)?;
     match (action.as_str(), rest) {
+        ("scene", [at, ids @ ..]) => {
+            if ids.is_empty() {
+                return Err("Scene requires at least one node id".into());
+            }
+            let at = parse_time(at)?;
+            let mut renderer = ProjectRenderer::new(&document, project, tools.clone(), false)?;
+            renderer.frame_plan(&timeline.active, at, 30.0, false)?;
+            let geometry = renderer
+                .edit_geometries(&timeline.active)
+                .ok_or("Scene wrapping requires native frame geometry")?;
+            let (next, scene) = document.wrap_scene(&timeline, ids, at, geometry)?;
+            if scene.is_some() {
+                next.save_over(&document)?;
+            }
+            Ok(json!({"ok": true, "entry": next.path, "scene": scene}))
+        }
+        ("sequence", ids) => {
+            if ids.is_empty() {
+                return Err("Sequence requires at least one node id".into());
+            }
+            let (next, sequence) = document.wrap_sequence(&timeline, ids)?;
+            if sequence.is_some() {
+                next.save_over(&document)?;
+            }
+            Ok(json!({"ok": true, "entry": next.path, "sequence": sequence}))
+        }
+        ("nudge", [at, dx, dy, ids @ ..]) => {
+            if ids.is_empty() {
+                return Err("Nudge requires at least one node id".into());
+            }
+            let dx = dx.parse::<f64>().map_err(|_| "Invalid horizontal nudge")?;
+            let dy = dy.parse::<f64>().map_err(|_| "Invalid vertical nudge")?;
+            let next = document.nudge(&timeline, ids, parse_time(at)?, [dx, dy])?;
+            if next.source != document.source {
+                next.save_over(&document)?;
+            }
+            Ok(json!({"ok":true,"entry":next.path}))
+        }
+        ("keyframe", [id, name, at, value]) => {
+            let value = serde_json::from_str(value)
+                .map_err(|error| format!("Keyframe value must be JSON: {error}"))?;
+            let next = document.toggle_keyframe_at_playhead(
+                &timeline,
+                id,
+                name,
+                value,
+                parse_time(at)?,
+            )?;
+            next.save_over(&document)?;
+            Ok(json!({"ok":true,"entry":next.path}))
+        }
+        ("close-gap", [scene, sequence, start, end]) => {
+            let next = document.close_gap(
+                &timeline,
+                scene,
+                sequence,
+                [parse_time(start)?, parse_time(end)?],
+            )?;
+            next.save_over(&document)?;
+            Ok(json!({"ok":true,"entry":next.path}))
+        }
+        ("cut", [scene, at, ids @ ..]) => {
+            let (next, units) =
+                document.split_at_playhead(&timeline, scene, ids, parse_time(at)?)?;
+            if !units.is_empty() {
+                next.save_over(&document)?;
+            }
+            Ok(json!({"ok":true,"entry":next.path,"units":units}))
+        }
+        ("ripple", [scene, side, at, ids @ ..]) => {
+            if side != "left" && side != "right" {
+                return Err("Ripple side must be left or right".into());
+            }
+            let (next, units, time) =
+                document.ripple_trim(&timeline, scene, ids, parse_time(at)?, side == "left")?;
+            if !units.is_empty() {
+                next.save_over(&document)?;
+            }
+            Ok(json!({"ok":true,"entry":next.path,"units":units,"time":time}))
+        }
         ("capture", [scene, at, output]) => {
             let area = timeline.workareas.get(scene).ok_or("Scene not found")?;
             let relative_time = parse_time(at)?;
@@ -181,6 +351,52 @@ fn main() {
     }
     if args == ["--version"] {
         println!("dapi-rust {}", env!("CARGO_PKG_VERSION"));
+        return;
+    }
+    if let [group, action, rest @ ..] = args.as_slice()
+        && group == "media"
+        && matches!(action.as_str(), "filmstrip" | "film" | "waveform" | "grab")
+        && rest
+            .iter()
+            .any(|arg| matches!(arg.as_str(), "--help" | "-h"))
+    {
+        print!(
+            "{}",
+            if action == "grab" {
+                ad3_editor::grab::HELP
+            } else if action == "waveform" {
+                ad3_editor::waveform::HELP
+            } else {
+                ad3_editor::filmstrip::HELP
+            }
+        );
+        return;
+    }
+    if let [group, action, rest @ ..] = args.as_slice()
+        && group == "media"
+        && action == "grab"
+    {
+        if let Err(error) = ad3_editor::grab::command(rest, &Tools::default(), None, |value| {
+            use std::io::Write;
+            writeln!(std::io::stdout().lock(), "{value}").map_err(|error| error.to_string())
+        }) {
+            eprintln!("{error}");
+            std::process::exit(1);
+        }
+        return;
+    }
+    if args[0] == "fonts" {
+        match ad3_editor::font_cli::output(
+            &args[1..],
+            &mut ad3_editor::fonts::FontBook::default(),
+            None,
+        ) {
+            Ok(output) => print!("{output}"),
+            Err(error) => {
+                eprintln!("{error}");
+                std::process::exit(1);
+            }
+        }
         return;
     }
     match run(&args) {

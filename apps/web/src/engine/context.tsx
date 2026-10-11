@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { createContext, onCleanup, useContext, type JSX } from 'solid-js';
-import { WorldProvider } from '@diffusionstudio/koota-solid';
+import { WorldProvider } from '@ad3-editing/koota-solid';
 
 import { createEngine, type Engine, type EngineOptions } from './create-engine';
 

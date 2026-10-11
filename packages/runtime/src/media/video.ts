@@ -14,7 +14,7 @@ import { NativeVideoBuffer, hasNativePreview } from './native-video';
 
 import type { Entity, World } from 'koota';
 import type { KeyframeIndex } from './keyframe-index';
-import type { VideoAsset } from '@diffusionstudio/assets';
+import type { VideoAsset } from '@ad3-editing/assets';
 
 
 export type VideoBufferMode = 'discarded' | 'idle' | 'alive';

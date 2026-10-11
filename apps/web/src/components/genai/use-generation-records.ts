@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { createMemo, createResource } from "solid-js";
-import { getAssetSpec, isAssetRef } from "@diffusionstudio/jsx";
-import { authoredElement } from "@diffusionstudio/reconciler";
+import { getAssetSpec, isAssetRef } from "@ad3-editing/jsx";
+import { authoredElement } from "@ad3-editing/reconciler";
 import { useSelection } from "@/engine/hooks";
 import { useLibrary } from "@/engine/library";
 import { supabase } from "@/lib/supabase";
@@ -18,8 +18,8 @@ import {
 } from "./config";
 import { generationConfigSchema, type GenerationConfig } from "./schemas";
 
-import type { AssetInput, AssetSpecInput } from "@diffusionstudio/jsx";
-import type { AssetLibrary } from "@diffusionstudio/assets";
+import type { AssetInput, AssetSpecInput } from "@ad3-editing/jsx";
+import type { AssetLibrary } from "@ad3-editing/assets";
 
 /**
  * The stored `usage_records.config` IS the server-side adapter input, which

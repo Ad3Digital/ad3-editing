@@ -5,7 +5,7 @@
 use crate::{
     Result,
     document::Node,
-    media::{MediaLibrary, Tools, checked_output, checked_output_cancellable, command, is_mp4},
+    media::{MediaLibrary, Tools, checked_output_cancellable, command, export_extension},
     timing::Timeline,
 };
 use std::{
@@ -27,6 +27,7 @@ pub struct RenderPlan {
     pub has_audio: bool,
     text_files: Vec<String>,
     native: Option<crate::compositor::NativeFrame>,
+    authored_size: [u32; 2],
 }
 
 fn dimension(n: f64) -> Result<u32> {
@@ -117,6 +118,7 @@ impl RenderPlan {
             inputs: Vec::new(),
             has_audio: false,
             text_files: Vec::new(),
+            authored_size: [frame.width, frame.height],
             native: Some(frame),
         }
     }
@@ -134,9 +136,14 @@ impl RenderPlan {
             self.height = frame.height;
             return Ok(());
         }
+        let resolution =
+            crate::timing::round_frame(f64::from(height) * 1e6 / f64::from(self.authored_size[1]))
+                / 1e6;
         let width = dimension(
-            (f64::from(self.width) * f64::from(height) / f64::from(self.height) / 2.0).round()
-                * 2.0,
+            crate::timing::round_frame(f64::from(self.authored_size[0]) * resolution / 2.0) * 2.0,
+        )?;
+        let height = dimension(
+            crate::timing::round_frame(f64::from(self.authored_size[1]) * resolution / 2.0) * 2.0,
         )?;
         let intermediate = format!("unscaled{}", self.graph.len());
         self.graph = self.graph.replace("[vout]", &format!("[{intermediate}]"));
@@ -194,6 +201,7 @@ impl RenderPlan {
             has_audio: false,
             text_files: Vec::new(),
             native: None,
+            authored_size: [width, height],
         };
         let mut visual = 0;
         let mut input = 0;
@@ -448,8 +456,29 @@ impl RenderPlan {
         output: &Path,
         cancel: Option<&AtomicBool>,
     ) -> Result<()> {
-        if !is_mp4(output) {
-            return Err("Native export currently supports .mp4; other formats are pending".into());
+        self.export_with_bitrate(
+            tools, project, output, cancel, None, None, 48_000, 2, None, None,
+        )
+    }
+
+    pub(crate) fn export_with_bitrate(
+        &self,
+        tools: &Tools,
+        project: &Path,
+        output: &Path,
+        cancel: Option<&AtomicBool>,
+        bitrate: Option<u32>,
+        audio_bitrate: Option<u32>,
+        audio_sample_rate: u32,
+        audio_channels: u32,
+        video_codec: Option<&str>,
+        audio_codec: Option<&str>,
+    ) -> Result<()> {
+        let extension = export_extension(output).ok_or(
+            "Native export currently supports .mp4, .mov and .webm; other formats are pending",
+        )?;
+        if extension == "ogg" {
+            return Err("Ogg requires audio-only export through ProjectRenderer".into());
         }
         if output.exists() {
             return Err("Export destination already exists".into());
@@ -458,7 +487,8 @@ impl RenderPlan {
         if !output.parent().is_some_and(Path::is_dir) {
             return Err("Export destination directory does not exist".into());
         }
-        if !self.width.is_multiple_of(2) || !self.height.is_multiple_of(2) {
+        if extension != "webm" && (!self.width.is_multiple_of(2) || !self.height.is_multiple_of(2))
+        {
             return Err("H.264 export requires even dimensions".into());
         }
         if self.native.is_some() {
@@ -470,7 +500,7 @@ impl RenderPlan {
                 );
             }
             let mut directory = JobDirectory::new(project)?;
-            let temporary = directory.file("native-frame.mp4");
+            let temporary = directory.file(&format!("native-frame.{extension}"));
             let mut encoder = crate::encoder::Encoder::start(
                 tools,
                 self.width,
@@ -478,6 +508,8 @@ impl RenderPlan {
                 self.fps,
                 &temporary,
                 &mut directory,
+                bitrate,
+                video_codec,
             )?;
             encoder.send(
                 self.export_frame_cancellable(tools, project, cancel)?,
@@ -485,42 +517,64 @@ impl RenderPlan {
             )?;
             encoder.finish(cancel)?;
             drop(encoder);
-            return crate::encoder::publish(&temporary, &output, cancel);
+            return crate::encoder::publish_video(
+                tools,
+                &temporary,
+                &output,
+                &mut directory,
+                cancel,
+                video_codec,
+            );
         }
         let mut directory = self.prepare(project)?;
-        let temp = directory.path.join("render.mp4");
+        let temp = directory.path.join(format!("render.{extension}"));
         directory.files.push(temp.clone());
         let mut command = self.command(tools, &directory);
         command.args(["-map", "[vout]"]);
         if self.has_audio {
             command.args([
-                "-map", "[aout]", "-c:a", "aac", "-ar", "48000", "-b:a", "192k",
+                "-map",
+                "[aout]",
+                "-c:a",
+                crate::encoder::audio_encoder(extension, audio_codec),
+                "-ar",
+                &audio_sample_rate.to_string(),
+                "-ac",
+                &audio_channels.to_string(),
+                "-b:a",
+                &audio_bitrate.unwrap_or(128_000).to_string(),
             ]);
         }
-        command
-            .args([
-                "-n",
-                "-t",
-                &self.duration.to_string(),
-                "-r",
-                &self.fps.to_string(),
-                "-c:v",
-                "libx264",
-                "-preset",
-                "fast",
-                "-crf",
-                "18",
-                "-pix_fmt",
-                "yuv420p",
-                "-movflags",
-                "+faststart",
-            ])
-            .arg(&temp);
+        command.args([
+            "-n",
+            "-t",
+            &self.duration.to_string(),
+            "-r",
+            &self.fps.to_string(),
+        ]);
+        crate::encoder::configure_video(&mut command, extension, bitrate, video_codec);
+        if self.has_audio {
+            crate::encoder::configure_lossless_audio(&mut command, audio_codec);
+        }
+        if extension != "webm" {
+            command.args(["-movflags", "+faststart"]);
+        }
+        command.arg(&temp);
         let result =
             checked_output_cancellable(&mut command, cancel, Duration::from_secs(24 * 3600));
         if result.is_err() {
             let _ = fs::remove_file(&temp);
             return result.map(|_| ());
+        }
+        if video_codec == Some("hevc") && extension == "mov" {
+            return crate::encoder::publish_video(
+                tools,
+                &temp,
+                &output,
+                &mut directory,
+                cancel,
+                video_codec,
+            );
         }
         // create_new + copy permits another volume while refusing an existing
         // file. Source media is never eligible for overwrite.
@@ -615,13 +669,24 @@ impl RenderPlan {
     }
 
     pub fn capture(&self, tools: &Tools, project: &Path, output: &Path) -> Result<()> {
+        self.capture_cancellable(tools, project, output, None)
+    }
+
+    pub fn capture_cancellable(
+        &self,
+        tools: &Tools,
+        project: &Path,
+        output: &Path,
+        cancel: Option<&AtomicBool>,
+    ) -> Result<()> {
+        crate::encoder::cancelled(cancel)?;
         if output.extension().and_then(|e| e.to_str()) != Some("png") {
             return Err("Capture destination must be .png".into());
         }
         let output = std::path::absolute(output).map_err(|e| e.to_string())?;
         if let Some(native) = &self.native {
             let png = native
-                .pixmap(self.width, self.height, None)?
+                .pixmap(self.width, self.height, cancel)?
                 .encode_png()
                 .map_err(|e| e.to_string())?;
             let mut directory = JobDirectory::new(project)?;
@@ -635,13 +700,14 @@ impl RenderPlan {
                 .and_then(|_| file.sync_all())
                 .map_err(|e| e.to_string())?;
             drop(file);
-            return crate::encoder::publish(&temporary, &output, None);
+            return crate::encoder::publish(&temporary, &output, cancel);
         }
-        let directory = self.prepare(project)?;
+        let mut directory = self.prepare(project)?;
+        let temporary = directory.file("capture.png");
         let mut command = self.command(tools, &directory);
         command
             .args(["-n", "-map", "[vout]", "-frames:v", "1", "-an"])
-            .arg(output);
+            .arg(&temporary);
         if self.has_audio {
             command.args([
                 "-map",
@@ -653,8 +719,8 @@ impl RenderPlan {
                 if cfg!(windows) { "NUL" } else { "/dev/null" },
             ]);
         }
-        checked_output(&mut command)?;
-        Ok(())
+        checked_output_cancellable(&mut command, cancel, Duration::from_secs(120))?;
+        crate::encoder::publish(&temporary, &output, cancel)
     }
 }
 
@@ -754,6 +820,21 @@ pub(crate) fn remove_owned_file(path: &Path) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn graph_resize_uses_authored_ratio_and_even_encoder_dimensions() {
+        let document = crate::source::SourceDocument::parse(PathBuf::from("index.tsx"), r#"export default <stage><scene id="s" active width={33} height={17} fill="red" workarea={[0,1]}/></stage>;"#.into()).unwrap();
+        let timeline = Timeline::resolve(&document.root, &Default::default()).unwrap();
+        let library =
+            MediaLibrary::load(&document.root, Path::new("."), &Tools::default()).unwrap();
+        let mut plan =
+            RenderPlan::build(&document.root, &timeline, &library, "s", 30.0, None).unwrap();
+        assert!(!plan.is_native());
+        plan.resize_output(17).unwrap();
+        assert_eq!((plan.width, plan.height), (34, 18));
+        plan.resize_output(34).unwrap();
+        assert_eq!((plan.width, plan.height), (66, 34));
+        assert!(plan.graph.ends_with("scale=66:34[vout]"));
+    }
     #[test]
     fn parallel_render_jobs_with_identical_timestamps_reserve_distinct_directories() {
         let stamp = SystemTime::now()

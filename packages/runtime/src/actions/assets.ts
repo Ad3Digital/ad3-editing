@@ -3,14 +3,14 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 // Reading assets out of the world. Everything that changes the asset set
-// goes through the AssetLibrary (@diffusionstudio/assets); these are the
+// goes through the AssetLibrary (@ad3-editing/assets); these are the
 // lookups the decoders and hosts share.
 
 import { Ai, AssetId, Library, Paint, SourceFrameRate, SourceModifiers } from '../traits';
 import { PaintType } from '../constants';
 
 import type { Entity, World } from 'koota';
-import type { Asset, AssetLibrary, SequenceAsset } from '@diffusionstudio/assets';
+import type { Asset, AssetLibrary, SequenceAsset } from '@ad3-editing/assets';
 import type { GenAi } from '../ai';
 
 /** The world's asset library; throws when the host attached none. */

@@ -8,9 +8,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Icon } from "@/components/ui/icon";
 import { ItemRow } from "@/components/ui/item-row";
 import { PanelSection } from "@/components/ui/panel-section";
-import { useTrait, useWorld } from "@diffusionstudio/koota-solid";
-import { Rect } from "@diffusionstudio/reconciler";
-import { Cache, Computed, Name, getNextName } from "@diffusionstudio/runtime";
+import { useTrait, useWorld } from "@ad3-editing/koota-solid";
+import { Rect } from "@ad3-editing/reconciler";
+import { Cache, Computed, Name, getNextName } from "@ad3-editing/runtime";
 import { useDerived, useEditor } from "@/engine/hooks";
 
 import type { Entity } from "koota";

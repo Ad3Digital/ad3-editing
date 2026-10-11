@@ -2,9 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { EASINGS } from "@diffusionstudio/reconciler";
+import { EASINGS } from "@ad3-editing/reconciler";
 
-import type { Easing } from "@diffusionstudio/jsx";
+import type { Easing } from "@ad3-editing/jsx";
 
 /**
  * The easings the JSX has a word for, which are exactly the presets the

@@ -1,4 +1,4 @@
-/* @jsxImportSource @diffusionstudio/jsx */
+/* @jsxImportSource @ad3-editing/jsx */
 /* Anime.js timeline scrubbed by the playhead: one clock, two render worlds.
  *
  *   cp examples/05-anime-timeline.tsx ~/Projects/anime-timeline/index.tsx
@@ -15,7 +15,7 @@
 import { createEffect } from "solid-js";
 import { createStore } from "solid-js/store";
 import { createTimeline } from "animejs";
-import { useTicker } from "@diffusionstudio/jsx";
+import { useTicker } from "@ad3-editing/jsx";
 
 const chip = { x: -160, y: 190, rotation: -90, cornerRadius: 12, opacity: 0 };
 const card = { rise: 90, opacity: 0, progress: 0, hue: 210 };

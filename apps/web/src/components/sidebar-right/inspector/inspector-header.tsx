@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { useWorld } from "@diffusionstudio/koota-solid";
+import { useWorld } from "@ad3-editing/koota-solid";
 import { useCameraScale, zoomBy, zoomTo, zoomToFit } from "@/engine";
 
 export function InspectorHeader() {

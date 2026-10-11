@@ -155,6 +155,96 @@ pub fn checked_output_cancellable_limit(
     Ok(output)
 }
 
+/// Consume codec output incrementally, while draining stderr and retaining
+/// cancellation/timeout ownership in the calling thread.
+pub(crate) fn checked_stream_cancellable<T: Send>(
+    command: &mut Command,
+    cancel: Option<&AtomicBool>,
+    timeout: Duration,
+    consume: impl FnOnce(std::process::ChildStdout) -> Result<T> + Send,
+) -> Result<T> {
+    cancelled(cancel)?;
+    let mut child = command
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|error| error.to_string())?;
+    let stdout = child.stdout.take().ok_or("Missing codec stdout")?;
+    let stderr = child.stderr.take().ok_or("Missing codec stderr")?;
+    let failed = AtomicBool::new(false);
+    thread::scope(|scope| {
+        let output = scope.spawn(|| {
+            let result = consume(stdout);
+            if result.is_err() {
+                failed.store(true, Ordering::Relaxed);
+            }
+            result
+        });
+        let errors = scope.spawn(|| {
+            let mut bytes = Vec::new();
+            let result = stderr
+                .take(1024 * 1024 + 1)
+                .read_to_end(&mut bytes)
+                .map_err(|error| error.to_string())
+                .and_then(|_| {
+                    if bytes.len() > 1024 * 1024 {
+                        Err("Codec stderr exceeded its limit".into())
+                    } else {
+                        Ok(bytes)
+                    }
+                });
+            if result.is_err() {
+                failed.store(true, Ordering::Relaxed);
+            }
+            result
+        });
+        let started = Instant::now();
+        let status = loop {
+            if failed.load(Ordering::Relaxed) {
+                break Err("Codec stream reader failed".to_string());
+            }
+            if let Err(error) = cancelled(cancel) {
+                break Err(error);
+            }
+            if started.elapsed() >= timeout {
+                break Err("Codec stream timed out".into());
+            }
+            match child.try_wait() {
+                Ok(Some(status)) => break Ok(status),
+                Ok(None) => (),
+                Err(error) => break Err(error.to_string()),
+            }
+            thread::sleep(Duration::from_millis(10));
+        };
+        if status.is_err() {
+            let _ = child.kill();
+        }
+        let _ = child.wait();
+        let output = output.join();
+        let errors = errors.join();
+        // Killing a codec can leave a partial PCM frame. Preserve the initiating
+        // cancellation/timeout instead of reporting that secondary read error.
+        if let Err(error) = &status
+            && error != "Codec stream reader failed"
+        {
+            return Err(error.clone());
+        }
+        let output = output.map_err(|_| "Codec stdout consumer panicked")??;
+        let errors = errors.map_err(|_| "Codec stderr reader panicked")??;
+        let status = status?;
+        if !status.success() {
+            return Err(format!(
+                "Codec exited {status}: {}",
+                String::from_utf8_lossy(&errors)
+                    .chars()
+                    .take(4000)
+                    .collect::<String>()
+            ));
+        }
+        Ok(output)
+    })
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SourceVersion {
     pub(crate) path: PathBuf,
@@ -485,6 +575,175 @@ pub struct MediaLibrary {
 #[derive(Default)]
 pub struct ProbeCache(BTreeMap<(SourceVersion, bool), Probe>);
 
+fn read_asset_manifest(project: &Path) -> Result<Value> {
+    let manifest = project.join("assets.yml");
+    let file = match fs::File::open(&manifest) {
+        Ok(file) => file,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Value::Null),
+        Err(error) => return Err(error.to_string()),
+    };
+    if file.metadata().map_err(|e| e.to_string())?.len() > 16 * 1024 * 1024 {
+        return Err("Asset manifest is too large".into());
+    }
+    parse_asset_manifest(file)
+}
+
+fn parse_asset_manifest(reader: impl Read) -> Result<Value> {
+    let mut bytes = Vec::new();
+    reader
+        .take(16 * 1024 * 1024 + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| error.to_string())?;
+    if bytes.len() > 16 * 1024 * 1024 {
+        return Err("Asset manifest is too large".into());
+    }
+    serde_yaml::from_slice(&bytes).map_err(|e| format!("Invalid assets.yml: {e}"))
+}
+
+#[cfg(test)]
+mod manifest_tests {
+    use super::*;
+
+    #[test]
+    #[ignore = "requires installed FFmpeg"]
+    fn streaming_codec_cancellation_timeout_and_reader_failure_release_workers() {
+        let tools = Tools::default();
+        let make_command = || {
+            let mut process = command(&tools.ffmpeg);
+            process.args([
+                "-v",
+                "error",
+                "-nostdin",
+                "-re",
+                "-f",
+                "lavfi",
+                "-i",
+                "anullsrc=r=8000:cl=mono",
+                "-f",
+                "f32le",
+                "pipe:1",
+            ]);
+            process
+        };
+        let cancel = Arc::new(AtomicBool::new(false));
+        let signal = cancel.clone();
+        let (ready, receiver) = std::sync::mpsc::sync_channel(1);
+        let controller = thread::spawn(move || {
+            let received = receiver.recv_timeout(Duration::from_secs(3)).is_ok();
+            signal.store(true, Ordering::Relaxed);
+            received
+        });
+        let started = Instant::now();
+        let error = checked_stream_cancellable(
+            &mut make_command(),
+            Some(&cancel),
+            Duration::from_secs(5),
+            |mut stdout| -> Result<()> {
+                let mut ready = Some(ready);
+                let mut buffer = [0u8; 4096];
+                loop {
+                    let count = stdout
+                        .read(&mut buffer)
+                        .map_err(|error| error.to_string())?;
+                    if count == 0 {
+                        return Err("partial PCM after interruption".into());
+                    }
+                    if let Some(ready) = ready.take() {
+                        ready.send(()).map_err(|error| error.to_string())?;
+                    }
+                }
+            },
+        )
+        .unwrap_err();
+        assert!(
+            controller.join().unwrap(),
+            "No PCM arrived before cancellation"
+        );
+        assert!(error.to_lowercase().contains("cancelled"), "{error}");
+        assert!(started.elapsed() < Duration::from_secs(5));
+        let error = checked_stream_cancellable(
+            &mut make_command(),
+            None,
+            Duration::from_millis(100),
+            |mut stdout| -> Result<()> {
+                std::io::copy(&mut stdout, &mut std::io::sink())
+                    .map_err(|error| error.to_string())?;
+                Err("partial PCM after interruption".into())
+            },
+        )
+        .unwrap_err();
+        assert!(error.contains("timed out"), "{error}");
+        let error = checked_stream_cancellable(
+            &mut make_command(),
+            None,
+            Duration::from_secs(5),
+            |_| -> Result<()> { Err("Injected consumer failure".into()) },
+        )
+        .unwrap_err();
+        assert_eq!(error, "Injected consumer failure");
+        let mut process = command(&tools.ffmpeg);
+        process.arg("-version");
+        let count =
+            checked_stream_cancellable(&mut process, None, Duration::from_secs(5), |mut stdout| {
+                std::io::copy(&mut stdout, &mut std::io::sink()).map_err(|error| error.to_string())
+            })
+            .unwrap();
+        assert!(count > 0);
+    }
+
+    #[test]
+    fn manifest_stream_limit_applies_without_trusting_a_prior_file_length() {
+        // An unbounded stream models growth after the initial length check.
+        assert_eq!(
+            parse_asset_manifest(std::io::repeat(b' ')).unwrap_err(),
+            "Asset manifest is too large"
+        );
+        let manifest = parse_asset_manifest(std::io::Cursor::new(
+            b"assets:\n  - id: movie\n    path: videos/clip\n    source: local.mp4\n",
+        ))
+        .unwrap();
+        assert_eq!(manifest["assets"][0]["source"], "local.mp4");
+        assert!(
+            parse_asset_manifest(std::io::Cursor::new(b"assets: [unclosed"))
+                .unwrap_err()
+                .contains("Invalid assets.yml")
+        );
+    }
+}
+
+fn resolve_asset_source(src: &str, project: &Path, manifest: &Value) -> Result<PathBuf> {
+    let source = manifest
+        .get("assets")
+        .and_then(Value::as_array)
+        .and_then(|assets| {
+            assets.iter().find(|asset| {
+                asset["path"].as_str() == Some(src) || asset["id"].as_str() == Some(src)
+            })
+        })
+        .and_then(|asset| asset["source"].as_str())
+        .unwrap_or(src);
+    if source.contains("://") {
+        return Err("remote media resolution is not ported yet".into());
+    }
+    let path = Path::new(source);
+    let path = std::path::absolute(if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        project.join(path)
+    })
+    .map_err(|e| e.to_string())?;
+    if !path.is_file() {
+        return Err(format!("source not found: {}", path.display()));
+    }
+    Ok(path)
+}
+
+/// Resolve a local file or project-library path/id without importing it or
+/// mounting unrelated project media. Shared with scene source binding.
+pub fn resolve_source(src: &str, project: &Path) -> Result<PathBuf> {
+    resolve_asset_source(src, project, &read_asset_manifest(project)?)
+}
+
 impl MediaLibrary {
     pub fn load(root: &Node, project: &Path, tools: &Tools) -> Result<Self> {
         Self::load_cached(root, project, tools, &mut ProbeCache::default())
@@ -506,16 +765,7 @@ impl MediaLibrary {
         cancel: Option<&AtomicBool>,
     ) -> Result<Self> {
         cancelled(cancel)?;
-        let manifest = project.join("assets.yml");
-        let manifest: Value = if manifest.is_file() {
-            if fs::metadata(&manifest).map_err(|e| e.to_string())?.len() > 16 * 1024 * 1024 {
-                return Err("Asset manifest is too large".into());
-            }
-            serde_yaml::from_slice(&fs::read(manifest).map_err(|e| e.to_string())?)
-                .map_err(|e| format!("Invalid assets.yml: {e}"))?
-        } else {
-            Value::Null
-        };
+        let manifest = read_asset_manifest(project)?;
         let mut library = Self {
             sources: BTreeMap::new(),
             probes: BTreeMap::new(),
@@ -532,39 +782,17 @@ impl MediaLibrary {
             let src = node
                 .string("src")
                 .ok_or_else(|| format!("{}: media requires a string src", node.id))?;
-            let source = manifest
-                .get("assets")
-                .and_then(Value::as_array)
-                .and_then(|assets| {
-                    assets.iter().find(|asset| {
-                        asset["path"].as_str() == Some(src) || asset["id"].as_str() == Some(src)
-                    })
-                })
-                .and_then(|asset| asset["source"].as_str())
-                .unwrap_or(src);
-            if source.contains("://") {
-                return Err(format!(
-                    "{}: remote media resolution is not ported yet",
-                    node.id
-                ));
-            }
-            let path = Path::new(source);
-            let path = if path.is_absolute() {
-                path.to_path_buf()
-            } else {
-                project.join(path)
-            };
-            let path = std::path::absolute(path).map_err(|e| e.to_string())?;
-            if !path.is_file() {
-                return Err(format!("{}: source not found: {}", node.id, path.display()));
-            }
+            let path = resolve_asset_source(src, project, &manifest)
+                .map_err(|error| format!("{}: {error}", node.id))?;
             let version = SourceVersion::read(&path)?;
-            let image = matches!(node.tag.as_str(), "image" | "imagePaint");
+            // Source binding follows the asset kind, independently of JSX tag.
+            // Every visual source gets the same Rust image probe first.
+            let image = node.tag != "audio";
             let cache_key = (version.clone(), image);
             let probe = if let Some(probe) = cache.0.get(&cache_key) {
                 Probe::clone(probe)
             } else {
-                let probe = if matches!(node.tag.as_str(), "image" | "imagePaint") {
+                let probe = if image {
                     match crate::texture::probe_image(&path, cancel)? {
                         Some(probe) => probe,
                         None => tools.probe_cancellable(&path, cancel)?,
@@ -604,7 +832,8 @@ impl MediaLibrary {
                 && let Some(duration) = node
                     .children
                     .iter()
-                    .filter(|c| c.tag == "videoPaint")
+                    .filter(|c| crate::paints::is_media(&c.tag))
+                    .filter(|c| library.probes.get(&c.id).is_some_and(|p| !p.still))
                     .find_map(|child| library.durations.get(&child.id))
                     .copied()
             {
@@ -613,10 +842,50 @@ impl MediaLibrary {
         }
         Ok(library)
     }
+
+    /// Playback forwards every visible video fill but uses only the last one's
+    /// audio. Even a silent video fill replaces an intrinsic audio source.
+    pub(crate) fn audio_source<'a>(&self, holder: &'a Node) -> Option<&'a Node> {
+        if !holder.is_timed() {
+            return None;
+        }
+        holder
+            .children
+            .iter()
+            .rev()
+            .find(|n| {
+                crate::paints::is_media(&n.tag)
+                    && !n.flag("hidden")
+                    && self.probes.get(&n.id).is_some_and(|p| !p.still)
+            })
+            .or_else(|| {
+                (holder.tag == "audio"
+                    || self
+                        .probes
+                        .get(&holder.id)
+                        .is_some_and(|p| p.has_video && !p.still))
+                .then_some(holder)
+            })
+    }
 }
 
 pub fn is_mp4(path: &Path) -> bool {
     path.extension()
         .and_then(OsStr::to_str)
         .is_some_and(|ext| ext.eq_ignore_ascii_case("mp4"))
+}
+
+pub fn export_extension(path: &Path) -> Option<&'static str> {
+    let extension = path.extension()?.to_str()?;
+    if extension.eq_ignore_ascii_case("mp4") {
+        Some("mp4")
+    } else if extension.eq_ignore_ascii_case("mov") {
+        Some("mov")
+    } else if extension.eq_ignore_ascii_case("webm") {
+        Some("webm")
+    } else if extension.eq_ignore_ascii_case("ogg") {
+        Some("ogg")
+    } else {
+        None
+    }
 }

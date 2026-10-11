@@ -16,8 +16,8 @@ import {
   CheckboxLabel,
 } from "@/components/ui/checkbox";
 import { createMemo, For, Show } from "solid-js";
-import { useHas, useWorld } from "@diffusionstudio/koota-solid";
-import { ClipsContent, Computed, KeepAspectRatio, isScene } from "@diffusionstudio/runtime";
+import { useHas, useWorld } from "@ad3-editing/koota-solid";
+import { ClipsContent, Computed, KeepAspectRatio, isScene } from "@ad3-editing/runtime";
 import { useDerived, useEditor } from "@/engine/hooks";
 import { syncKeyframe } from "@/engine/keyframes";
 import {

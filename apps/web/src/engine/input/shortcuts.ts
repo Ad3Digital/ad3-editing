@@ -29,7 +29,7 @@ import {
 	store,
 	togglePlayback,
 	toggleShuttlePlayback,
-} from '@diffusionstudio/runtime';
+} from '@ad3-editing/runtime';
 import { Not, Or } from 'koota';
 
 import { zoomBy, zoomTo, zoomToFit, zoomToSelection } from '../camera';
@@ -43,7 +43,7 @@ import { Keys, MODIFIER_KEYS, Pointer } from '../traits';
 import { editTransform } from './interactions';
 
 import type { TransformWrite } from './interactions';
-import type { CameraMatrix } from '@diffusionstudio/runtime';
+import type { CameraMatrix } from '@ad3-editing/runtime';
 import type { Entity, World } from 'koota';
 
 type Shortcut = {

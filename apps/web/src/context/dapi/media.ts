@@ -6,17 +6,17 @@ import { ALL_FORMATS, BlobSource, CanvasSink, Input } from 'mediabunny';
 import { pickInformativeTimes } from './frame-triage';
 import { trpc } from '@/lib/trpc';
 import { uploadBlob } from '@/lib/uploads';
-import { composeSheet, planSheet, planSheetSizes, sheetTimecode } from '@diffusionstudio/encoder';
+import { composeSheet, planSheet, planSheetSizes, sheetTimecode } from '@ad3-editing/encoder';
 import { assert } from '@/utils';
 import { startResumableSession, uploadResumableStream } from '@/lib/uploads';
-import { filmstripAsset, formatTimecode, getAssetFile, getLibrary, Project, transcodeForAnalysis, transcodeForTranscription, waveformAsset } from '@diffusionstudio/runtime';
-import { AssetLibrary, assetName, isAbsoluteSource, isUrlSource } from '@diffusionstudio/assets';
+import { filmstripAsset, formatTimecode, getAssetFile, getLibrary, Project, transcodeForAnalysis, transcodeForTranscription, waveformAsset } from '@ad3-editing/runtime';
+import { AssetLibrary, assetName, isAbsoluteSource, isUrlSource } from '@ad3-editing/assets';
 import { createProjectFS } from '@/projects/fs';
 
 import type { Accessor } from 'solid-js';
-import type { Asset } from '@diffusionstudio/assets';
+import type { Asset } from '@ad3-editing/assets';
 import type { EditorSession } from './session';
-import type { MediaListenRequest, MediaListenResult, MediaFrameRequest, MediaFrameResult, TimecodedImage, MediaProbeRequest, MediaTranscribeRequest, MediaTranscribeResult, MediaFilmstripRequest, MediaFilmstripResult, MediaWaveformRequest, MediaWaveformResult, TranscriptSegment } from "@diffusionstudio/cli/channels";
+import type { MediaListenRequest, MediaListenResult, MediaFrameRequest, MediaFrameResult, TimecodedImage, MediaProbeRequest, MediaTranscribeRequest, MediaTranscribeResult, MediaFilmstripRequest, MediaFilmstripResult, MediaWaveformRequest, MediaWaveformResult, TranscriptSegment } from "@ad3-editing/cli/channels";
 
 type ResolveAsset = (path: string) => Promise<Asset>;
 

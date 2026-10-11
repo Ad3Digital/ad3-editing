@@ -21,7 +21,7 @@ import {
   FloatingInspectorHeader,
   FloatingInspectorTitle,
 } from "@/components/ui/floating-inspector";
-import { useTrait, useWorld } from "@diffusionstudio/koota-solid";
+import { useTrait, useWorld } from "@ad3-editing/koota-solid";
 import {
   ColorStop as ColorStopElement,
   ImagePaint,
@@ -29,8 +29,8 @@ import {
   RadialGradientPaint,
   SolidPaint,
   VideoPaint,
-} from "@diffusionstudio/reconciler";
-import { BlendMode, BlendModeType, Cache, Paint, PaintType, Rotation, ScaleMode, ScaleModeType } from "@diffusionstudio/runtime";
+} from "@ad3-editing/reconciler";
+import { BlendMode, BlendModeType, Cache, Paint, PaintType, Rotation, ScaleMode, ScaleModeType } from "@ad3-editing/runtime";
 import { useEditor } from "@/engine/hooks";
 import { BLEND_MODE_ORDER, BLEND_MODE_SEPARATORS, blendModeName, displayBlendMode } from "./blend-modes";
 import { readStopProps } from "./gradient-stops";
@@ -38,8 +38,8 @@ import { SolidFillPicker } from "./solid-picker";
 import { GradientFillPicker } from "./gradient-picker";
 import { AssetFillPicker } from "./asset-picker";
 
-import type { Fit } from "@diffusionstudio/jsx";
-import type { Asset } from "@diffusionstudio/assets";
+import type { Fit } from "@ad3-editing/jsx";
+import type { Asset } from "@ad3-editing/assets";
 import type { Entity } from "koota";
 
 export type FillTab = "solid" | "gradient" | "asset";

@@ -11,7 +11,7 @@ import {
 	invert2D, isGenerating,
 	multiply2D, rectToQuad, rotate2D, scale2D, store, transformPoint,
 	translate2D,
-} from '@diffusionstudio/runtime';
+} from '@ad3-editing/runtime';
 
 import { Hud, Keys, SnapLines } from '../traits';
 import {
@@ -22,7 +22,7 @@ import { getMarqueeQuad } from '../input/snapping';
 import { getMountedNameInput } from './name-input';
 
 import type { Entity, World } from 'koota';
-import type { Mat2D } from '@diffusionstudio/runtime';
+import type { Mat2D } from '@ad3-editing/runtime';
 
 const ACCENT = '#008CFF';
 const SNAP_COLOR = '#F43535';

@@ -10,18 +10,18 @@
  * where the commands live.
  */
 
-import { Active, Background, Chars, colorToHex, Computed, DEFAULT_BACKGROUND, FrameRate, framesToSeconds, getActiveEntity, getEntityChildren, getEntityTree, getIntrinsicPaint, getParentEntity, getTimelineOrigin, isText, Loop, PaintType, Selected, Sequential, setActive, Size, Source, Stage } from '@diffusionstudio/runtime';
-import { isAssetRef, isPropValue, serializeAssetRef, SOURCE_ATTR } from '@diffusionstudio/jsx';
+import { Active, Background, Chars, colorToHex, Computed, DEFAULT_BACKGROUND, FrameRate, framesToSeconds, getActiveEntity, getEntityChildren, getEntityTree, getIntrinsicPaint, getParentEntity, getTimelineOrigin, isText, Loop, PaintType, Selected, Sequential, setActive, Size, Source, Stage } from '@ad3-editing/runtime';
+import { isAssetRef, isPropValue, serializeAssetRef, SOURCE_ATTR } from '@ad3-editing/jsx';
 import { createRoot } from 'solid-js';
 
-import { authoredElement, authoredTree, getRuntimeDocument, insert, isSceneNode, renderAuthored, withDocument } from '@diffusionstudio/reconciler';
+import { authoredElement, authoredTree, getRuntimeDocument, insert, isSceneNode, renderAuthored, withDocument } from '@ad3-editing/reconciler';
 
 import { findInspectEntry } from './inspect';
 
-import type { SceneNode } from '@diffusionstudio/runtime';
-import type { InspectValue, PropValue, SerializedAssetRef } from '@diffusionstudio/jsx';
+import type { SceneNode } from '@ad3-editing/runtime';
+import type { InspectValue, PropValue, SerializedAssetRef } from '@ad3-editing/jsx';
 import type { Entity, World } from 'koota';
-import type { AuthoredTree, ProjectDocument, RuntimeDocument } from '@diffusionstudio/reconciler';
+import type { AuthoredTree, ProjectDocument, RuntimeDocument } from '@ad3-editing/reconciler';
 
 /**
  * A value an edit can carry to the file: what a source spells as a literal,

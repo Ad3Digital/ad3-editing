@@ -36,6 +36,12 @@ pub struct FontSpec {
     pub style: Style,
     pub spacing: f64,
 }
+#[derive(Clone, Debug, serde::Serialize, PartialEq, Eq, PartialOrd, Ord)]
+pub struct FontVariant {
+    pub weight: String,
+    pub style: String,
+    pub source: String,
+}
 impl Default for FontSpec {
     fn default() -> Self {
         Self {
@@ -94,8 +100,125 @@ pub struct FontBook {
     read_budget: Option<u64>,
 }
 impl FontBook {
+    pub fn available_families(&mut self, cancel: Option<&AtomicBool>) -> Result<Vec<String>> {
+        self.catalog(cancel)?;
+        let mut families = std::collections::BTreeSet::new();
+        for face in self.db.as_ref().ok_or("Font catalog unavailable")?.faces() {
+            cancelled(cancel)?;
+            for (family, _) in &face.families {
+                families.insert(family.clone());
+            }
+        }
+        Ok(families.into_iter().collect())
+    }
+
     pub(crate) fn begin_frame(&mut self) {
         self.read_budget = Some(256 * 1024 * 1024);
+    }
+    /// Available fixed weights and standard CSS stops inside variable wght axes.
+    /// Resolve the first installed family in a CSS fallback list, without
+    /// reporting an unrelated fallback font as the requested family's catalog.
+    pub fn available_weights(
+        &mut self,
+        family: &str,
+        cancel: Option<&AtomicBool>,
+    ) -> Result<Vec<u16>> {
+        Ok(self
+            .available_variants(family, cancel)?
+            .into_iter()
+            .filter_map(|variant| variant.weight.parse::<u16>().ok())
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .collect())
+    }
+
+    pub fn available_variants(
+        &mut self,
+        family: &str,
+        cancel: Option<&AtomicBool>,
+    ) -> Result<Vec<FontVariant>> {
+        self.catalog(cancel)?;
+        let mut ids = Vec::new();
+        for name in family_names(family)? {
+            cancelled(cancel)?;
+            if name.eq_ignore_ascii_case("Inter") && self.bundled.is_some() {
+                ids.extend(self.bundled.into_iter().flatten());
+            } else {
+                ids.extend(
+                    self.db
+                        .as_ref()
+                        .ok_or("Font catalog unavailable")?
+                        .faces()
+                        .filter(|face| {
+                            face.families
+                                .iter()
+                                .any(|(family, _)| family.eq_ignore_ascii_case(&name))
+                        })
+                        .map(|face| face.id),
+                );
+            }
+            if !ids.is_empty() {
+                break;
+            }
+        }
+        if ids.len() > 256 {
+            return Err("Font family exceeds 256 faces".into());
+        }
+        self.begin_frame();
+        let mut variants = std::collections::BTreeSet::new();
+        for id in ids {
+            cancelled(cancel)?;
+            let info = self
+                .db
+                .as_ref()
+                .and_then(|db| db.face(id))
+                .ok_or("Missing font face")?
+                .clone();
+            let weight = info.weight.0;
+            let style = if info.style == Style::Normal {
+                "normal"
+            } else {
+                "italic"
+            };
+            let mut name = String::new();
+            for character in info.post_script_name.chars() {
+                match character {
+                    '\\' | '"' => {
+                        name.push('\\');
+                        name.push(character);
+                    }
+                    character if character.is_control() => {
+                        name.push_str(&format!("\\{:x} ", character as u32))
+                    }
+                    character => name.push(character),
+                }
+            }
+            let source = format!("local(\"{name}\")");
+            let face = self.face(id, cancel)?;
+            let font = face.font()?;
+            let mut add_weight = |weight: u16| {
+                variants.insert(FontVariant {
+                    weight: weight.to_string(),
+                    style: style.into(),
+                    source: source.clone(),
+                });
+            };
+            if let Some(axis) = font
+                .axes()
+                .iter()
+                .find(|axis| axis.tag() == Tag::new(b"wght"))
+            {
+                for weight in (100..=900).step_by(100) {
+                    if (axis.min_value()..=axis.max_value()).contains(&(weight as f32)) {
+                        add_weight(weight);
+                    }
+                }
+            } else if (1..=1000).contains(&weight) {
+                add_weight(weight);
+            }
+        }
+        cancelled(cancel)?;
+        Ok(variants.into_iter().collect())
     }
     fn catalog(&mut self, cancel: Option<&AtomicBool>) -> Result<()> {
         cancelled(cancel)?;
@@ -775,6 +898,63 @@ mod tests {
         assert!(book.face(a, None).err().unwrap().contains("byte budget"));
         std::fs::remove_file(path).unwrap();
     }
+    #[test]
+    fn weight_catalog_reports_variable_axes_fixed_faces_fallbacks_and_cancellation() {
+        let mut book = FontBook::default();
+        book.catalog(None).unwrap();
+        assert_eq!(
+            book.available_weights("'Inter'", None).unwrap(),
+            (100..=900).step_by(100).collect::<Vec<u16>>()
+        );
+        assert_eq!(
+            book.available_weights("MissingTestFamily, Inter", None)
+                .unwrap(),
+            (100..=900).step_by(100).collect::<Vec<u16>>()
+        );
+        assert!(
+            book.available_weights("MissingTestFamily", None)
+                .unwrap()
+                .is_empty()
+        );
+        let cancelled = AtomicBool::new(true);
+        assert!(book.available_weights("Inter", Some(&cancelled)).is_err());
+
+        // Disable the variable-axis table in an owned in-memory font, so the
+        // fixture exercises static face metadata without installed-font input.
+        let mut bytes = include_bytes!("../assets/fonts/Inter.ttf").to_vec();
+        let count = u16::from_be_bytes(bytes[4..6].try_into().unwrap()) as usize;
+        let mut removed = false;
+        for index in 0..count {
+            let start = 12 + index * 16;
+            if &bytes[start..start + 4] == b"fvar" {
+                bytes[start..start + 4].copy_from_slice(b"xvar");
+                removed = true;
+            }
+        }
+        assert!(removed);
+        let mut db = Database::new();
+        db.load_font_data(bytes);
+        let template = db.faces().next().unwrap().clone();
+        for weight in [300, 700] {
+            let mut info = template.clone();
+            for (family, _) in &mut info.families {
+                *family = "StaticWeightFixture".into();
+            }
+            info.weight = Weight(weight);
+            db.push_face_info(info);
+        }
+        let mut static_book = FontBook {
+            db: Some(db),
+            ..Default::default()
+        };
+        assert_eq!(
+            static_book
+                .available_weights("staticweightfixture", None)
+                .unwrap(),
+            vec![300, 700]
+        );
+    }
+
     #[test]
     fn bundled_variable_inter_precedes_installed_namesakes_at_every_weight() {
         let mut book = FontBook::default();

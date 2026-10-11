@@ -1,4 +1,4 @@
-/* @jsxImportSource @diffusionstudio/jsx */
+/* @jsxImportSource @ad3-editing/jsx */
 /* The everyday composition: sequenced A-roll, an image overlay, data-driven
  * titles via <For>, and a music bed under everything.
  *
@@ -14,7 +14,7 @@
  */
 
 import { For } from "solid-js";
-import type { Time } from "@diffusionstudio/jsx";
+import type { Time } from "@ad3-editing/jsx";
 
 const VIDEOS = "https://mdn.github.io/shared-assets/videos";
 const MUSIC = "https://mdn.github.io/webaudio-examples/audio-basics/outfoxing.mp3";

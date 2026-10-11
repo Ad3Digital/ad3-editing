@@ -15,7 +15,7 @@ import { GuineaCaptionDecoder, GUINEA_TEXT_STYLE } from './guinea';
 import { StarkCaptionDecoder, STARK_TEXT_STYLE } from './stark';
 
 import type { Entity, World } from 'koota';
-import type { Asset } from '@diffusionstudio/assets';
+import type { Asset } from '@ad3-editing/assets';
 import type { CaptionDecoder, CaptionPresetStyle } from './types';
 
 export type { CaptionDecoder, CaptionPresetStyle } from './types';

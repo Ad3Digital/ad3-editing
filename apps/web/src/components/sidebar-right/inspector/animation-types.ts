@@ -2,10 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { ANIMATION_TYPES } from "@diffusionstudio/reconciler";
+import { ANIMATION_TYPES } from "@ad3-editing/reconciler";
 
-import type { AnimationType as AnimationName } from "@diffusionstudio/jsx";
-import type { AnimationType } from "@diffusionstudio/runtime";
+import type { AnimationType as AnimationName } from "@ad3-editing/jsx";
+import type { AnimationType } from "@ad3-editing/runtime";
 
 export type AnimationOption = {
   name: AnimationName;

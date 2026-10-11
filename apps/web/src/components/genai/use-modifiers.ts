@@ -9,7 +9,7 @@
 // these are toggles rather than commands, and turning one off gives the
 // original back rather than running anything.
 
-import { authoredElement } from "@diffusionstudio/reconciler";
+import { authoredElement } from "@ad3-editing/reconciler";
 import { useEditor } from "@/engine/hooks";
 import { useMediaSelection } from "./selection";
 

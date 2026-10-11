@@ -4,7 +4,7 @@
 
 /**
  * The dynamic inspector: one control per `@inspect` variable of the mounted
- * project (see @diffusionstudio/jsx's inspect), filed under the groups their
+ * project (see @ad3-editing/jsx's inspect), filed under the groups their
  * paths spell. A control moves the variable's signal live — one reactive
  * graph, no remount — and every settled value goes through the editor, so the
  * declaration's initializer and the undo history hear it like any other edit.
@@ -39,15 +39,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { For, Match, Switch, createMemo, createSignal } from "solid-js";
-import { WebFonts, loadWebFont } from "@diffusionstudio/runtime";
-import { useWorld } from "@diffusionstudio/koota-solid";
+import { WebFonts, loadWebFont } from "@ad3-editing/runtime";
+import { useWorld } from "@ad3-editing/koota-solid";
 import { useEditor } from "@/engine/hooks";
 import { useInspectEntries } from "@/engine/inspect";
 import { colorToHex, parseColor } from "@/utils/color";
 import { FontDropdown, GrowingTextArea } from "./text";
 
-import type { InspectEntry } from "@diffusionstudio/reconciler";
-import type { InspectValue } from "@diffusionstudio/jsx";
+import type { InspectEntry } from "@ad3-editing/reconciler";
+import type { InspectValue } from "@ad3-editing/jsx";
 
 export function VariablesSettings() {
   const world = useWorld();

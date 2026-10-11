@@ -3,13 +3,13 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 
-import { Audio, Captions, ImagePaint, Rect, VideoPaint } from '@diffusionstudio/reconciler';
-import { Computed, getActiveEntity, getNextName, Root, Source, store } from '@diffusionstudio/runtime';
-import { assetName } from '@diffusionstudio/assets';
+import { Audio, Captions, ImagePaint, Rect, VideoPaint } from '@ad3-editing/reconciler';
+import { Computed, getActiveEntity, getNextName, Root, Source, store } from '@ad3-editing/runtime';
+import { assetName } from '@ad3-editing/assets';
 
 import { getDocumentEditor } from './editor';
 
-import type { Asset } from '@diffusionstudio/assets';
+import type { Asset } from '@ad3-editing/assets';
 import type { Entity, World } from 'koota';
 
 export interface InsertAssetOptions {

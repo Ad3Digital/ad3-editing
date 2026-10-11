@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Cache, Computed, store } from '@diffusionstudio/runtime';
+import { Cache, Computed, store } from '@ad3-editing/runtime';
 
 import { CLIP_CORNER_RADIUS } from '../config';
 import { framesToPixels, getResolution } from '../view';

@@ -3,19 +3,19 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 // File actions on the library, with the user told how they went: the
-// mechanics live in @diffusionstudio/assets.
+// mechanics live in @ad3-editing/assets.
 
 import { toast } from "somoto";
-import { importFiles as importFilesInto, pickFiles, saveAssetAs as saveAs } from "@diffusionstudio/assets";
+import { importFiles as importFilesInto, pickFiles, saveAssetAs as saveAs } from "@ad3-editing/assets";
 import { insertAsset } from "./insert-asset";
 import { forgetAssetMedia } from "./timeline/media";
 import { forgetAssetPeaks } from "./timeline/peaks";
 
 import type { World } from "koota";
 
-import type { Asset, AssetLibrary } from "@diffusionstudio/assets";
+import type { Asset, AssetLibrary } from "@ad3-editing/assets";
 
-export { droppedFiles, pickFiles } from "@diffusionstudio/assets";
+export { droppedFiles, pickFiles } from "@ad3-editing/assets";
 
 /** Saves a copy of an asset's file where the user says; reports failure. */
 export async function saveAssetAs(asset: Pick<Asset, "handle" | "mimeType" | "path">): Promise<void> {

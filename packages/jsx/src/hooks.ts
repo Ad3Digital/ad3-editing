@@ -5,8 +5,8 @@
 /**
  * The authoring hooks, as signatures. They read the host a project is mounted
  * into, which only exists inside the editor: when a project is mounted, the
- * renderer substitutes its own "@diffusionstudio/jsx" module (see
- * @diffusionstudio/reconciler) and these implementations are replaced by ones
+ * renderer substitutes its own "@ad3-editing/jsx" module (see
+ * @ad3-editing/reconciler) and these implementations are replaced by ones
  * bound to the live host. This package carries the declarations so project
  * sources type-check and get IntelliSense; calling them outside a mount
  * throws rather than silently returning a dead value.

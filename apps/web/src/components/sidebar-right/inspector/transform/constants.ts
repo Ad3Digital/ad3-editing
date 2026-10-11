@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { ConstraintType } from "@diffusionstudio/runtime";
+import { ConstraintType } from "@ad3-editing/runtime";
 
 export type Constraint = {
   key: ConstraintType;

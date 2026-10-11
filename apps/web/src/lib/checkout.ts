@@ -8,7 +8,7 @@ import type {
   BillingPeriod,
   SubscriptionCredits,
   TopupCredits,
-} from "@diffusionstudio/api-contract";
+} from "@ad3-editing/api-contract";
 
 import { trpc } from "./trpc";
 import { mainBridge } from "./ipc";

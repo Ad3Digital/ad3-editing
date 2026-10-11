@@ -32,6 +32,538 @@ fn unavailable_tools() -> Tools {
         ffprobe: PathBuf::from("missing-native-vector-ffprobe"),
     }
 }
+
+#[test]
+fn negative_rounded_size_reflects_each_logical_corner_and_preserves_pixels() {
+    for (width, height, scale_x, scale_y) in [
+        (24, 16, 1, 1),
+        (-24, 16, -1, 1),
+        (24, -16, 1, -1),
+        (-24, -16, -1, -1),
+    ] {
+        let props = format!(
+            r#"<rect id="r" x={{32}} y={{24}} width={{{width}}} height={{{height}}} cornerRadiusTopLeft={{2}} cornerRadiusTopRight={{4}} cornerRadiusBottomRight={{6}} cornerRadiusBottomLeft={{8}} fill="red"/>"#
+        );
+        let reflected = format!(
+            r#"<rect id="r" x={{32}} y={{24}} width={{24}} height={{16}} scaleX={{{scale_x}}} scaleY={{{scale_y}}} cornerRadiusTopLeft={{2}} cornerRadiusTopRight={{4}} cornerRadiusBottomRight={{6}} cornerRadiusBottomLeft={{8}} fill="red"/>"#
+        );
+        // Scale is around the center, so compensate its pivot translation.
+        let reflected = document("", &reflected)
+            .set("r", "x", Some(serde_json::json!(32 + (width - 24) / 2)))
+            .unwrap()
+            .set("r", "y", Some(serde_json::json!(24 + (height - 16) / 2)))
+            .unwrap();
+        let negative = document("", &props);
+        assert_eq!(
+            native(&mut Compositor::default(), &negative.root, 0.0)
+                .rgba(64, 48, false, None)
+                .unwrap(),
+            native(&mut Compositor::default(), &reflected.root, 0.0)
+                .rgba(64, 48, false, None)
+                .unwrap(),
+            "{width} x {height}"
+        );
+    }
+}
+
+#[test]
+fn text_mask_uses_authored_box_and_never_paints_glyphs() {
+    let doc = document(
+        "",
+        r#"<text id="mask" mask x={8} y={8} width={24} height={16} fill="white">Mask</text><rect id="r" width={64} height={48} fill="red"/>"#,
+    );
+    let bytes = native(&mut Compositor::default(), &doc.root, 0.0)
+        .rgba(64, 48, false, None)
+        .unwrap();
+    assert_eq!(pixel(&bytes, 64, 18, 16), [255, 0, 0, 255]);
+    assert_eq!(pixel(&bytes, 64, 4, 16), [0, 0, 0, 0]);
+    assert_eq!(pixel(&bytes, 64, 34, 16), [0, 0, 0, 0]);
+}
+
+#[test]
+fn image_mask_uses_transformed_rounded_box_without_drawing_its_media() {
+    let doc = document(
+        "",
+        r#"<image id="mask" mask x={8} y={8} width={24} height={16} cornerRadius={6} rotation={180}/><rect id="r" width={64} height={48} fill="red"/>"#,
+    );
+    let bytes = native(&mut Compositor::default(), &doc.root, 0.0)
+        .rgba(64, 48, false, None)
+        .unwrap();
+    assert_eq!(pixel(&bytes, 64, 18, 16), [255, 0, 0, 255]);
+    assert_eq!(pixel(&bytes, 64, 4, 16), [0, 0, 0, 0]);
+    assert_eq!(pixel(&bytes, 64, 34, 16), [0, 0, 0, 0]);
+    assert_eq!(pixel(&bytes, 64, 8, 8), [0, 0, 0, 0]);
+}
+
+#[test]
+fn text_aspect_lock_preserves_auto_size_and_applies_when_a_bound_is_authored() {
+    let auto = document(
+        "",
+        r#"<text id="t" fontFamily="Inter" fontSize={16} keepAspectRatio fill="white">Text</text>"#,
+    );
+    let mut compositor = Compositor::default();
+    native(&mut compositor, &auto.root, 0.0);
+    let old = compositor.edit_geometry("t").unwrap().frame.size;
+    assert!(old[0] > 0.0 && old[1] > 0.0);
+    let authored = auto
+        .set("t", "width", Some(serde_json::json!(old[0] * 2.0)))
+        .unwrap();
+    native(&mut compositor, &authored.root, 0.0);
+    let resized = compositor.edit_geometry("t").unwrap().frame.size;
+    assert_eq!(resized[0], (old[0] * 2.0).round());
+    assert_eq!(resized[1], (old[1] * 2.0).round());
+    let unlocked = authored.set("t", "keepAspectRatio", None).unwrap();
+    let changed = unlocked
+        .set("t", "width", Some(serde_json::json!(old[0] * 3.0)))
+        .unwrap();
+    native(&mut compositor, &changed.root, 0.0);
+    assert_eq!(
+        compositor.edit_geometry("t").unwrap().frame.size[1],
+        resized[1]
+    );
+}
+
+#[test]
+fn aspect_locked_rect_size_is_resolved_before_motion_tracks() {
+    let doc = document(
+        "",
+        r#"<rect id="r" width={20} keepAspectRatio fill="red"/>"#,
+    );
+    let mut compositor = Compositor::default();
+    let bytes = native(&mut compositor, &doc.root, 0.0)
+        .rgba(64, 48, false, None)
+        .unwrap();
+    assert_eq!(
+        compositor.edit_geometry("r").unwrap().frame.size,
+        [20.0, 20.0]
+    );
+    assert_eq!(pixel(&bytes, 64, 10, 19), [255, 0, 0, 255]);
+    assert_eq!(pixel(&bytes, 64, 10, 21), [0, 0, 0, 0]);
+    let animated = document(
+        "",
+        r#"<rect id="r" width={20} keepAspectRatio fill="red"><keyframeTrack property="height"><keyframe time={0} value={30}/></keyframeTrack></rect>"#,
+    );
+    let mut renderer = ProjectRenderer::new(
+        &animated,
+        std::path::Path::new("."),
+        unavailable_tools(),
+        false,
+    )
+    .unwrap();
+    renderer.frame_plan("s", 0.0, 30.0, false).unwrap();
+    assert_eq!(
+        renderer.edit_geometries("s").unwrap()["r"].frame.size,
+        [20.0, 30.0]
+    );
+}
+
+#[test]
+fn nested_scene_clips_descendants_and_restores_clip_for_siblings() {
+    let doc = document(
+        "",
+        r#"<scene id="inner" x={8} y={6} width={20} height={16} fill="green"><rect id="r" x={-8} y={-6} width={64} height={48} fill="red"/></scene><rect id="sibling" x={40} y={30} width={8} height={8} fill="white"/>"#,
+    );
+    let frame = native(&mut Compositor::default(), &doc.root, 0.0);
+    let bytes = frame.rgba(64, 48, false, None).unwrap();
+    assert_eq!(pixel(&bytes, 64, 10, 10), [255, 0, 0, 255]);
+    assert_eq!(pixel(&bytes, 64, 4, 10), [0, 0, 0, 0]);
+    assert_eq!(pixel(&bytes, 64, 30, 10), [0, 0, 0, 0]);
+    assert_eq!(pixel(&bytes, 64, 10, 24), [0, 0, 0, 0]);
+    assert_eq!(pixel(&bytes, 64, 42, 32), [255, 255, 255, 255]);
+}
+
+#[test]
+fn nested_scene_rounded_clip_intersects_ancestor_mask_in_world_space() {
+    let doc = document(
+        "",
+        r#"<rect id="mask" mask x={16} width={20} height={48}/><scene id="inner" x={8} y={8} width={32} height={24} cornerRadius={8} rotation={180}><rect id="r" x={-100} y={-100} width={240} height={240} fill="red"/></scene>"#,
+    );
+    let bytes = native(&mut Compositor::default(), &doc.root, 0.0)
+        .rgba(64, 48, false, None)
+        .unwrap();
+    assert_eq!(pixel(&bytes, 64, 20, 20), [255, 0, 0, 255]);
+    assert_eq!(pixel(&bytes, 64, 12, 20), [0, 0, 0, 0]);
+    assert_eq!(pixel(&bytes, 64, 38, 20), [0, 0, 0, 0]);
+    assert!(pixel(&bytes, 64, 35, 8)[3] < 64);
+    assert_eq!(pixel(&bytes, 64, 35, 16), [255, 0, 0, 255]);
+}
+
+#[test]
+fn nested_scene_timing_gates_children_and_keeps_parent_source_clock() {
+    let doc = document(
+        "",
+        r#"<scene id="inner" x={8} y={6} width={20} height={16} start={0.5} sourceIn={1} sourceOut={3} playbackRate={2}><rect id="r" width={64} height={48} fill="red" end={6}/></scene>"#,
+    );
+    let timeline = Timeline::resolve(&doc.root, &BTreeMap::new()).unwrap();
+    let child = timeline.get("r").unwrap();
+    assert_eq!(child.scene_id, "s");
+    assert_eq!(child.start, 0.5);
+    assert_eq!(child.end, 1.5);
+    assert_eq!(child.source_at(1.0), 2.0);
+    let mut compositor = Compositor::default();
+    for (time, expected) in [(0.0, 0), (0.5, 255), (1.0, 255), (1.5, 0)] {
+        let bytes = native(&mut compositor, &doc.root, time)
+            .rgba(64, 48, false, None)
+            .unwrap();
+        assert_eq!(pixel(&bytes, 64, 12, 12)[3], expected, "time {time}");
+    }
+}
+
+#[test]
+fn runtime_skew_is_rendered_without_changing_authored_source() {
+    let doc = document(
+        "",
+        r#"<rect id="r" x={16} y={12} width={16} height={12} fill="red"/>"#,
+    );
+    let source = doc.source.clone();
+    let mut renderer =
+        ProjectRenderer::new(&doc, std::path::Path::new("."), unavailable_tools(), false).unwrap();
+    renderer
+        .set_runtime_skews(BTreeMap::from([("r".into(), [30.0, 0.0])]))
+        .unwrap();
+    let skewed = renderer
+        .frame_plan("s", 0.0, 30.0, false)
+        .unwrap()
+        .frame(&unavailable_tools(), std::path::Path::new("."))
+        .unwrap();
+    let geometry = renderer.edit_geometries("s").unwrap()["r"];
+    assert_eq!(geometry.transform.skew, [30.0, 0.0]);
+    assert_eq!(geometry.local, geometry.transform.local_matrix());
+    assert!(
+        renderer
+            .set_runtime_skews(BTreeMap::from([("r".into(), [f64::NAN, 0.0])]))
+            .is_err()
+    );
+    renderer.set_runtime_skews(BTreeMap::new()).unwrap();
+    let plain = renderer
+        .frame_plan("s", 0.0, 30.0, false)
+        .unwrap()
+        .frame(&unavailable_tools(), std::path::Path::new("."))
+        .unwrap();
+    assert_ne!(skewed, plain);
+    assert_eq!(
+        renderer.edit_geometries("s").unwrap()["r"].transform.skew,
+        [0.0, 0.0]
+    );
+    assert_eq!(doc.source, source);
+}
+
+#[test]
+fn renderer_edit_geometry_uses_the_sampled_preview_frame() {
+    let doc = document(
+        "",
+        r#"<rect id="r" width={8} height={8}><keyframeTrack property="x"><keyframe time={0} value={0}/><keyframe time={2} value={20}/></keyframeTrack></rect>"#,
+    );
+    let mut renderer =
+        ProjectRenderer::new(&doc, std::path::Path::new("."), unavailable_tools(), false).unwrap();
+    assert!(renderer.edit_geometries("s").is_none());
+    renderer.frame_plan("s", 1.0, 30.0, false).unwrap();
+    assert_eq!(
+        renderer.edit_geometries("s").unwrap()["r"]
+            .transform
+            .position[0],
+        10.0
+    );
+    renderer.frame_plan("s", 0.0, 30.0, false).unwrap();
+    assert_eq!(
+        renderer.edit_geometries("s").unwrap()["r"]
+            .transform
+            .position[0],
+        0.0
+    );
+}
+
+#[test]
+fn dissolving_group_bakes_transform_preserves_timing_and_pixels() {
+    let doc = document(
+        "",
+        r#"<group id="g" x={8} y={4} start={0.5} sourceIn={1} playbackRate={2}><rect id="r" x={4} y={4} width={12} height={10} fill="red" start={1} end={3}/></group>"#,
+    );
+    let timeline = Timeline::resolve(&doc.root, &BTreeMap::new()).unwrap();
+    let mut compositor = Compositor::default();
+    native(&mut compositor, &doc.root, 1.0);
+    native(&mut compositor, &doc.root, 1.0);
+    let geometry = doc
+        .root
+        .nodes()
+        .into_iter()
+        .filter_map(|node| {
+            compositor
+                .edit_geometry(&node.id)
+                .map(|geometry| (node.id.clone(), geometry))
+        })
+        .collect();
+    let (next, released, _) = doc
+        .dissolve_container(&timeline, "g", 1.0, &geometry)
+        .unwrap();
+    assert_eq!(released, vec!["r"]);
+    assert!(next.root.find("g").is_none());
+    let next_timeline = Timeline::resolve(&next.root, &BTreeMap::new()).unwrap();
+    for time in [0.5, 1.0, 1.25] {
+        assert_eq!(
+            timeline.get("r").unwrap().source_at(time),
+            next_timeline.get("r").unwrap().source_at(time)
+        );
+        let before = native(&mut compositor, &doc.root, time)
+            .rgba(64, 48, false, None)
+            .unwrap();
+        let after = native(&mut Compositor::default(), &next.root, time)
+            .rgba(64, 48, false, None)
+            .unwrap();
+        assert_eq!(before, after);
+    }
+}
+
+#[test]
+fn wrapping_scene_inside_rate_sequence_preserves_parent_space_and_clip_windows() {
+    let doc = document(
+        "",
+        r#"<group id="parent" x={8} y={4}><sequence id="seq" start={0.5} sourceIn={1} playbackRate={2}><rect id="a" x={4} y={4} width={12} height={10} fill="red" start={1} end={2}/><rect id="b" x={20} y={4} width={8} height={10} fill="green" start={2} end={3}/></sequence></group>"#,
+    );
+    let timeline = Timeline::resolve(&doc.root, &BTreeMap::new()).unwrap();
+    let mut compositor = Compositor::default();
+    native(&mut compositor, &doc.root, 0.75);
+    native(&mut compositor, &doc.root, 0.75);
+    let (next, scene) = doc
+        .wrap_scene(
+            &timeline,
+            &["a".into(), "b".into()],
+            0.75,
+            compositor.edit_geometries(),
+        )
+        .unwrap();
+    assert_eq!(
+        next.root.find("seq").unwrap().children[0].id,
+        scene.unwrap()
+    );
+    let resolved = Timeline::resolve(&next.root, &BTreeMap::new()).unwrap();
+    for id in ["a", "b"] {
+        let before = timeline.get(id).unwrap();
+        let after = resolved.get(id).unwrap();
+        assert_eq!(
+            [
+                before.start,
+                before.end,
+                before.origin,
+                before.playback_rate
+            ],
+            [after.start, after.end, after.origin, after.playback_rate]
+        );
+    }
+    let mut after = Compositor::default();
+    for time in [0.5, 0.75, 1.0, 1.25] {
+        native(&mut after, &next.root, time);
+        assert_eq!(
+            native(&mut compositor, &doc.root, time)
+                .rgba(64, 48, false, None)
+                .unwrap(),
+            native(&mut after, &next.root, time)
+                .rgba(64, 48, false, None)
+                .unwrap()
+        );
+    }
+}
+
+#[test]
+fn wrapping_scene_rounds_rotated_bounds_and_syncs_animated_position() {
+    let doc = document(
+        "",
+        r#"<rect id="r" x={10} y={12} width={12} height={8} rotation={30} fill="red"><keyframeTrack id="track" property="x"><keyframe id="k0" time={0} value={10}/><keyframe id="k1" time={2} value={30}/></keyframeTrack></rect>"#,
+    );
+    let mut renderer =
+        ProjectRenderer::new(&doc, std::path::Path::new("."), unavailable_tools(), false).unwrap();
+    let before = renderer
+        .frame_plan("s", 1.0, 30.0, false)
+        .unwrap()
+        .frame(&unavailable_tools(), std::path::Path::new("."))
+        .unwrap();
+    let geometry = renderer.edit_geometries("s").unwrap();
+    let rect = geometry["r"]
+        .frame
+        .bounds(geometry["r"].transform.local_matrix());
+    let timeline = Timeline::resolve(&doc.root, &BTreeMap::new()).unwrap();
+    let (next, scene) = doc
+        .wrap_scene(&timeline, &["r".into()], 1.0, geometry)
+        .unwrap();
+    let scene = next.root.find(scene.as_ref().unwrap()).unwrap();
+    assert_eq!(scene.number("x", 0.0).unwrap(), rect.min_x.floor());
+    assert_eq!(
+        scene.number("width", 0.0).unwrap(),
+        rect.max_x.ceil() - rect.min_x.floor()
+    );
+    let resolved = Timeline::resolve(&next.root, &BTreeMap::new()).unwrap();
+    let points = next.keyframe_points(&resolved, "r", "x").unwrap();
+    assert_eq!(points.len(), 3);
+    assert_eq!(points[1].1, 1.0);
+    assert_eq!(points[1].2, serde_json::json!(20.0 - rect.min_x.floor()));
+    assert_eq!(
+        next.root.find("k0").unwrap().number("value", 0.0).unwrap(),
+        10.0
+    );
+    let mut after_renderer =
+        ProjectRenderer::new(&next, std::path::Path::new("."), unavailable_tools(), false).unwrap();
+    let after = after_renderer
+        .frame_plan("s", 1.0, 30.0, false)
+        .unwrap()
+        .frame(&unavailable_tools(), std::path::Path::new("."))
+        .unwrap();
+    assert_eq!(before, after);
+}
+
+#[test]
+fn wrapping_scene_measures_sequence_leaves_and_preserves_pixels_and_clock() {
+    let doc = document(
+        "",
+        r#"<sequence id="seq"><rect id="a" x={8} y={6} width={12} height={10} fill="red" end={1}/><rect id="b" x={24} y={10} width={8} height={12} fill="green" start={1} end={2}/></sequence><rect id="other" x={40} width={4} height={4} fill="blue"/>"#,
+    );
+    let timeline = Timeline::resolve(&doc.root, &BTreeMap::new()).unwrap();
+    let mut compositor = Compositor::default();
+    native(&mut compositor, &doc.root, 0.0);
+    let (next, scene) = doc
+        .wrap_scene(
+            &timeline,
+            &["seq".into()],
+            0.0,
+            compositor.edit_geometries(),
+        )
+        .unwrap();
+    let scene = next.root.find(scene.as_ref().unwrap()).unwrap();
+    assert_eq!(scene.tag, "scene");
+    assert_eq!(scene.number("x", 0.0).unwrap(), 8.0);
+    assert_eq!(scene.number("y", 0.0).unwrap(), 6.0);
+    assert_eq!(scene.number("width", 0.0).unwrap(), 24.0);
+    assert_eq!(scene.number("height", 0.0).unwrap(), 16.0);
+    let resolved = Timeline::resolve(&next.root, &BTreeMap::new()).unwrap();
+    for time in [0.0, 0.5, 1.0, 1.5] {
+        assert_eq!(
+            timeline.get("b").unwrap().source_at(time),
+            resolved.get("b").unwrap().source_at(time)
+        );
+        assert_eq!(
+            native(&mut compositor, &doc.root, time)
+                .rgba(64, 48, false, None)
+                .unwrap(),
+            native(&mut Compositor::default(), &next.root, time)
+                .rgba(64, 48, false, None)
+                .unwrap()
+        );
+    }
+}
+
+#[test]
+fn dissolving_nested_scene_bakes_position_and_preserves_child_clock_and_pixels() {
+    let doc = document(
+        "",
+        r#"<scene id="inner" x={8} y={4} width={40} height={32} start={0.5} sourceIn={1} playbackRate={2}><sequence id="seq"><rect id="r" x={4} y={4} width={12} height={10} fill="red" start={1} end={3}/></sequence></scene>"#,
+    );
+    let timeline = Timeline::resolve(&doc.root, &BTreeMap::new()).unwrap();
+    let mut compositor = Compositor::default();
+    native(&mut compositor, &doc.root, 1.0);
+    let geometry = compositor.edit_geometries().clone();
+    let (next, released, _) = doc
+        .dissolve_container(&timeline, "inner", 1.0, &geometry)
+        .unwrap();
+    assert_eq!(released, vec!["seq"]);
+    assert!(next.root.find("inner").is_none());
+    assert_eq!(next.root.find("r").unwrap().number("x", 0.0).unwrap(), 12.0);
+    assert_eq!(next.root.find("r").unwrap().number("y", 0.0).unwrap(), 8.0);
+    let after = Timeline::resolve(&next.root, &BTreeMap::new()).unwrap();
+    for time in [0.5, 1.0, 1.25] {
+        assert_eq!(
+            timeline.get("r").unwrap().source_at(time),
+            after.get("r").unwrap().source_at(time)
+        );
+        assert_eq!(
+            native(&mut compositor, &doc.root, time)
+                .rgba(64, 48, false, None)
+                .unwrap(),
+            native(&mut Compositor::default(), &next.root, time)
+                .rgba(64, 48, false, None)
+                .unwrap()
+        );
+    }
+    assert!(
+        doc.dissolve_container(&timeline, "s", 1.0, &geometry)
+            .unwrap_err()
+            .contains("root scene")
+    );
+}
+
+#[test]
+fn edit_geometry_tracks_successful_frame_and_resets_without_stale_nodes() {
+    let doc = document(
+        "",
+        r#"<group id="g" x={12} rotation={15}><rect id="r" x={8} y={6} width={12} height={10} fill="red"/></group>"#,
+    );
+    let mut compositor = Compositor::default();
+    assert!(compositor.edit_geometry("r").is_none());
+    native(&mut compositor, &doc.root, 0.0);
+    let rect = compositor.edit_geometry("r").unwrap();
+    let group = compositor.edit_geometry("g").unwrap();
+    assert_eq!(rect.transform.position, [8.0, 6.0]);
+    assert_eq!(rect.transform.size, [12.0, 10.0]);
+    assert_eq!(rect.local, rect.transform.local_matrix());
+    assert_eq!(rect.world, group.world.multiply(rect.local));
+    let timeline = Timeline::resolve(&doc.root, &BTreeMap::new()).unwrap();
+    assert!(
+        compositor
+            .frame(
+                doc.root.find("s").unwrap(),
+                &timeline,
+                f64::NAN,
+                30.0,
+                false,
+                None
+            )
+            .is_err()
+    );
+    assert_eq!(compositor.edit_geometry("r").unwrap().world, rect.world);
+    let next = document("", r#"<rect id="new" width={4} height={4}/>"#);
+    native(&mut compositor, &next.root, 0.0);
+    assert!(compositor.edit_geometry("r").is_none());
+    assert!(compositor.edit_geometry("new").is_some());
+    compositor.reset();
+    assert!(compositor.edit_geometry("new").is_none());
+}
+
+#[test]
+fn source_group_preserves_rendered_positions_across_frames() {
+    let doc = document(
+        "",
+        r#"<rect id="a" x={8} y={6} width={12} height={10} rotation={15} fill="red" start={0} end={2}/><rect id="b" x={32} y={16} width={18} height={14} fill="lime" start={0.5} end={2}/>"#,
+    );
+    let (grouped, _) = doc.group(&["a".into(), "b".into()]).unwrap();
+    let mut original_compositor = Compositor::default();
+    let mut grouped_compositor = Compositor::default();
+    for time in [0.0, 1.0 / 30.0, 0.5, 1.0, 1.5] {
+        let before = native(&mut original_compositor, &doc.root, time)
+            .rgba(64, 48, false, None)
+            .unwrap();
+        let after = native(&mut grouped_compositor, &grouped.root, time)
+            .rgba(64, 48, false, None)
+            .unwrap();
+        assert_eq!(after, before, "group changed pixels at {time}");
+    }
+}
+
+#[test]
+fn source_restack_changes_composited_overlap_and_back_restores_it() {
+    let doc = document(
+        "",
+        r#"<rect id="red" width={32} height={32} fill="red"/><rect id="blue" width={32} height={32} fill="blue"/>"#,
+    );
+    let sample = |doc: &SourceDocument| {
+        let pixels = native(&mut Compositor::default(), &doc.root, 0.0)
+            .rgba(64, 48, false, None)
+            .unwrap();
+        pixel(&pixels, 64, 16, 16)
+    };
+    assert_eq!(sample(&doc), [0, 0, 255, 255]);
+    let front = doc.restack(&["red".into()], true).unwrap();
+    assert_eq!(sample(&front), [255, 0, 0, 255]);
+    let back = front.restack(&["red".into()], false).unwrap();
+    assert_eq!(sample(&back), [0, 0, 255, 255]);
+}
 fn dynamic_document(name: &str, source: String) -> SourceDocument {
     let path = std::path::absolute(name).unwrap();
     let evaluated = ad3_editor::evaluator::evaluate(&path, &source).unwrap();
@@ -186,7 +718,7 @@ fn visibility_uses_rounded_frame_boundaries_and_unpainted_nodes_stay_transparent
 fn unsupported_native_properties_fail_explicitly_and_failed_plans_do_not_advance_geometry() {
     for (props, body) in [
         ("skewX={2}", ""),
-        ("", r#"<rect keepAspectRatio/>"#),
+        ("", r#"<rect skewY={2}/>"#),
         ("", r#"<rect cornerRadius={-1} fill="red"/>"#),
     ] {
         let doc = document(props, body);
@@ -204,12 +736,6 @@ fn unsupported_native_properties_fail_explicitly_and_failed_plans_do_not_advance
                 .is_err()
         );
     }
-    let nested = document("", "<scene/>");
-    assert!(
-        Timeline::resolve(&nested.root, &BTreeMap::new())
-            .unwrap_err()
-            .contains("Scenes cannot be nested")
-    );
     let doc = document("", r#"<html/>"#);
     assert!(!Compositor::supports(doc.root.find("s").unwrap()));
     let doc = document(
@@ -355,7 +881,7 @@ fn rounded_output_width_keeps_original_uniform_capture_resolution() {
 
 #[test]
 fn a_mounted_scene_keeps_its_backend_and_rejects_new_unsupported_nodes() {
-    let source = r#"import {useTicker} from '@diffusionstudio/jsx';
+    let source = r#"import {useTicker} from '@ad3-editing/jsx';
       export default ()=>{const t=useTicker();return <stage><scene id="s" active width={64} height={48} workarea={[0,3]}>
         <group x={24} y={8} rotation={90}><rect width={8} height={8} fill="red"/><rect x={t.time()<1?20:30} width={8} height={8} fill="blue"/></group>
         {t.time()>=1&&t.time()<2?<html/>:null}
@@ -406,7 +932,7 @@ fn a_mounted_scene_keeps_its_backend_and_rejects_new_unsupported_nodes() {
 
 #[test]
 fn switching_scenes_retains_each_backend_and_group_history() {
-    let doc=dynamic_document("scenes.tsx",r#"import {useTicker} from '@diffusionstudio/jsx';
+    let doc=dynamic_document("scenes.tsx",r#"import {useTicker} from '@ad3-editing/jsx';
       export default ()=>{const t=useTicker();return <stage>
         <scene id="a" active width={64} height={48} workarea={[0,3]}>
           <group x={24} y={8} rotation={90}><rect width={8} height={8} fill="red"/><rect x={20} width={8} height={8}/></group>
@@ -447,7 +973,7 @@ fn switching_scenes_retains_each_backend_and_group_history() {
 
 #[test]
 fn unsupported_properties_stop_native_history_until_remount_but_pixel_cancellation_does_not() {
-    let doc=dynamic_document("transient-prop.tsx",r#"import {useTicker} from '@diffusionstudio/jsx';
+    let doc=dynamic_document("transient-prop.tsx",r#"import {useTicker} from '@ad3-editing/jsx';
       export default ()=>{const t=useTicker();return <stage><scene id="s" active width={64} height={48} workarea={[0,3]}>
         <group x={24} y={8} rotation={90} {...(t.time()>=1&&t.time()<2?{skewX:2}:{})}>
           <rect width={8} height={8} fill="red"/><rect x={t.time()<1?20:30} width={8} height={8} fill="blue"/>

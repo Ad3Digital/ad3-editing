@@ -11,7 +11,7 @@ import { getAsset, getAssetFile } from '../actions/assets';
 import { TimeStretcher } from './time-stretcher';
 
 import type { Entity, World } from 'koota';
-import type { AudioAsset, VideoAsset } from '@diffusionstudio/assets';
+import type { AudioAsset, VideoAsset } from '@ad3-editing/assets';
 import type { AudioBus } from './audio-bus';
 
 const audioTrackCache = new Map<string, Promise<InputAudioTrack | null>>();

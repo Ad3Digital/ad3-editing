@@ -30,7 +30,7 @@ import { Button } from '@/components/ui/button';
 import { cx } from '@/lib/cva';
 import { toast } from 'somoto';
 import { usePermissionState } from '@/hooks/use-permission';
-import { useHas, useTrait, useWorld } from '@diffusionstudio/koota-solid';
+import { useHas, useTrait, useWorld } from '@ad3-editing/koota-solid';
 import {
   Chars,
   Computed,
@@ -46,7 +46,7 @@ import {
   isCaption,
   isText,
   loadWebFont,
-} from '@diffusionstudio/runtime';
+} from '@ad3-editing/runtime';
 import { getLocalFonts } from '@/engine/fonts';
 import { useDerived, useEditor, useTool } from '@/engine/hooks';
 import { removeKeyframeTrack, syncKeyframe } from '@/engine/keyframes';

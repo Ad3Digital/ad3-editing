@@ -1,7 +1,7 @@
 {
-  "name": "@diffusionstudio/encoder",
+  "name": "@ad3-editing/encoder",
   "version": "0.1.0",
-  "description": "Offline video/audio/image encoding over @diffusionstudio/runtime worlds via mediabunny. Needs a browser-grade context (HTMLCanvasElement, OfflineAudioContext, AudioWorklet, SharedArrayBuffer).",
+  "description": "Offline video/audio/image encoding over @ad3-editing/runtime worlds via mediabunny. Needs a browser-grade context (HTMLCanvasElement, OfflineAudioContext, AudioWorklet, SharedArrayBuffer).",
   "license": "MPL-2.0",
   "type": "module",
   "sideEffects": false,
@@ -17,7 +17,7 @@
     "webcodecs"
   ],
   "dependencies": {
-    "@diffusionstudio/runtime": "*",
+    "@ad3-editing/runtime": "*",
     "koota": "^0.6.6",
     "mediabunny": "^1.32.2"
   },

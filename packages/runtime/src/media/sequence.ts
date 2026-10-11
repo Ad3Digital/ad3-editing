@@ -5,7 +5,7 @@
 import { assert } from '../utils/assert';
 import { FrameCache } from './frame-cache';
 
-import type { SequenceAsset } from '@diffusionstudio/assets';
+import type { SequenceAsset } from '@ad3-editing/assets';
 
 const FRAME_EXTENSIONS = /\.(png|jpe?g|webp|avif|bmp|gif)$/i;
 

@@ -2,6 +2,10 @@
 // separate test executables is unnecessarily expensive on Windows.
 #[path = "compositor.rs"]
 mod compositor;
+#[cfg(feature = "desktop")]
+#[allow(dead_code)]
+#[path = "../src/desktop.rs"]
+mod desktop_ui;
 #[path = "editing.rs"]
 mod editing;
 #[path = "effects.rs"]

@@ -2,12 +2,12 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { buildTimelineLayers, getActiveEntity } from '@diffusionstudio/runtime';
-import { useWorld } from '@diffusionstudio/koota-solid';
+import { buildTimelineLayers, getActiveEntity } from '@ad3-editing/runtime';
+import { useWorld } from '@ad3-editing/koota-solid';
 
 import { useDerived } from './use-derived';
 
-import type { TimelineIndexValue, TimelineNode } from '@diffusionstudio/runtime';
+import type { TimelineIndexValue, TimelineNode } from '@ad3-editing/runtime';
 import type { Accessor } from 'solid-js';
 
 /**

@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { trait } from 'koota';
-import { Computed, FrameRate, Time, getActiveEntity } from '@diffusionstudio/runtime';
+import { Computed, FrameRate, Time, getActiveEntity } from '@ad3-editing/runtime';
 import { toast } from 'somoto';
 import { ProjectConfig } from '../traits';
 import { sceneConfigKey } from '../project-config';

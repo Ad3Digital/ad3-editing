@@ -3,14 +3,14 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { Show } from "solid-js";
-import { useHas, useWorld } from "@diffusionstudio/koota-solid";
-import { Cache, Source } from "@diffusionstudio/runtime";
+import { useHas, useWorld } from "@ad3-editing/koota-solid";
+import { Cache, Source } from "@ad3-editing/runtime";
 import { cx } from "@/lib/cva";
 import { useDerived, useEditor } from "@/engine/hooks";
 import { findKeyframeAt, findKeyframeTrack, keyframeFrame, toggleKeyframe } from "@/engine/keyframes";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
-import type { AnimatableProperty } from "@diffusionstudio/jsx";
+import type { AnimatableProperty } from "@ad3-editing/jsx";
 import type { Entity } from "koota";
 
 type KeyframeProps = {

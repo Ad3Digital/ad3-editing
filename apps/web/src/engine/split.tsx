@@ -10,7 +10,7 @@
  * canvas shows: an element beside the one it came from, with its own times.
  */
 
-import { Sequence } from '@diffusionstudio/reconciler';
+import { Sequence } from '@ad3-editing/reconciler';
 import {
 	AdjustmentLayer,
 	ChildOf,
@@ -26,7 +26,7 @@ import {
 	isSequence,
 	setPlayhead,
 	store,
-} from '@diffusionstudio/runtime';
+} from '@ad3-editing/runtime';
 import { Or } from 'koota';
 
 import { getDocumentEditor } from './editor';

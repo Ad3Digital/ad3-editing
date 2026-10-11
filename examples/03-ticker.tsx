@@ -1,4 +1,4 @@
-/* @jsxImportSource @diffusionstudio/jsx */
+/* @jsxImportSource @ad3-editing/jsx */
 /* Declarative animation: useTicker exposes the playhead as reactive
  * accessors, createMemo derives values from it, and props consume the memos.
  *
@@ -12,7 +12,7 @@
  */
 
 import { createMemo } from "solid-js";
-import { useTicker } from "@diffusionstudio/jsx";
+import { useTicker } from "@ad3-editing/jsx";
 
 const LOOP = 4; // seconds per revolution
 

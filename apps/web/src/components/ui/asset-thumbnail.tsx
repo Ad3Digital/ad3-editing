@@ -4,10 +4,10 @@
 
 import { Show, For, createResource, onCleanup } from 'solid-js';
 import { cx } from '@/lib/cva';
-import { getAssetFile } from '@diffusionstudio/runtime';
-import { deriveThumbnail, DEFAULT_THUMBNAIL_WIDTH, derivePeaks } from '@diffusionstudio/assets';
+import { getAssetFile } from '@ad3-editing/runtime';
+import { deriveThumbnail, DEFAULT_THUMBNAIL_WIDTH, derivePeaks } from '@ad3-editing/assets';
 
-import type { Asset as LibraryAsset, AssetCache, AudioAsset, VideoAsset, ImageAsset } from '@diffusionstudio/assets';
+import type { Asset as LibraryAsset, AssetCache, AudioAsset, VideoAsset, ImageAsset } from '@ad3-editing/assets';
 
 /**
  * What a thumbnail needs of an asset: the runtime's `Asset` and the legacy

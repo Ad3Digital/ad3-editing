@@ -5,7 +5,7 @@
 import { trait, type Entity, type World } from 'koota';
 
 import type { FontSource } from '../fonts/types';
-import type { AssetLibrary } from '@diffusionstudio/assets';
+import type { AssetLibrary } from '@ad3-editing/assets';
 import type { GenAi } from '../ai';
 import type { Quad } from '../math/aabb';
 

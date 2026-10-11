@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { assetSystem, renderSystem, transformSystem, playbackSystem, motionSystem, AudioEngine, createRuntimeWorld, Geometry, Mode, RenderSurface, Time, ChildOf, syncInteractiveState } from '@diffusionstudio/runtime';
+import { assetSystem, renderSystem, transformSystem, playbackSystem, motionSystem, AudioEngine, createRuntimeWorld, Geometry, Mode, RenderSurface, Time, ChildOf, syncInteractiveState } from '@ad3-editing/runtime';
 import { hudSystem } from './hud';
 import { createSignal, type Accessor, type Setter } from 'solid-js';
 import { AssetSelection, Hud, Keys, MODIFIER_KEYS, Pointer, PointerEvents, ProjectConfig, SnapLines } from './traits';
@@ -11,8 +11,8 @@ import { clearClipFrames, clearClipPeaks, clearMedia, clearPeaks, timelineSystem
 import { shortcutSystem } from './input/shortcuts';
 import { sourceErrorSystem } from './source-errors';
 
-import type { RuntimeWorld } from '@diffusionstudio/runtime';
-import type { CanvasPointerEvent, PointerEventType } from '@diffusionstudio/runtime';
+import type { RuntimeWorld } from '@ad3-editing/runtime';
+import type { CanvasPointerEvent, PointerEventType } from '@ad3-editing/runtime';
 
 export interface EngineOptions {
 	/**

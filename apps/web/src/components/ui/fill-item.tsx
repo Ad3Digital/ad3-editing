@@ -7,13 +7,13 @@ import { AssetThumbnail } from "@/components/ui/asset-thumbnail";
 import { Icon } from "@/components/ui/icon";
 import { Keyframe } from "@/components/ui/keyframe";
 import { OpacitySwatch } from "@/components/ui/opacity-swatch";
-import { useTrait, useWorld } from "@diffusionstudio/koota-solid";
-import { AssetId, Computed, Paint, PaintType, colorToHex, parseColor } from "@diffusionstudio/runtime";
+import { useTrait, useWorld } from "@ad3-editing/koota-solid";
+import { AssetId, Computed, Paint, PaintType, colorToHex, parseColor } from "@ad3-editing/runtime";
 import { useDerived, useEditor } from "@/engine/hooks";
 import { useLibrary } from "@/engine/library";
 import { syncKeyframe } from "@/engine/keyframes";
 import { readGradientStops, sameGradientStops, type GradientStop } from "@/components/sidebar-right/inspector/gradient-stops";
-import { assetName } from "@diffusionstudio/assets";
+import { assetName } from "@ad3-editing/assets";
 import { mergeColorWithOpacity } from "@/utils";
 
 import type { Entity } from "koota";

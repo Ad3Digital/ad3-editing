@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * What a compiled bundle sees as "@diffusionstudio/jsx".
+ * What a compiled bundle sees as "@ad3-editing/jsx".
  *
  * The npm package under that name is authoring-only — types, pure helpers, and
  * hooks that throw because they have no host to read. A project never resolves
@@ -17,7 +17,7 @@
  * Order matters — the renderer bindings must come last so they win.
  */
 
-import * as authoring from '@diffusionstudio/jsx';
+import * as authoring from '@ad3-editing/jsx';
 
 import * as elements from './elements';
 import { __inspect } from './inspect';

@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { Show } from "solid-js";
-import { useWorld } from "@diffusionstudio/koota-solid";
-import { Rect, Scene, SolidPaint, Text } from "@diffusionstudio/reconciler";
+import { useWorld } from "@ad3-editing/koota-solid";
+import { Rect, Scene, SolidPaint, Text } from "@ad3-editing/reconciler";
 import {
   Computed,
   findSceneAt,
@@ -16,11 +16,11 @@ import {
   Tool,
   ToolType,
   worldToLocal,
-} from "@diffusionstudio/runtime";
+} from "@ad3-editing/runtime";
 import { useEditor, useTool } from "@/engine";
 
 import type { Entity } from "koota";
-import type { Point } from "@diffusionstudio/runtime";
+import type { Point } from "@ad3-editing/runtime";
 
 type ToolConfig = {
   isScene?: boolean;

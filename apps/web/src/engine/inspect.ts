@@ -12,7 +12,7 @@
 import { createSignal } from 'solid-js';
 
 import type { Accessor } from 'solid-js';
-import type { InspectEntry } from '@diffusionstudio/reconciler';
+import type { InspectEntry } from '@ad3-editing/reconciler';
 import type { World } from 'koota';
 
 interface Registry {

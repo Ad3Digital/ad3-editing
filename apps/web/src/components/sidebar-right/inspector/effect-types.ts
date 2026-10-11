@@ -2,10 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { EFFECT_TYPES } from "@diffusionstudio/reconciler";
+import { EFFECT_TYPES } from "@ad3-editing/reconciler";
 
-import type { EffectType as EffectName } from "@diffusionstudio/jsx";
-import type { EffectType } from "@diffusionstudio/runtime";
+import type { EffectType as EffectName } from "@ad3-editing/jsx";
+import type { EffectType } from "@ad3-editing/runtime";
 
 /**
  * What an `<effect>`'s `value` means, which is what a type switch has to

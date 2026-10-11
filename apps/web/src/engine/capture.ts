@@ -20,17 +20,17 @@
  * is any `src` of it resolved.
  */
 
-import { mount } from '@diffusionstudio/reconciler';
+import { mount } from '@ad3-editing/reconciler';
 import {
 	Ai, ChildOf, FramePromises, FrameRate, Fonts, Hidden, Library, Mode, Project,
 	RenderSurface, Root, Source, TranscriptionRequest,
 	createRuntimeWorld, disposeDecoders, getParentNode, removeChild, resetCamera,
-} from '@diffusionstudio/runtime';
+} from '@ad3-editing/runtime';
 
 import { loadProjectBundle } from '@/lib/db';
 import { compileProject, isDesktop } from '@/projects';
 
-import type { RuntimeMode } from '@diffusionstudio/runtime';
+import type { RuntimeMode } from '@ad3-editing/runtime';
 import type { Entity, World } from 'koota';
 
 export interface CaptureOptions {

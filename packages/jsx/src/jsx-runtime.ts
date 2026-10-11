@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /**
- * Type-only JSX runtime for `jsxImportSource: "@diffusionstudio/jsx"`. JSX is
+ * Type-only JSX runtime for `jsxImportSource: "@ad3-editing/jsx"`. JSX is
  * compiled by babel-preset-solid (universal mode) against the renderer in
  * "./renderer", so this module carries no runtime — only the JSX namespace
  * TypeScript resolves element and prop types from.

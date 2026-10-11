@@ -118,7 +118,7 @@ fn masks_match_original_runtime_canvas_samples_and_adapter_defaults() {
 }
 #[test]
 fn reactive_mask_toggle_keeps_the_backend_and_restores_normal_layer_drawing() {
-    let source=r#"import {useTicker} from '@diffusionstudio/jsx';
+    let source=r#"import {useTicker} from '@ad3-editing/jsx';
       export default ()=>{const t=useTicker();return <stage><scene id="s" active width={128} height={128} workarea={[0,3]}>
         <rect width={128} height={128} fill="red">
           <rect id="m" mask={t.time()<1} x={20} width={30} height={70} fill="blue"/>

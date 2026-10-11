@@ -7,7 +7,7 @@
  * pure helpers they may call, and the hooks the editor implements. The
  * renderer that turns this vocabulary into a composition is not here — the
  * editor supplies it when a project is mounted (see
- * @diffusionstudio/reconciler), so nothing in this package touches a host.
+ * @ad3-editing/reconciler), so nothing in this package touches a host.
  */
 
 export {

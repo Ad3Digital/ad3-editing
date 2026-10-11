@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Computed, FrameRate, getActiveEntity } from "@diffusionstudio/runtime";
+import { Computed, FrameRate, getActiveEntity } from "@ad3-editing/runtime";
 
 import { getDefaultExportTemplate } from "@/components/sidebar-right/inspector/export-templates";
 import { renderScene } from "@/context/render";

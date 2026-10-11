@@ -76,7 +76,7 @@ if [ -z "$APP_EXECUTABLE" ]; then
   echo "AD3 Editing application executable could not be located." >&2
   exit 1
 fi
-export DIFFUSION_APP_PATH="$(cd "$CONTENTS_DIR/.." && pwd)"
+export AD3_APP_PATH="$(cd "$CONTENTS_DIR/.." && pwd)"
 ELECTRON_RUN_AS_NODE=1 exec "$APP_EXECUTABLE" "$DIR/../dapi.js" "$@"
 `;
 writeFileSync(join(stageDir, "bin", "dapi"), posixWrapper);
@@ -88,13 +88,13 @@ if (process.platform !== "win32") chmodSync(join(stageDir, "bin", "dapi"), 0o755
 const windowsWrapper = `@echo off
 setlocal
 set "APP_DIR=%~dp0..\\..\\.."
-if exist "%APP_DIR%\\Diffusion Studio.exe" goto app_found
+if exist "%APP_DIR%\\AD3 Editing.exe" goto app_found
 
-set "INSTALL_ROOT=%LOCALAPPDATA%\\DiffusionStudio"
+set "INSTALL_ROOT=%LOCALAPPDATA%\\AD3Editing"
 if not exist "%INSTALL_ROOT%" goto app_missing
 pushd "%INSTALL_ROOT%" >nul
 for /f "delims=" %%D in ('dir /b /ad /o-d app-* 2^>nul') do (
-  if exist "%%D\\Diffusion Studio.exe" (
+  if exist "%%D\\AD3 Editing.exe" (
     set "APP_DIR=%INSTALL_ROOT%\\%%D"
     goto installed_app_found
   )
@@ -105,9 +105,9 @@ goto app_missing
 :installed_app_found
 popd
 :app_found
-set "DIFFUSION_APP_PATH=%APP_DIR%"
+set "AD3_APP_PATH=%APP_DIR%"
 set "ELECTRON_RUN_AS_NODE=1"
-"%APP_DIR%\\Diffusion Studio.exe" "%APP_DIR%\\resources\\cli\\dapi.js" %*
+"%APP_DIR%\\AD3 Editing.exe" "%APP_DIR%\\resources\\cli\\dapi.js" %*
 set "DAPI_EXIT=%ERRORLEVEL%"
 endlocal & exit /b %DAPI_EXIT%
 

@@ -12,8 +12,8 @@ import { useEditorApi } from "@/context/dapi";
 import { RULER_HEIGHT } from "@/engine/timeline";
 import { createEffect, onCleanup, untrack } from 'solid-js';
 import { toast } from 'somoto';
-import { useWorld } from '@diffusionstudio/koota-solid';
-import { mount } from '@diffusionstudio/reconciler';
+import { useWorld } from '@ad3-editing/koota-solid';
+import { mount } from '@ad3-editing/reconciler';
 import { getDocumentEditor } from '@/engine/editor';
 import { getEditHistory } from '@/engine/history';
 import { setInspectEntries } from '@/engine/inspect';
@@ -21,14 +21,14 @@ import { attachLibrary, isLibraryFile } from '@/engine/library';
 import { attachAi } from '@/utils/gen-ai';
 import { attachProjectConfig, isProjectConfigFile } from '@/engine/project-config';
 import { loadProjectBundle, rememberProjectBundle } from '@/lib/db';
-import { isCacheFile } from '@diffusionstudio/assets';
+import { isCacheFile } from '@ad3-editing/assets';
 import { createEditWriter } from '@/projects/edits';
 import { compileProject, watchProject } from '@/projects/host';
 import { captureProjectCover } from '@/projects/cover';
 import { useProject } from "@/context/project";
 import { useEngineContext } from "@/engine";
 
-import type { Mount } from '@diffusionstudio/reconciler';
+import type { Mount } from '@ad3-editing/reconciler';
 import type { EditWriter } from '@/projects/edits';
 
 const MIN_CANVAS_HEIGHT = 200;

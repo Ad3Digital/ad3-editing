@@ -14,8 +14,8 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import { Keyframe } from '@/components/ui/keyframe';
-import { useTrait, useWorld } from '@diffusionstudio/koota-solid';
-import { Computed, Flip } from '@diffusionstudio/runtime';
+import { useTrait, useWorld } from '@ad3-editing/koota-solid';
+import { Computed, Flip } from '@ad3-editing/runtime';
 import { useDerived, useEditor } from '@/engine/hooks';
 import { syncKeyframe } from '@/engine/keyframes';
 

@@ -6,7 +6,7 @@ import { trait } from 'koota';
 
 import { GeometryType, PaintType, CaptionType, CaptionAlign } from '../constants';
 
-import type { AssetRef } from '@diffusionstudio/jsx';
+import type { AssetRef } from '@ad3-editing/jsx';
 
 // Geometric primitive: RECT or TEXT (see GeometryType). Other node-like roles
 // (group, audio, scene, caption) are layered on top via tag traits.
@@ -57,14 +57,14 @@ export const Name = trait({ value: '' });
 export const Key = trait({ value: '' });
 
 // Where this entity's JSX element is, as `<file>:<key or position>` (see
-// SOURCE_ATTR in @diffusionstudio/jsx). Set by the host while a project
+// SOURCE_ATTR in @ad3-editing/jsx). Set by the host while a project
 // renders; it is what lets a change made in the editor be written back to the
 // source that produced the entity. Deliberately not serialized: a copy of an
 // entity is not the element it was copied from.
 export const Source = trait({ value: '' });
 
 // On entities a `<For>`/`<Index>` body produced: the source of that loop (see
-// LOOP_ATTR in @diffusionstudio/jsx). Every iteration shares one Source, so
+// LOOP_ATTR in @ad3-editing/jsx). Every iteration shares one Source, so
 // this is what tells the editor an element cannot be written to alone and
 // which entities are its fellow iterations. Set by the host while a project
 // renders and taken off once the loop has been unrolled in the source; not

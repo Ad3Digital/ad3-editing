@@ -6,11 +6,11 @@ import {
   AdjustmentLayer, Audio, Cache, Caption, Computed, FrameRate, Geometry,
   Group, Hidden, IsMask, Opacity, PaintType, Scene, Sequential, Source,
   SourceError, Workarea, framesToSeconds, getIntrinsicPaint, isText,
-} from "@diffusionstudio/runtime";
+} from "@ad3-editing/runtime";
 
 import { resolveNode } from "./nodes";
 
-import type { CheckIssue, CheckRequest, CheckResult } from "@diffusionstudio/cli/channels";
+import type { CheckIssue, CheckRequest, CheckResult } from "@ad3-editing/cli/channels";
 import type { Entity } from "koota";
 import type { EditorSession } from "./session";
 

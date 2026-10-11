@@ -9,9 +9,9 @@ import { join } from "node:path";
 
 import { IndentationText, Project, SyntaxKind } from "ts-morph";
 
-import { ID_ATTR, INSPECT_TAG, formatSource, isCompositionTag, isLoopTag, isSerializedAssetRef, parseSource } from "@diffusionstudio/jsx";
+import { ID_ATTR, INSPECT_TAG, formatSource, isCompositionTag, isLoopTag, isSerializedAssetRef, parseSource } from "@ad3-editing/jsx";
 
-import type { InspectValue, PropValue, SerializedAssetRef } from "@diffusionstudio/jsx";
+import type { InspectValue, PropValue, SerializedAssetRef } from "@ad3-editing/jsx";
 import type {
   ArrowFunction,
   FunctionExpression,
@@ -123,7 +123,7 @@ export interface SourceUnroll {
 
 /**
  * Overwrites the initializer of an `@inspect`-annotated top-level const (see
- * @diffusionstudio/jsx's inspect). Addressed by file and variable name — a
+ * @ad3-editing/jsx's inspect). Addressed by file and variable name — a
  * const's name is unique in its module, so no id is needed — and only written
  * when the declaration still carries the annotation and holds a literal: an
  * initializer someone rewrote into an expression is theirs again.
@@ -305,7 +305,7 @@ function setProp(tag: JsxTag, name: string, value: EditValue): void {
 }
 
 /** Where `generate` comes from — the module every project authors against. */
-const GENERATE_MODULE = "@diffusionstudio/jsx";
+const GENERATE_MODULE = "@ad3-editing/jsx";
 
 /**
  * Makes sure `generate` is in scope once a declaration has been spelled into

@@ -5,13 +5,13 @@
 /**
  * Editor state on the world, next to the runtime's own singletons: what the
  * pointer and keyboard are doing, and what the HUD is drawing because of it.
- * None of it belongs in `@diffusionstudio/runtime` (a headless world has no
+ * None of it belongs in `@ad3-editing/runtime` (a headless world has no
  * pointer), and none of it is authored, so it never reaches the source.
  */
 
 import { trait } from 'koota';
 
-import type { CanvasPointerEvent, Point } from '@diffusionstudio/runtime';
+import type { CanvasPointerEvent, Point } from '@ad3-editing/runtime';
 import type { ProjectConfig as ProjectConfigStore } from './project-config';
 
 export type PointerPhase = 'pressed' | 'lifted';

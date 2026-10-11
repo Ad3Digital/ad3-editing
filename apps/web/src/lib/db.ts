@@ -78,7 +78,7 @@ export interface GlobalDBSchema extends idb.DBSchema {
   };
 }
 
-const DB_NAME = 'diffusion-studio-idb';
+const DB_NAME = 'ad3-editing-idb';
 const DB_VERSION = 2;
 
 const dbPromise = openDB<GlobalDBSchema>(DB_NAME, DB_VERSION, {

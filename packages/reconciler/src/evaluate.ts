@@ -14,7 +14,7 @@ import { JSX_RUNTIME } from './runtime';
 const MODULES: Record<string, unknown> = {
 	'solid-js': solid,
 	'solid-js/store': solidStore,
-	'@diffusionstudio/jsx': JSX_RUNTIME,
+	'@ad3-editing/jsx': JSX_RUNTIME,
 };
 
 /** Evaluates a compiled CommonJS bundle and returns its default export. */
@@ -23,7 +23,7 @@ export function evaluate(code: string): () => unknown {
 
 	const require = (id: string): unknown => {
 		const resolved = MODULES[id];
-		if (!resolved) throw new Error(`Cannot import "${id}" — only solid-js and @diffusionstudio/jsx are available.`);
+		if (!resolved) throw new Error(`Cannot import "${id}" — only solid-js and @ad3-editing/jsx are available.`);
 		return resolved;
 	};
 

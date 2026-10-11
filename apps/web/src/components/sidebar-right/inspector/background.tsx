@@ -16,8 +16,8 @@ import { ColorOpacityRow } from "@/components/ui/color-opacity-row";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { createSignal } from "solid-js";
-import { Background, DEFAULT_BACKGROUND, Root, colorToHex } from "@diffusionstudio/runtime";
-import { useTrait, useWorld } from "@diffusionstudio/koota-solid";
+import { Background, DEFAULT_BACKGROUND, Root, colorToHex } from "@ad3-editing/runtime";
+import { useTrait, useWorld } from "@ad3-editing/koota-solid";
 import { useEditor } from "@/engine/hooks/use-editor";
 
 export function BackgroundSettings() {

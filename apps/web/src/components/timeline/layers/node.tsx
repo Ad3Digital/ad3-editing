@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { createMemo, createSignal, Show } from 'solid-js';
-import { useTag, useTrait, useWorld } from '@diffusionstudio/koota-solid';
+import { useTag, useTrait, useWorld } from '@ad3-editing/koota-solid';
 import {
   ClipHeight,
   Expanded,
@@ -23,7 +23,7 @@ import {
   isScene,
   isSequence,
   isText,
-} from '@diffusionstudio/runtime';
+} from '@ad3-editing/runtime';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import {
@@ -43,7 +43,7 @@ import { useLayerContext } from './context';
 import { setRowHover } from './hover';
 
 import type { World } from 'koota';
-import type { TimelineNode } from '@diffusionstudio/runtime';
+import type { TimelineNode } from '@ad3-editing/runtime';
 import type { LayerRowProps } from './layer';
 
 export function NodeLayer(props: LayerRowProps) {

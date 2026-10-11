@@ -22,14 +22,14 @@
  * be replayed against the one that replaced it.
  */
 
-import { Source, getEntityChildren } from '@diffusionstudio/runtime';
-import { authoredElement, renderAuthored } from '@diffusionstudio/reconciler';
+import { Source, getEntityChildren } from '@ad3-editing/runtime';
+import { authoredElement, renderAuthored } from '@ad3-editing/reconciler';
 import { createSignal } from 'solid-js';
 
 import { getDocumentEditor } from './editor';
 
-import type { AuthoredTree } from '@diffusionstudio/reconciler';
-import type { InspectValue, PropValue } from '@diffusionstudio/jsx';
+import type { AuthoredTree } from '@ad3-editing/reconciler';
+import type { InspectValue, PropValue } from '@ad3-editing/jsx';
 import type { Entity, World } from 'koota';
 import type { CapturedNode, DocumentEditor, EntityEdit } from './editor';
 

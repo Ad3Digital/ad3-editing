@@ -30,8 +30,8 @@ import {
   type Accessor,
   type Setter,
 } from "solid-js";
-import { useQuery } from "@diffusionstudio/koota-solid";
-import { Color, DEFAULT_BACKGROUND } from "@diffusionstudio/runtime";
+import { useQuery } from "@ad3-editing/koota-solid";
+import { Color, DEFAULT_BACKGROUND } from "@ad3-editing/runtime";
 import { toast } from "somoto";
 
 import type { Entity } from "koota";

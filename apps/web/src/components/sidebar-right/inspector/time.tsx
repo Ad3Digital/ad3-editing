@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/context-menu";
 import { createStoredSignal } from "@/lib/store";
 import { store } from "@/init";
-import { useTrait, useWorld } from "@diffusionstudio/koota-solid";
+import { useTrait, useWorld } from "@ad3-editing/koota-solid";
 import {
   Computed,
   FrameRate,
@@ -44,7 +44,7 @@ import {
   isGroupLike,
   isScene,
   secondsToFrames,
-} from "@diffusionstudio/runtime";
+} from "@ad3-editing/runtime";
 import { useDerived, useEditor } from "@/engine/hooks";
 import { editTime, trimIn, trimOut } from "@/engine/timing";
 

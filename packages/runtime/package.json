@@ -1,5 +1,5 @@
 {
-  "name": "@diffusionstudio/runtime",
+  "name": "@ad3-editing/runtime",
   "version": "0.1.0",
   "description": "Headless editor runtime: koota traits, world, actions, systems, media decoding, and capture. No DOM, no solid-js.",
   "license": "MPL-2.0",
@@ -20,8 +20,8 @@
     "video"
   ],
   "dependencies": {
-    "@diffusionstudio/assets": "*",
-    "@diffusionstudio/jsx": "*",
+    "@ad3-editing/assets": "*",
+    "@ad3-editing/jsx": "*",
     "animejs": "^4.4.1",
     "colord": "^2.9.3",
     "koota": "^0.6.6",

@@ -4,7 +4,7 @@
 
 /**
  * The live `__inspect` — substituted for the throwing declaration in
- * @diffusionstudio/jsx (see "./runtime"), so a compiled `@inspect` declaration
+ * @ad3-editing/jsx (see "./runtime"), so a compiled `@inspect` declaration
  * resolves to a signal on the host's Solid instance. The composition reads it
  * through the rewritten references; the inspector reads and writes it through
  * the entry collected here. One signal, one graph: a set from the inspector
@@ -14,7 +14,7 @@
 import { createSignal } from 'solid-js';
 
 import type { Accessor } from 'solid-js';
-import type { InspectDeclaration, InspectType, InspectValue } from '@diffusionstudio/jsx';
+import type { InspectDeclaration, InspectType, InspectValue } from '@ad3-editing/jsx';
 
 /**
  * One inspected variable of a mount: its identity (`file` and `name`, which is

@@ -10,8 +10,8 @@ import { ControlledTextField } from "@/components/ui/text-field";
 import { Keyframe } from "@/components/ui/keyframe";
 import { useVolumeMeter, type ChannelLevels } from "@/hooks/use-volume-meter";
 import { cx } from "@/lib/cva";
-import { useHas, useTrait, useWorld } from "@diffusionstudio/koota-solid";
-import { AudioBusHandle, Computed, Muted, Soloed } from "@diffusionstudio/runtime";
+import { useHas, useTrait, useWorld } from "@ad3-editing/koota-solid";
+import { AudioBusHandle, Computed, Muted, Soloed } from "@ad3-editing/runtime";
 import { useDerived, useEditor } from "@/engine/hooks";
 import { syncKeyframe } from "@/engine/keyframes";
 

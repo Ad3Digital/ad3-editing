@@ -3,8 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { createMemo, createSignal, For, Show } from "solid-js";
-import { useQuery, useTrait, useWorld } from "@diffusionstudio/koota-solid";
-import { ChildOf, Library, Root, setCamera, Source } from "@diffusionstudio/runtime";
+import { useQuery, useTrait, useWorld } from "@ad3-editing/koota-solid";
+import { ChildOf, Library, Root, setCamera, Source } from "@ad3-editing/runtime";
 import { Icon } from "@/components/ui/icon";
 import {
   DropdownMenu,
@@ -25,7 +25,7 @@ import { droppedFiles, importFiles } from "@/engine/asset-actions";
 import { createScene, insertAssetsInNewScene } from "@/engine/new-scene";
 import { ASSET_DRAG_TYPE } from "@/components/sidebar-left/folder-item";
 
-import type { Rect } from "@diffusionstudio/runtime";
+import type { Rect } from "@ad3-editing/runtime";
 import type { LayoutPreset } from "@/lib/layout-presets";
 
 

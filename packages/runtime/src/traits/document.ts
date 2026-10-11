@@ -4,14 +4,14 @@
 
 import { trait } from 'koota';
 
-import type { SceneNode as AuthoredSceneNode } from '@diffusionstudio/jsx';
+import type { SceneNode as AuthoredSceneNode } from '@ad3-editing/jsx';
 
 /** The real DOM node owned by a scene node. */
 export type DomNode = Element | Text;
 
 /**
  * One element of the document, and its place in it: the authoring `SceneNode`
- * (see @diffusionstudio/jsx) instantiated with the DOM node type the document
+ * (see @ad3-editing/jsx) instantiated with the DOM node type the document
  * manages. `parent` and `children` are the tree the reconciler reads back:
  * text nodes and element nodes in the one order they were inserted in, which
  * is what the document answers `getFirstChild` and `getNextSibling` from.

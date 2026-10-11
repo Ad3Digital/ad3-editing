@@ -8,7 +8,7 @@
  * duration; the HUD moves it into place each frame while it is mounted.
  */
 
-import { Name, RenderSurface } from '@diffusionstudio/runtime';
+import { Name, RenderSurface } from '@ad3-editing/runtime';
 
 import { getDocumentEditor } from '../editor';
 

@@ -35,9 +35,9 @@ import {
 import { ColorOpacityPicker } from "@/components/ui/color-opacity-picker";
 import { useDrag } from "@/hooks/use-drag";
 import { clamp, mergeColorWithOpacity } from "@/utils";
-import { useTrait, useWorld } from "@diffusionstudio/koota-solid";
-import { ColorStop as ColorStopElement } from "@diffusionstudio/reconciler";
-import { Computed, Paint, PaintType, colorToHex, parseColor } from "@diffusionstudio/runtime";
+import { useTrait, useWorld } from "@ad3-editing/koota-solid";
+import { ColorStop as ColorStopElement } from "@ad3-editing/reconciler";
+import { Computed, Paint, PaintType, colorToHex, parseColor } from "@ad3-editing/runtime";
 import { useDerived, useEditor } from "@/engine/hooks";
 import { syncKeyframe } from "@/engine/keyframes";
 import { readGradientStops, sameGradientStops, type GradientStop } from "./gradient-stops";

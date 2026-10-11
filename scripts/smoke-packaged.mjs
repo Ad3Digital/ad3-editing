@@ -129,7 +129,7 @@ try {
 
   const project = await call(page, "projects:create", { root: join(output, "projects"), displayName: "HyperFrames release smoke" });
   const dir = project.dir;
-  await writeFile(join(dir, project.entry), '/* @jsxImportSource @diffusionstudio/jsx */\nexport default function Smoke() { return <stage><scene id="hf-smoke-scene" name="HyperFrames smoke" width={320} height={180} fill="#18324c" active /></stage>; }\n');
+  await writeFile(join(dir, project.entry), '/* @jsxImportSource @ad3-editing/jsx */\nexport default function Smoke() { return <stage><scene id="hf-smoke-scene" name="HyperFrames smoke" width={320} height={180} fill="#18324c" active /></stage>; }\n');
   const settings = { template: "custom", title: "First render", subtitle: "", accent: "#5eead4", background: "#18324c", duration: 1.5, width: 320, height: 180, fps: 24, transparent: false };
   let composition = await call(page, "hyperframes:save", { dir, draft: { name: "Release smoke", settings, html: source("First render") } });
   const saved = await call(page, "hyperframes:list", { dir });
@@ -174,7 +174,7 @@ try {
   // Seed only the isolated profile's normal recent-project record, then drive
   // the real project route and panel. No user profile or user project is used.
   await page.evaluate((project) => new Promise((done, fail) => {
-    const request = indexedDB.open("diffusion-studio-idb", 2);
+    const request = indexedDB.open("ad3-editing-idb", 2);
     request.onerror = () => fail(request.error);
     request.onsuccess = () => {
       const db = request.result;

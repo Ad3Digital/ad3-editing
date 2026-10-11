@@ -1,5 +1,5 @@
 {
-  "name": "@diffusionstudio/koota-solid",
+  "name": "@ad3-editing/koota-solid",
   "version": "0.1.0",
   "description": "Solid bindings for koota — a port of @koota/react, adapted to Solid's reactivity model.",
   "license": "MPL-2.0",

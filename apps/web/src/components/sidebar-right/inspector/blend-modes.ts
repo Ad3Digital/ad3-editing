@@ -2,10 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { BlendModeType } from "@diffusionstudio/runtime";
-import { BLEND_MODES } from "@diffusionstudio/reconciler";
+import { BlendModeType } from "@ad3-editing/runtime";
+import { BLEND_MODES } from "@ad3-editing/reconciler";
 
-import type { BlendMode } from "@diffusionstudio/jsx";
+import type { BlendMode } from "@ad3-editing/jsx";
 
 // Ordered to match Figma's blend mode menu groupings.
 export const BLEND_MODE_ORDER: BlendModeType[] = [

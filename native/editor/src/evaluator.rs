@@ -165,7 +165,7 @@ fn export_target(value: &Value) -> Result<Option<&str>> {
 fn resolve(specifier: &str, referrer: &Path) -> Result<PathBuf> {
     if matches!(
         specifier,
-        "solid-js" | "solid-js/store" | "@diffusionstudio/jsx"
+        "solid-js" | "solid-js/store" | "@ad3-editing/jsx"
     ) {
         return Err(format!(
             "Host module {specifier} requires the native reactive host, which is still being ported"
@@ -524,7 +524,7 @@ fn install_hosts(loader: &Loader, context: &mut Context) -> JsResult<()> {
         .build();
     for (specifier, global, object) in [
         ("solid-js", "__ad3Solid", solid),
-        ("@diffusionstudio/jsx", "__ad3Authoring", jsx),
+        ("@ad3-editing/jsx", "__ad3Authoring", jsx),
     ] {
         let keys = object.own_property_keys(context)?;
         context.register_global_property(js_string!(global), object, Attribute::empty())?;

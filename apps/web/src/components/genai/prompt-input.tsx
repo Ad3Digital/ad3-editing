@@ -64,7 +64,7 @@ import { droppedFiles, importFiles, pickFiles } from "@/engine/asset-actions";
 import { useMediaSelection } from "./selection";
 import { ASSET_DRAG_TYPE } from "@/components/sidebar-left/folder-item";
 
-import type { AssetCache } from "@diffusionstudio/assets";
+import type { AssetCache } from "@ad3-editing/assets";
 import type { ThumbnailAsset } from "@/components/ui/asset-thumbnail";
 
 export type PromptInputMode = "IMAGE" | "VIDEO" | "VOICE" | "AUDIO";

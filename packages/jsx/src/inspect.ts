@@ -70,7 +70,7 @@ function hostOnly(name: string): never {
  * What an `@inspect` declaration compiles into: a signal the inspector shares
  * with the composition. Never authored by hand — the compile step injects the
  * call and rewrites the variable's references into calls of the accessor; this
- * declaration exists so the substituted module (see @diffusionstudio/reconciler)
+ * declaration exists so the substituted module (see @ad3-editing/reconciler)
  * has a signature to stand in for.
  */
 export function __inspect(declaration: InspectDeclaration, initial: InspectValue): Accessor<InspectValue> {

@@ -127,7 +127,7 @@ const TAGS: ReadonlySet<string> = new Set(COMPOSITION_TAGS);
 /**
  * Whether a tag names a composition element, in either spelling: the camelCase
  * intrinsics a project is authored in, and the PascalCase components the
- * compile step canonicalizes them into (see @diffusionstudio/reconciler's
+ * compile step canonicalizes them into (see @ad3-editing/reconciler's
  * "elements"). Both are the same element, so both are stamped.
  */
 export function isCompositionTag(tag: string): boolean {

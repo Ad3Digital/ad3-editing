@@ -65,7 +65,7 @@ export function DevAuthCodeInput() {
         <TextFieldInput
           uiSize="compact"
           type="text"
-          placeholder="diffusion://... or raw code"
+          placeholder="ad3-editing://... or raw code"
           value={code()}
           onInput={(e) => setCode(e.currentTarget.value)}
           onKeyDown={(e) => e.stopPropagation()}

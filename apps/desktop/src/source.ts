@@ -11,10 +11,10 @@
 // disagreed, a drag would write to the wrong element; that invariant is why
 // these two modules are read together.
 
-import { COMPOSITION_TAGS, ID_ATTR, INSPECT_TAG, INSPECT_TYPES, LOOP_ATTR, SOURCE_ATTR, formatSource, isCompositionTag, isLoopTag } from "@diffusionstudio/jsx";
+import { COMPOSITION_TAGS, ID_ATTR, INSPECT_TAG, INSPECT_TYPES, LOOP_ATTR, SOURCE_ATTR, formatSource, isCompositionTag, isLoopTag } from "@ad3-editing/jsx";
 
 import type { NodePath, PluginObj, types as t } from "@babel/core";
-import type { InspectDeclaration, InspectType } from "@diffusionstudio/jsx";
+import type { InspectDeclaration, InspectType } from "@ad3-editing/jsx";
 
 /** What babel hands a plugin factory. */
 type BabelApi = { types: typeof import("@babel/core").types };
@@ -112,7 +112,7 @@ export function canonicalizeTagsPlugin({ types }: BabelApi): PluginObj {
         );
         program.unshiftContainer(
           "body",
-          types.importDeclaration(specifiers, types.stringLiteral("@diffusionstudio/jsx")),
+          types.importDeclaration(specifiers, types.stringLiteral("@ad3-editing/jsx")),
         );
       },
     },
@@ -123,7 +123,7 @@ export function canonicalizeTagsPlugin({ types }: BabelApi): PluginObj {
 // @inspect variables
 
 /** What the compiled module imports `__inspect` from. */
-const INSPECT_MODULE = "@diffusionstudio/jsx";
+const INSPECT_MODULE = "@ad3-editing/jsx";
 
 /**
  * An `@inspect` tag at the start of a comment line. Anchored there — the way a

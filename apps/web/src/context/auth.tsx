@@ -15,7 +15,7 @@ import {
 } from 'solid-js';
 import { toast } from 'somoto';
 import type { Session, User } from '@supabase/supabase-js';
-import { FREE_CREDITS_QUOTA, type UserData } from '@diffusionstudio/api-contract';
+import { FREE_CREDITS_QUOTA, type UserData } from '@ad3-editing/api-contract';
 
 import { supabase } from '@/lib/supabase';
 import { trpc } from '@/lib/trpc';

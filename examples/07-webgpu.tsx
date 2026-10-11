@@ -1,4 +1,4 @@
-/* @jsxImportSource @diffusionstudio/jsx */
+/* @jsxImportSource @ad3-editing/jsx */
 /* WebGPU owning a <surface>: a triangle whose colors cycle with the playhead.
  *
  *   cp examples/07-webgpu.tsx ~/Projects/webgpu/index.tsx
@@ -18,8 +18,8 @@
  */
 
 import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
-import { useTicker } from "@diffusionstudio/jsx";
-import type { SceneNode } from "@diffusionstudio/jsx";
+import { useTicker } from "@ad3-editing/jsx";
+import type { SceneNode } from "@ad3-editing/jsx";
 
 const SHADER = /* wgsl */ `
   @group(0) @binding(0) var<uniform> time: f32;

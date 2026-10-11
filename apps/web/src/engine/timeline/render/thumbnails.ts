@@ -2,14 +2,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Computed, getSourceWindow, store } from '@diffusionstudio/runtime';
+import { Computed, getSourceWindow, store } from '@ad3-editing/runtime';
 
 import { CLIP_BREAKPOINTS, CLIP_LABEL_HEIGHT } from '../config';
 import { pickFrame, requestFrames, resolveStill } from '../media';
 import { framesToPixels, getFrameRate, getResolution, getViewport, pixelsToFrames } from '../view';
 import { renderWaveform } from './waveform';
 
-import type { Asset, VideoAsset } from '@diffusionstudio/assets';
+import type { Asset, VideoAsset } from '@ad3-editing/assets';
 import type { Entity, World } from 'koota';
 import type { RowCursor } from '../layout';
 import type { TimelineSurfaceState } from '../surface';

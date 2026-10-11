@@ -10,7 +10,7 @@ import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { Command } from "commander";
 import { version } from "../../../package.json";
-import { parseTime, TIME_FPS } from "@diffusionstudio/jsx";
+import { parseTime, TIME_FPS } from "@ad3-editing/jsx";
 import { editor, errnoCode, GENERATE_TIMEOUT_MS, waitForCliSocket } from "./cli-client";
 import { listLocalFonts } from "./fonts";
 import { buildIssueBody, createIssue } from "./report";
@@ -325,7 +325,7 @@ function launchApp(background: boolean): Promise<boolean> {
   }
 
   if (process.platform === "win32") {
-    const appRoot = process.env.DIFFUSION_APP_PATH;
+    const appRoot = process.env.AD3_APP_PATH ?? process.env.DIFFUSION_APP_PATH;
     if (!appRoot) return Promise.resolve(false);
     const executable = join(appRoot, `${APP_NAME}.exe`);
     if (!existsSync(executable)) return Promise.resolve(false);
@@ -452,7 +452,7 @@ function formatLogEntry(entry: LogEntry): string {
 
 type ScreenshotOptions = { output?: string };
 
-// `diffusion-studio_2026-07-31_08-55-12.png`
+// `ad3-editing_2026-07-31_08-55-12.png`
 function screenshotFilename(taken: Date, attempt: number): string {
   const pad = (value: number) => String(value).padStart(2, "0");
   const date = [taken.getFullYear(), pad(taken.getMonth() + 1), pad(taken.getDate())].join("-");

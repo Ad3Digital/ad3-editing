@@ -1,4 +1,4 @@
-/* @jsxImportSource @diffusionstudio/jsx */
+/* @jsxImportSource @ad3-editing/jsx */
 /* Three.js owning a <surface>: a glTF helmet spun by the playhead.
  *
  *   cp examples/06-three.tsx ~/Projects/three/index.tsx
@@ -23,8 +23,8 @@
  */
 
 import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
-import { useTicker } from "@diffusionstudio/jsx";
-import type { SceneNode } from "@diffusionstudio/jsx";
+import { useTicker } from "@ad3-editing/jsx";
+import type { SceneNode } from "@ad3-editing/jsx";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";

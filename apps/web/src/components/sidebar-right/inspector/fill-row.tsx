@@ -12,8 +12,8 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { useHas, useTrait } from "@diffusionstudio/koota-solid";
-import { Hidden, Paint, PaintType } from "@diffusionstudio/runtime";
+import { useHas, useTrait } from "@ad3-editing/koota-solid";
+import { Hidden, Paint, PaintType } from "@ad3-editing/runtime";
 import { useEditor } from "@/engine/hooks";
 
 import type { Entity } from "koota";

@@ -1,4 +1,4 @@
-/* @jsxImportSource @diffusionstudio/jsx */
+/* @jsxImportSource @ad3-editing/jsx */
 /* An AI prompt box as real HTML, centered in the frame.
  *
  *   cp examples/04-html-in-canvas.tsx ~/Projects/html-in-canvas/index.tsx
@@ -13,7 +13,7 @@
  */
 
 import { createMemo } from "solid-js";
-import { useTicker } from "@diffusionstudio/jsx";
+import { useTicker } from "@ad3-editing/jsx";
 
 const PROMPT = "Cut a 30 second teaser from these clips, punchy captions, synthwave score";
 const CHARS_PER_SECOND = 12;

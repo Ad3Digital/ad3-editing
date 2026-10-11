@@ -16,14 +16,14 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Keyframe } from "@/components/ui/keyframe";
-import { useWorld } from "@diffusionstudio/koota-solid";
+import { useWorld } from "@ad3-editing/koota-solid";
 import {
   Computed,
   getParentEntity,
   isAdjustmentLayer,
   isScene,
   isSequence,
-} from "@diffusionstudio/runtime";
+} from "@ad3-editing/runtime";
 import { useDerived, useEditor } from "@/engine/hooks";
 import { syncKeyframe } from "@/engine/keyframes";
 import { RotateRow } from "./rotate-row";

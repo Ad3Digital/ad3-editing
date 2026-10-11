@@ -8,11 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Icon } from "@/components/ui/icon";
 import { formatDuration } from "@/utils/formatters";
-import { getAssetFile } from "@diffusionstudio/runtime";
-import { derivePeaks, assetName } from "@diffusionstudio/assets";
+import { getAssetFile } from "@ad3-editing/runtime";
+import { derivePeaks, assetName } from "@ad3-editing/assets";
 import { useLibrary } from "@/engine/library";
 
-import type { Asset } from '@diffusionstudio/assets';
+import type { Asset } from '@ad3-editing/assets';
 
 type VisualAsset = Extract<Asset, { type: 'IMAGE' | 'VIDEO' | 'SEQUENCE' }>;
 

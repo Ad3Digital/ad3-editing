@@ -6,8 +6,8 @@ import { existsSync, unlinkSync } from "node:fs";
 import { createServer } from "node:net";
 import type { Server, Socket } from "node:net";
 import { app, BrowserWindow } from "electron";
-import { CLI_WIRE, SOCKET_PATH } from "@diffusionstudio/cli/protocol";
-import type { CliHandshake, CliHandshakeReply } from "@diffusionstudio/cli/protocol";
+import { CLI_WIRE, SOCKET_PATH } from "@ad3-editing/cli/protocol";
+import type { CliHandshake, CliHandshakeReply } from "@ad3-editing/cli/protocol";
 import { mainBridge } from "./main-manager";
 import { MAIN_CHANNELS } from "./main-channels";
 

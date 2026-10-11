@@ -9,7 +9,7 @@ import { join } from "node:path";
 import type { MenuItemConstructorOptions } from "electron";
 
 const MACOS_CLI_LINK_PATH = "/usr/local/bin/dapi";
-const WINDOWS_CLI_ROOT = "DiffusionStudio";
+const WINDOWS_CLI_ROOT = "AD3Editing";
 
 function run(file: string, args: string[], env?: NodeJS.ProcessEnv): Promise<void> {
   const { promise, resolve, reject } = Promise.withResolvers<void>();
@@ -39,7 +39,7 @@ async function installWindowsCli(): Promise<string> {
   await copyFile(join(process.resourcesPath, "cli", "bin", "dapi.cmd"), destination);
 
   const addToPath = [
-    "$target = $env:DIFFUSION_CLI_DIR",
+    "$target = $env:AD3_CLI_DIR",
     "$current = [Environment]::GetEnvironmentVariable('Path', 'User')",
     "$entries = @($current -split ';' | Where-Object { $_ })",
     "if (-not ($entries | Where-Object { $_.TrimEnd([char]92) -ieq $target.TrimEnd([char]92) })) {",
@@ -50,7 +50,7 @@ async function installWindowsCli(): Promise<string> {
   await run(
     "powershell.exe",
     ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", addToPath],
-    { ...process.env, DIFFUSION_CLI_DIR: binDir },
+    { ...process.env, AD3_CLI_DIR: binDir },
   );
   return destination;
 }

@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import { Or, trait } from 'koota';
-import { AdjustmentLayer, ChildOf, Computed, Geometry, Group, Selected, isSequence, store } from '@diffusionstudio/runtime';
+import { AdjustmentLayer, ChildOf, Computed, Geometry, Group, Selected, isSequence, store } from '@ad3-editing/runtime';
 import { getDocumentEditor } from '../editor';
 import { getEditHistory } from '../history';
 import { moveEntityTo } from '../timing';

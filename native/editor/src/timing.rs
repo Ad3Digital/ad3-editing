@@ -134,6 +134,136 @@ impl Timeline {
         durations: &BTreeMap<String, f64>,
         fps: f64,
     ) -> Result<Self> {
+        Self::resolve_known(stage, durations, None, fps)
+    }
+    /// A still asset bound through a video tag has no natural time cap. Keep
+    /// the authored tag/identity while using the same default window as IMAGE.
+    pub fn resolve_with_media(
+        stage: &Node,
+        library: &crate::media::MediaLibrary,
+        fps: f64,
+    ) -> Result<Self> {
+        Self::resolve_known(stage, &library.durations, Some(&library.probes), fps)
+    }
+    fn resolve_known(
+        stage: &Node,
+        durations: &BTreeMap<String, f64>,
+        probes: Option<&BTreeMap<String, crate::media::Probe>>,
+        fps: f64,
+    ) -> Result<Self> {
+        Self::resolve_placed(stage, durations, probes, fps, &BTreeMap::new())
+    }
+
+    /// Offsets are measured recording-to-reference seconds, keyed by linked node ID.
+    pub fn resolve_with_sync_offsets(
+        stage: &Node,
+        durations: &BTreeMap<String, f64>,
+        fps: f64,
+        offsets: &BTreeMap<String, f64>,
+    ) -> Result<Self> {
+        Self::resolve_linked(stage, durations, None, fps, offsets)
+    }
+
+    pub fn resolve_with_media_sync(
+        stage: &Node,
+        library: &crate::media::MediaLibrary,
+        fps: f64,
+        offsets: &BTreeMap<String, f64>,
+    ) -> Result<Self> {
+        if offsets.is_empty()
+            && !stage
+                .nodes()
+                .iter()
+                .any(|node| node.props.contains_key("syncTo"))
+        {
+            return Self::resolve_with_media(stage, library, fps);
+        }
+        Self::resolve_linked(
+            stage,
+            &library.durations,
+            Some(&library.probes),
+            fps,
+            offsets,
+        )
+    }
+
+    fn resolve_linked(
+        stage: &Node,
+        durations: &BTreeMap<String, f64>,
+        probes: Option<&BTreeMap<String, crate::media::Probe>>,
+        fps: f64,
+        offsets: &BTreeMap<String, f64>,
+    ) -> Result<Self> {
+        let mut plain = stage.clone();
+        fn strip(node: &mut Node) {
+            node.props.remove("syncTo");
+            for child in &mut node.children {
+                strip(child);
+            }
+        }
+        strip(&mut plain);
+        let nodes = stage.nodes();
+        let mut pending = nodes
+            .iter()
+            .filter(|node| node.props.contains_key("syncTo"))
+            .copied()
+            .collect::<Vec<_>>();
+        let mut placements = BTreeMap::new();
+        let mut timeline = Self::resolve_placed(&plain, durations, probes, fps, &placements)?;
+        while !pending.is_empty() {
+            let mut progressed = false;
+            let mut remaining = Vec::new();
+            for node in &pending {
+                let target = node
+                    .string("syncTo")
+                    .ok_or("syncTo requires a reference ID string")?;
+                let reference = stage.find(target).ok_or_else(|| {
+                    format!("{}: syncTo reference {target:?} does not exist", node.id)
+                })?;
+                if !matches!(node.tag.as_str(), "audio" | "video")
+                    || !matches!(reference.tag.as_str(), "audio" | "video")
+                {
+                    return Err("syncTo requires audio/video recordings on both ends".into());
+                }
+                if pending.iter().any(|other| other.id == target) {
+                    remaining.push(*node);
+                    continue;
+                }
+                let recording = timeline.get(&node.id)?;
+                let reference = timeline.get(target)?;
+                if recording.scene_id != reference.scene_id {
+                    return Err("syncTo reference must belong to the same root scene".into());
+                }
+                let offset = *offsets
+                    .get(&node.id)
+                    .ok_or_else(|| format!("{}: missing measured syncTo offset", node.id))?;
+                let placed = crate::audio_sync::place_recording(
+                    recording,
+                    reference,
+                    offset,
+                    time(node, "sourceIn")?.map(|value| snap_at_rate(value, fps)),
+                    time(node, "sourceOut")?.map(|value| snap_at_rate(value, fps)),
+                    durations.get(&node.id).copied(),
+                )?;
+                placements.insert(node.id.clone(), placed);
+                timeline = Self::resolve_placed(&plain, durations, probes, fps, &placements)?;
+                progressed = true;
+            }
+            if !progressed {
+                return Err("syncTo links cannot form a cycle".into());
+            }
+            pending = remaining;
+        }
+        Ok(timeline)
+    }
+
+    fn resolve_placed(
+        stage: &Node,
+        durations: &BTreeMap<String, f64>,
+        probes: Option<&BTreeMap<String, crate::media::Probe>>,
+        fps: f64,
+        placements: &BTreeMap<String, Span>,
+    ) -> Result<Self> {
         if !fps.is_finite() || fps <= 0.0 || fps > 240.0 {
             return Err("Timeline FPS must be in (0, 240]".into());
         }
@@ -162,7 +292,8 @@ impl Timeline {
             active,
         };
         for scene in scenes {
-            let span = timeline.resolve_node(scene, None, &scene.id, durations, fps)?;
+            let span = timeline
+                .resolve_node(scene, None, &scene.id, durations, probes, fps, placements)?;
             let area =
                 if let Some(value) = scene.props.get("workarea").filter(|value| !value.is_null()) {
                     let array = value
@@ -187,7 +318,9 @@ impl Timeline {
         parent: Option<&Span>,
         scene: &str,
         durations: &BTreeMap<String, f64>,
+        probes: Option<&BTreeMap<String, crate::media::Probe>>,
         fps: f64,
+        placements: &BTreeMap<String, Span>,
     ) -> Result<Span> {
         let snap = |seconds| snap_at_rate(seconds, fps);
         if node.props.contains_key("syncTo") {
@@ -195,9 +328,6 @@ impl Timeline {
                 "{}: native audio syncTo resolution is not implemented yet",
                 node.id
             ));
-        }
-        if node.tag == "scene" && parent.is_some() {
-            return Err("Scenes cannot be nested".into());
         }
         let rate = node.number("playbackRate", 1.0)?;
         if rate <= 0.0 {
@@ -221,13 +351,20 @@ impl Timeline {
             if node.tag != "captions" || source_out.is_infinite() {
                 source_out = source_out.min(snap(*duration));
             }
-        } else if matches!(node.tag.as_str(), "video" | "audio") {
+        } else if matches!(node.tag.as_str(), "video" | "audio")
+            && !probes
+                .and_then(|p| p.get(&node.id))
+                .is_some_and(|p| p.still)
+        {
             return Err(format!(
                 "{}: source duration must be probed before resolving media timing",
                 node.id
             ));
         }
-        let fits = node.is_container() && authored_out.is_none() && timeline_end.is_none();
+        let fits = node.is_container()
+            && !durations.contains_key(&node.id)
+            && authored_out.is_none()
+            && timeline_end.is_none();
         if source_out.is_infinite() {
             // The original runtime's fallback is 480 frames, including in a
             // capture world with a different frame rate.
@@ -254,8 +391,23 @@ impl Timeline {
             volume_db: node.number("volume", 0.0)? + parent.map_or(0.0, |p| p.volume_db),
         };
         let mut children = Vec::new();
+        if let Some(placed) = placements.get(&node.id) {
+            span.origin = placed.origin;
+            span.start = snap(placed.start);
+            span.end = snap(placed.end);
+            span.source_in = placed.source_in;
+            span.source_out = placed.source_out;
+        }
         for child in node.children.iter().filter(|child| child.is_timed()) {
-            let resolved = self.resolve_node(child, Some(&span), scene, durations, fps)?;
+            let resolved = self.resolve_node(
+                child,
+                Some(&span),
+                scene,
+                durations,
+                probes,
+                fps,
+                placements,
+            )?;
             // Original Cache.children excludes IsMask; masks have their own
             // timing, but do not extend a container fitted to its children.
             if !child.flag("mask") {

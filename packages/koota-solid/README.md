@@ -1,4 +1,4 @@
-# @diffusionstudio/koota-solid
+# @ad3-editing/koota-solid
 
 Solid bindings for [koota](https://github.com/pmndrs/koota): a port of `@koota/react`. The API mirrors `@koota/react` one to one, adapted to Solid's reactivity model.
 
@@ -6,7 +6,7 @@ Solid bindings for [koota](https://github.com/pmndrs/koota): a port of `@koota/r
 
 ```tsx
 import { createWorld, trait } from 'koota';
-import { WorldProvider, useQuery, useTrait } from '@diffusionstudio/koota-solid';
+import { WorldProvider, useQuery, useTrait } from '@ad3-editing/koota-solid';
 
 const Position = trait({ x: 0, y: 0 });
 const world = createWorld();

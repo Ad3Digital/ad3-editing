@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { Computed, resolveCaptionDecoder, secondsToFrames, store } from '@diffusionstudio/runtime';
+import { Computed, resolveCaptionDecoder, secondsToFrames, store } from '@ad3-editing/runtime';
 
 import { CLIP_BREAKPOINTS, CLIP_CORNER_RADIUS, CLIP_FONT, CLIP_LABEL_HEIGHT } from '../config';
 import { getClipStyle } from '../style';

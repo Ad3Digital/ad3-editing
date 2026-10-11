@@ -41,6 +41,8 @@ impl Encoder {
         fps: f64,
         output: &Path,
         directory: &mut JobDirectory,
+        bitrate: Option<u32>,
+        codec: Option<&str>,
     ) -> Result<Self> {
         let log = directory.file("encoder.log");
         let stderr = fs::OpenOptions::new()
@@ -48,32 +50,31 @@ impl Encoder {
             .create_new(true)
             .open(&log)
             .map_err(|e| e.to_string())?;
-        let mut child = command(&tools.ffmpeg)
-            .args([
-                "-v",
-                "error",
-                "-nostdin",
-                "-n",
-                "-f",
-                "rawvideo",
-                "-pix_fmt",
-                "rgba",
-                "-video_size",
-                &format!("{width}x{height}"),
-                "-framerate",
-                &fps.to_string(),
-                "-i",
-                "pipe:0",
-                "-an",
-                "-c:v",
-                "libx264",
-                "-preset",
-                "fast",
-                "-crf",
-                "18",
-                "-pix_fmt",
-                "yuv420p",
-            ])
+        let mut encoder_command = command(&tools.ffmpeg);
+        encoder_command.args([
+            "-v",
+            "error",
+            "-nostdin",
+            "-n",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "rgba",
+            "-video_size",
+            &format!("{width}x{height}"),
+            "-framerate",
+            &fps.to_string(),
+            "-i",
+            "pipe:0",
+            "-an",
+        ]);
+        configure_video(
+            &mut encoder_command,
+            crate::media::export_extension(output).ok_or("Unsupported export container")?,
+            bitrate,
+            codec,
+        );
+        let mut child = encoder_command
             .arg(output)
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
@@ -195,4 +196,184 @@ pub(crate) fn publish(source: &Path, output: &Path, cancel: Option<&AtomicBool>)
         ));
     }
     result
+}
+
+pub(crate) fn configure_video(
+    command: &mut std::process::Command,
+    extension: &str,
+    bitrate: Option<u32>,
+    codec: Option<&str>,
+) {
+    if codec == Some("av1") {
+        command.args([
+            "-c:v",
+            "libaom-av1",
+            "-cpu-used",
+            "6",
+            "-row-mt",
+            "1",
+            "-threads",
+            "2",
+            "-pix_fmt",
+            "yuv420p",
+        ]);
+        if bitrate.is_none() {
+            command.args(["-crf", "30", "-b:v", "0"]);
+        }
+    } else if extension == "webm" {
+        command.args([
+            "-c:v",
+            if codec == Some("vp8") {
+                "libvpx"
+            } else {
+                "libvpx-vp9"
+            },
+            "-deadline",
+            "good",
+            "-cpu-used",
+            "4",
+            "-pix_fmt",
+            "yuv420p",
+        ]);
+        if bitrate.is_none() {
+            command.args(["-crf", "30", "-b:v", "0"]);
+        }
+    } else {
+        let hevc = codec == Some("hevc");
+        command.args([
+            "-c:v",
+            if hevc { "libx265" } else { "libx264" },
+            "-preset",
+            "fast",
+            "-pix_fmt",
+            "yuv420p",
+        ]);
+        if hevc {
+            command.args([
+                "-tag:v",
+                "hvc1",
+                "-x265-params",
+                "log-level=error:pools=none:frame-threads=1:asm=0",
+            ]);
+            if extension == "mov" {
+                // This Windows FFmpeg build corrupts its heap when libx265
+                // encodes directly into MOV. Encode MP4, then remux losslessly.
+                command.args(["-f", "mp4"]);
+            }
+        }
+        if bitrate.is_none() {
+            command.args(["-crf", if hevc { "28" } else { "18" }]);
+        }
+    }
+    if let Some(bitrate) = bitrate {
+        // Use rate control instead of the default constant-quality mode.
+        command.args(["-b:v", &bitrate.to_string()]);
+    }
+}
+
+pub(crate) fn audio_encoder(extension: &str, codec: Option<&str>) -> &'static str {
+    if codec == Some("vorbis") {
+        return "libvorbis";
+    }
+    if codec == Some("flac") {
+        return "flac";
+    }
+    if codec == Some("mp3") {
+        return "libmp3lame";
+    }
+    if codec == Some("opus") || codec.is_none() && matches!(extension, "webm" | "ogg") {
+        "libopus"
+    } else {
+        "aac"
+    }
+}
+
+pub(crate) fn configure_lossless_audio(command: &mut std::process::Command, codec: Option<&str>) {
+    if codec == Some("flac") {
+        // Preserve the mix to FLAC's 32-bit integer precision; MP4's FLAC
+        // muxing is gated as experimental by the installed FFmpeg build.
+        command.args(["-sample_fmt", "s32", "-strict", "-2", "-b:a", "0"]);
+    }
+}
+
+pub(crate) fn publish_video(
+    tools: &Tools,
+    source: &Path,
+    output: &Path,
+    directory: &mut JobDirectory,
+    cancel: Option<&AtomicBool>,
+    codec: Option<&str>,
+) -> Result<()> {
+    if codec == Some("hevc") && crate::media::export_extension(output) == Some("mov") {
+        let remuxed = directory.file("hevc-remux.mov");
+        crate::media::checked_output_cancellable(
+            command(&tools.ffmpeg)
+                .args(["-v", "error", "-nostdin", "-n", "-i"])
+                .arg(source)
+                .args([
+                    "-c",
+                    "copy",
+                    "-tag:v",
+                    "hvc1",
+                    "-movflags",
+                    "+faststart",
+                    "-f",
+                    "mov",
+                ])
+                .arg(&remuxed),
+            cancel,
+            Duration::from_secs(120),
+        )?;
+        publish(&remuxed, output, cancel)
+    } else {
+        publish(source, output, cancel)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn av1_configures_bounded_encoder_and_rate_control() {
+        for bitrate in [None, Some(500_000)] {
+            let mut command = std::process::Command::new("ffmpeg");
+            super::configure_video(&mut command, "webm", bitrate, Some("av1"));
+            let args: Vec<_> = command
+                .get_args()
+                .map(|arg| arg.to_str().unwrap())
+                .collect();
+            assert!(args.windows(2).any(|pair| pair == ["-c:v", "libaom-av1"]));
+            assert!(args.windows(2).any(|pair| pair == ["-threads", "2"]));
+            assert_eq!(args.contains(&"-crf"), bitrate.is_none());
+            assert!(!args.contains(&"-preset"));
+        }
+    }
+    #[test]
+    fn hevc_configures_encoder_tag_and_bounded_threads() {
+        let mut command = std::process::Command::new("ffmpeg");
+        super::configure_video(&mut command, "mov", Some(500_000), Some("hevc"));
+        let args: Vec<_> = command
+            .get_args()
+            .map(|arg| arg.to_str().unwrap())
+            .collect();
+        assert!(args.windows(2).any(|pair| pair == ["-c:v", "libx265"]));
+        assert!(args.windows(2).any(|pair| pair == ["-tag:v", "hvc1"]));
+        assert!(args.contains(&"log-level=error:pools=none:frame-threads=1:asm=0"));
+        assert!(!args.contains(&"-crf"));
+    }
+    #[test]
+    fn saved_bitrate_replaces_constant_quality_for_both_codecs() {
+        for extension in ["mp4", "mov", "webm"] {
+            let mut command = std::process::Command::new("ffmpeg");
+            super::configure_video(&mut command, extension, Some(500_000), None);
+            let args: Vec<_> = command
+                .get_args()
+                .map(|arg| arg.to_str().unwrap())
+                .collect();
+            assert!(args.windows(2).any(|pair| pair == ["-b:v", "500000"]));
+            assert!(!args.contains(&"-crf"));
+            let mut defaults = std::process::Command::new("ffmpeg");
+            super::configure_video(&mut defaults, extension, None, None);
+            assert!(defaults.get_args().any(|arg| arg == "-crf"));
+        }
+    }
 }

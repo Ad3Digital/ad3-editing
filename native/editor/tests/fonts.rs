@@ -4,6 +4,17 @@ use ad3_editor::{
 };
 
 #[test]
+fn available_font_families_include_bundled_inter_and_recover_from_cancellation() {
+    let mut book = FontBook::default();
+    let cancel = std::sync::atomic::AtomicBool::new(true);
+    assert!(book.available_families(Some(&cancel)).is_err());
+    let families = book.available_families(None).unwrap();
+    assert!(families.iter().any(|family| family == "Inter"));
+    assert!(families.windows(2).all(|pair| pair[0] < pair[1]));
+    assert_eq!(families, book.available_families(None).unwrap());
+}
+
+#[test]
 fn bundled_inter_baselines_match_canvas_metrics() {
     let mut book = FontBook::default();
     let spec = FontSpec {

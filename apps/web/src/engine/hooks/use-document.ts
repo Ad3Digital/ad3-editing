@@ -1,5 +1,5 @@
-import { useWorld } from "@diffusionstudio/koota-solid";
-import { getRuntimeDocument } from "@diffusionstudio/reconciler";
+import { useWorld } from "@ad3-editing/koota-solid";
+import { getRuntimeDocument } from "@ad3-editing/reconciler";
 
 export function useDocument() {
   const world = useWorld();

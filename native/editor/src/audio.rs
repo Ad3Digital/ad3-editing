@@ -108,11 +108,13 @@ impl Mixer {
         }
         let mut output = vec![0.0_f32; count * 2];
         for node in root.nodes() {
-            if !matches!(node.tag.as_str(), "audio" | "video")
-                || !library
-                    .probes
-                    .get(&node.id)
-                    .is_some_and(|probe| probe.has_audio)
+            let Some(audio_node) = library.audio_source(node) else {
+                continue;
+            };
+            if !library
+                .probes
+                .get(&audio_node.id)
+                .is_some_and(|probe| probe.has_audio)
             {
                 continue;
             }
@@ -120,8 +122,12 @@ impl Mixer {
             if span.scene_id != scene || span.hidden || span.muted {
                 continue;
             }
-            let first =
-                (((span.start - work_start) * SAMPLE_RATE).ceil().max(0.0) as u64).max(range.start);
+            // A rounded visual in point may precede fractional source zero.
+            // Leave that prefix silent instead of seeking before the recording.
+            let first = (((span.start.max(span.origin) - work_start) * SAMPLE_RATE)
+                .ceil()
+                .max(0.0) as u64)
+                .max(range.start);
             let last =
                 (((span.end - work_start) * SAMPLE_RATE).ceil().max(0.0) as u64).min(range.end);
             if first >= last {
@@ -129,12 +135,9 @@ impl Mixer {
             }
             self.has_audio = true;
             let scene_time = work_start + first as f64 / SAMPLE_RATE;
-            if span.source_at(scene_time) < -1e-9 {
-                return Err("Negative media preroll is not ported yet".into());
-            }
             let source = library
                 .sources
-                .get(&node.id)
+                .get(&audio_node.id)
                 .ok_or("Missing audio source")?;
             let decoded = self.decoded(source, span.playback_rate, directory, tools, cancel)?;
             // The decoded file already has this playback rate applied, hence

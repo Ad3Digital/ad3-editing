@@ -13,7 +13,7 @@
  * (`AnimatableProperty`), the way a track in the file is.
  */
 
-import { Keyframe as KeyframeElement, KeyframeTrack as KeyframeTrackElement, trackPropertyPath } from "@diffusionstudio/reconciler";
+import { Keyframe as KeyframeElement, KeyframeTrack as KeyframeTrackElement, trackPropertyPath } from "@ad3-editing/reconciler";
 import {
   Cache,
   ChildOf,
@@ -25,9 +25,9 @@ import {
   framesToSeconds,
   getNodeLocalFrame,
   getPropertyPaths,
-} from "@diffusionstudio/runtime";
+} from "@ad3-editing/runtime";
 
-import type { AnimatableProperty } from "@diffusionstudio/jsx";
+import type { AnimatableProperty } from "@ad3-editing/jsx";
 import type { Entity, World } from "koota";
 import type { DocumentEditor } from "./editor";
 

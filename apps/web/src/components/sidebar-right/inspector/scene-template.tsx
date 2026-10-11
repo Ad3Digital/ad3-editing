@@ -5,9 +5,9 @@
 import { For, Show, createSignal } from "solid-js";
 import { Icon } from "@/components/ui/icon";
 import { PanelSection } from "@/components/ui/panel-section";
-import { useWorld } from "@diffusionstudio/koota-solid";
-import { Scene, SolidPaint } from "@diffusionstudio/reconciler";
-import { Root, Source, Tool, ToolType, getNextName, getViewport, screenToWorld } from "@diffusionstudio/runtime";
+import { useWorld } from "@ad3-editing/koota-solid";
+import { Scene, SolidPaint } from "@ad3-editing/reconciler";
+import { Root, Source, Tool, ToolType, getNextName, getViewport, screenToWorld } from "@ad3-editing/runtime";
 import { useEditor } from "@/engine/hooks";
 
 import { PRESET_CATEGORIES, type LayoutPresetCategory, type LayoutPreset } from "@/lib/layout-presets";

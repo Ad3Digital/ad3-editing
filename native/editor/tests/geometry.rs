@@ -2,6 +2,117 @@ use ad3_editor::geometry::*;
 use serde::Deserialize;
 use serde_json::Value;
 
+#[test]
+fn container_bake_preserves_pivot_offset_flip_and_composed_matrix() {
+    let child = TransformValues {
+        position: [8.0, 12.0],
+        offset: [3.0, -2.0],
+        size: [20.0, 12.0],
+        anchor: [Some(0.25), Some(0.75)],
+        flip: [Some(-1.0), Some(1.0)],
+        rotation: 30.0,
+        scale: [1.5, 0.75],
+        ..Default::default()
+    };
+    for container in [
+        Mat2D::translate(10.0, -5.0),
+        Mat2D::translate(16.0, 8.0)
+            .multiply(Mat2D::rotate(90.0))
+            .multiply(Mat2D::scale(2.0, 2.0)),
+        Mat2D::translate(16.0, 8.0)
+            .multiply(Mat2D::rotate(25.0))
+            .multiply(Mat2D::scale(2.0, 0.5)),
+    ] {
+        let baked = child.bake_container(container);
+        assert_eq!(baked.anchor, child.anchor);
+        assert_eq!(baked.offset, child.offset);
+        assert_eq!(baked.flip, child.flip);
+        let before = container
+            .multiply(child.local_matrix())
+            .quad(child.size[0], child.size[1]);
+        let after = baked.local_matrix().quad(child.size[0], child.size[1]);
+        for (before, after) in before.into_iter().zip(after) {
+            assert!(
+                (before.x - after.x).abs() < 0.51,
+                "x: {before:?} != {after:?}"
+            );
+            assert!(
+                (before.y - after.y).abs() < 0.51,
+                "y: {before:?} != {after:?}"
+            );
+        }
+    }
+    let identity = child.bake_container(Mat2D::IDENTITY);
+    assert_eq!(identity.local_matrix(), child.local_matrix());
+}
+
+#[test]
+fn timeline_marquee_normalizes_reverse_drags_deduplicates_and_keeps_additive_base() {
+    let regions = vec![
+        (
+            "sequence".into(),
+            Aabb {
+                min_x: 0.0,
+                min_y: 0.0,
+                max_x: 20.0,
+                max_y: 10.0,
+            },
+        ),
+        (
+            "sequence".into(),
+            Aabb {
+                min_x: 40.0,
+                min_y: 0.0,
+                max_x: 60.0,
+                max_y: 10.0,
+            },
+        ),
+        (
+            "clip".into(),
+            Aabb {
+                min_x: 10.0,
+                min_y: 20.0,
+                max_x: 30.0,
+                max_y: 30.0,
+            },
+        ),
+    ];
+    let start = Point { x: 0.0, y: 0.0 };
+    let end = Point { x: 50.0, y: 30.0 };
+    assert_eq!(
+        marquee_selection(start, end, &regions, &[]),
+        vec!["sequence", "clip"]
+    );
+    assert_eq!(
+        marquee_selection(end, start, &regions, &[]),
+        vec!["sequence", "clip"]
+    );
+    let base = vec!["existing".into(), "clip".into()];
+    assert_eq!(
+        marquee_selection(start, end, &regions, &base),
+        vec!["existing", "clip", "sequence"]
+    );
+    assert_eq!(base, vec!["existing", "clip"]);
+    assert!(
+        marquee_selection(
+            Point { x: 25.0, y: 2.0 },
+            Point { x: 35.0, y: 8.0 },
+            &regions,
+            &[]
+        )
+        .is_empty()
+    );
+    assert_eq!(
+        marquee_selection(
+            Point { x: 20.0, y: 10.0 },
+            Point { x: 21.0, y: 11.0 },
+            &regions,
+            &[]
+        ),
+        vec!["sequence"]
+    );
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct TransformCase {

@@ -13,12 +13,12 @@
 // reference needs: a library asset with a path to name it by.
 
 import { createMemo } from "solid-js";
-import { AssetId } from "@diffusionstudio/runtime";
-import { authoredElement } from "@diffusionstudio/reconciler";
+import { AssetId } from "@ad3-editing/runtime";
+import { authoredElement } from "@ad3-editing/reconciler";
 import { useSelection } from "@/engine/hooks";
 import { useLibrary } from "@/engine/library";
 
-import type { Asset } from "@diffusionstudio/assets";
+import type { Asset } from "@ad3-editing/assets";
 import type { Entity } from "koota";
 
 /** A selected node and the library asset it is bound to. */

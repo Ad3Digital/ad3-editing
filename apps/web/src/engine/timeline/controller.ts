@@ -34,7 +34,7 @@ import {
 } from './config';
 import { getFrameRate } from './view';
 import { hitPin, pinControls, scenePins, finishPinDrag } from './pins';
-import { Computed } from '@diffusionstudio/runtime';
+import { Computed } from '@ad3-editing/runtime';
 
 import type { Entity, World } from 'koota';
 

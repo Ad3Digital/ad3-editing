@@ -2,10 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { CAPTION_PRESETS } from "@diffusionstudio/reconciler";
+import { CAPTION_PRESETS } from "@ad3-editing/reconciler";
 
-import type { CaptionPreset as CaptionPresetName } from "@diffusionstudio/jsx";
-import type { CaptionType } from "@diffusionstudio/runtime";
+import type { CaptionPreset as CaptionPresetName } from "@ad3-editing/jsx";
+import type { CaptionType } from "@ad3-editing/runtime";
 
 /**
  * A color the preset paints with and lets the file override, in the order its

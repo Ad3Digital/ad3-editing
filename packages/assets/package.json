@@ -1,5 +1,5 @@
 {
-  "name": "@diffusionstudio/assets",
+  "name": "@ad3-editing/assets",
   "version": "0.1.0",
   "description": "A project's asset library: the assets.yml manifest, content hashing, media probing, and the AssetLibrary that links, stores, resolves and organizes assets over a host-provided ProjectFS. World-free: reactive state is solid-js signals; no koota, no DOM beyond media decoding.",
   "license": "MPL-2.0",

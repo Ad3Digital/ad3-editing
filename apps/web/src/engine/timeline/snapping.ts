@@ -22,7 +22,7 @@ import {
 	getActiveEntity,
 	getParentEntity,
 	store,
-} from '@diffusionstudio/runtime';
+} from '@ad3-editing/runtime';
 import { Or } from 'koota';
 
 import { SNAP_DISTANCE } from './config';

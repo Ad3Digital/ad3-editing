@@ -2,13 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { useTrait, useWorld } from '@diffusionstudio/koota-solid';
+import { useTrait, useWorld } from '@ad3-editing/koota-solid';
 import { createMemo } from 'solid-js';
 
 import { AssetSelection } from '../traits';
 import { useLibrary } from '../library';
 
-import type { Asset } from '@diffusionstudio/assets';
+import type { Asset } from '@ad3-editing/assets';
 
 /**
  * Reactive read and write of the AssetSelection trait: the one library asset

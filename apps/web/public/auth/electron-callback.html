@@ -36,7 +36,7 @@
         var merged = new URLSearchParams();
         params.forEach(function (v, k) { merged.set(k, v); });
         hash.forEach(function (v, k) { merged.set(k, v); });
-        var target = "diffusion://auth/callback?" + merged.toString();
+        var target = "ad3-editing://auth/callback?" + merged.toString();
         var link = document.getElementById("link");
         if (link) link.setAttribute("href", target);
         window.location.replace(target);

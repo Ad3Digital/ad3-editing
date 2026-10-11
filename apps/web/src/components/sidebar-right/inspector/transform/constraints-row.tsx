@@ -12,8 +12,8 @@ import {
   SelectPortal,
 } from "@/components/ui/select";
 import { horizontalConstraints, verticalConstraints } from "./constants";
-import { useTrait } from "@diffusionstudio/koota-solid";
-import { Constraint, ConstraintType } from "@diffusionstudio/runtime";
+import { useTrait } from "@ad3-editing/koota-solid";
+import { Constraint, ConstraintType } from "@ad3-editing/runtime";
 
 import type { Entity } from "koota";
 

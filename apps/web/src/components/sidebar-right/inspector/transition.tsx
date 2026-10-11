@@ -24,8 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SliderInput } from "@/components/ui/slider-input";
-import { useHas, useTrait, useWorld } from "@diffusionstudio/koota-solid";
-import { FrameRate, Transition, framesToSeconds } from "@diffusionstudio/runtime";
+import { useHas, useTrait, useWorld } from "@ad3-editing/koota-solid";
+import { FrameRate, Transition, framesToSeconds } from "@ad3-editing/runtime";
 import { useEditor } from "@/engine/hooks";
 import {
   DEFAULT_TRANSITION,

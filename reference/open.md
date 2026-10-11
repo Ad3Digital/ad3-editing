@@ -1,6 +1,6 @@
 # `dapi open [path]`
 
-Launches Diffusion Studio — or surfaces the running instance — and, given a
+Launches AD3 Editing — or surfaces the running instance — and, given a
 path, opens that folder as a project. The first command of the core loop:
 `open`, then mount, then render.
 

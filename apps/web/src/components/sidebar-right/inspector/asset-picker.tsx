@@ -19,14 +19,14 @@ import { Separator } from "@/components/ui/separator";
 import { LazyAssetItem } from "@/components/sidebar-left/asset-item";
 import { usePromptInput } from "@/context/prompt-input";
 import { createDefaultConfig } from "@/components/genai/prompt-input";
-import { assetName } from "@diffusionstudio/assets";
-import { useTrait } from "@diffusionstudio/koota-solid";
-import { AssetId, isScene } from "@diffusionstudio/runtime";
+import { assetName } from "@ad3-editing/assets";
+import { useTrait } from "@ad3-editing/koota-solid";
+import { AssetId, isScene } from "@ad3-editing/runtime";
 import { useLibrary } from "@/engine/library";
 import { pickAndImport } from "@/engine/asset-actions";
 import { isLocalOnlyDesktop } from "@/lib/local-mode";
 
-import type { Asset } from "@diffusionstudio/assets";
+import type { Asset } from "@ad3-editing/assets";
 import type { Entity } from "koota";
 
 type AssetFilter = "ALL" | "IMAGE" | "VIDEO";

@@ -5,9 +5,9 @@
 // Music and sound effects, declared: the prompt box writes a `generate.audio`
 // source and inserts an <Audio> consuming it (see ./insert).
 
-import { generate } from "@diffusionstudio/jsx";
-import { Audio } from "@diffusionstudio/reconciler";
-import { useWorld } from "@diffusionstudio/koota-solid";
+import { generate } from "@ad3-editing/jsx";
+import { Audio } from "@ad3-editing/reconciler";
+import { useWorld } from "@ad3-editing/koota-solid";
 import { useEditor } from "@/engine/hooks";
 import { AUDIO_SIZE } from "@/engine/insert-asset";
 import { insertGenerated, randomSeed } from "./insert";

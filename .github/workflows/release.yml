@@ -106,7 +106,7 @@ jobs:
       - name: Verify macOS signing and preview readiness regressions
         run: node --experimental-strip-types --test apps/desktop/scripts/macos-signing-options.test.mjs packages/hyperframes-engine/scripts/readiness.test.mjs
       - name: Package native installer
-        run: npm run make --workspace=@diffusionstudio/desktop -- --arch ${{ matrix.arch }}
+        run: npm run make --workspace=@ad3-editing/desktop -- --arch ${{ matrix.arch }}
       - name: Smoke installed Windows portable
         if: runner.os == 'Windows'
         shell: pwsh
@@ -115,7 +115,7 @@ jobs:
           if (!$portable) { throw 'Windows portable archive was not found.' }
           $installDirectory = Join-Path $env:RUNNER_TEMP 'AD3 Editing portable'
           Expand-Archive -LiteralPath $portable.FullName -DestinationPath $installDirectory
-          $app = Get-ChildItem $installDirectory -Recurse -File -Filter 'Diffusion Studio.exe' | Select-Object -First 1
+          $app = Get-ChildItem $installDirectory -Recurse -File -Filter 'AD3 Editing.exe' | Select-Object -First 1
           if (!$app) { throw 'Installed Windows executable was not found.' }
           $originalPath = $env:PATH
           try {

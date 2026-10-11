@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { basename, dirname } from "@diffusionstudio/assets";
+import { basename, dirname } from "@ad3-editing/assets";
 import { usePromptInput } from "@/context/prompt-input";
 import { createDefaultConfig } from "@/components/genai/prompt-input";
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
@@ -34,7 +34,7 @@ import { droppedFiles, importFiles, pickAndImport } from "@/engine/asset-actions
 import { isInputTarget } from "@/utils";
 import { isLocalOnlyDesktop } from "@/lib/local-mode";
 
-import type { AssetLibrary } from "@diffusionstudio/assets";
+import type { AssetLibrary } from "@ad3-editing/assets";
 
 /** The ancestors of a folder path, root excluded, nearest last. */
 function ancestorsOf(path: string): string[] {

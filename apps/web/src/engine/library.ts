@@ -6,16 +6,16 @@
 // disk and kept in step with the JSX (a rename in the library is a `src`
 // edit in the file).
 
-import { AssetId, Library } from '@diffusionstudio/runtime';
-import { AssetLibrary, MANIFEST_FILE, ASSETS_DIR } from '@diffusionstudio/assets';
-import { useTrait, useWorld } from '@diffusionstudio/koota-solid';
-import { authoredElement } from '@diffusionstudio/reconciler';
+import { AssetId, Library } from '@ad3-editing/runtime';
+import { AssetLibrary, MANIFEST_FILE, ASSETS_DIR } from '@ad3-editing/assets';
+import { useTrait, useWorld } from '@ad3-editing/koota-solid';
+import { authoredElement } from '@ad3-editing/reconciler';
 import type { Accessor } from 'solid-js';
 
 import { createProjectFS } from '@/projects/fs';
 import { getDocumentEditor } from './editor';
 
-import type { Asset } from '@diffusionstudio/assets';
+import type { Asset } from '@ad3-editing/assets';
 import type { World } from 'koota';
 
 /**

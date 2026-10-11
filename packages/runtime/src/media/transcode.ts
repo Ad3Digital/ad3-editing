@@ -13,7 +13,7 @@ import { formatTimestamp } from '../utils/time';
 import { getAssetFile } from '../actions/assets';
 
 import type { StreamTargetChunk } from 'mediabunny';
-import type { Asset, VideoAsset, AudioAsset } from '@diffusionstudio/assets';
+import type { Asset, VideoAsset, AudioAsset } from '@ad3-editing/assets';
 
 type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 

@@ -15,13 +15,13 @@ import {
 import { AssetInfoPreview } from "./asset-info-preview";
 import { supabase } from "@/lib/supabase";
 import { toClientConfig } from "@/components/genai/use-generation-records";
-import { useWorld } from "@diffusionstudio/koota-solid";
-import { assetName } from "@diffusionstudio/assets";
+import { useWorld } from "@ad3-editing/koota-solid";
+import { assetName } from "@ad3-editing/assets";
 import { useLibrary } from "@/engine/library";
 import { useAssetSelection } from "@/engine/hooks";
 import { insertAssetAtPlayhead, replaceAssetSource } from "@/engine/asset-actions";
 
-import type { Asset } from "@diffusionstudio/assets";
+import type { Asset } from "@ad3-editing/assets";
 
 /** Information about the library asset picked in the assets panel. */
 export function AssetInfoPanel() {

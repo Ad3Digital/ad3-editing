@@ -1,5 +1,5 @@
 import { For, Show, createSignal, onMount } from 'solid-js';
-import { useTicker } from '@diffusionstudio/jsx';
+import { useTicker } from '@ad3-editing/jsx';
 
 const bars = [
   { id: 'one', color: '#4ce1b0', phase: 0 },

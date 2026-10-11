@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { HitRegions, Tool, ToolType, Dragging, Hovering, isPointerInEntity, pointInQuad } from '@diffusionstudio/runtime';
+import { HitRegions, Tool, ToolType, Dragging, Hovering, isPointerInEntity, pointInQuad } from '@ad3-editing/runtime';
 
 import { getEditHistory } from '../history';
 import { Keys, Pointer, PointerEvents } from '../traits';
@@ -11,7 +11,7 @@ import { handleCanvasInteraction, handleGeometryInteraction } from './interactio
 
 import type { World } from 'koota';
 import type { CursorType } from './cursor';
-import type { CanvasPointerEvent, DispatchedPointerEvent, HitRegion, PointerEventType } from '@diffusionstudio/runtime';
+import type { CanvasPointerEvent, DispatchedPointerEvent, HitRegion, PointerEventType } from '@ad3-editing/runtime';
 
 /**
  * A region's identity for enter/leave: two headers are two targets even

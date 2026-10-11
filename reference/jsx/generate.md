@@ -1,9 +1,9 @@
 # Generated assets
 
-Assets that don't exist yet are **declared as values** with the `generate` namespace from `@diffusionstudio/jsx`. A declaration returns an **`AssetRef`** that is passed wherever a source is expected (`src`, `startFrame`, `endFrame`, `refs`). This makes generative content declarative: the project describes the asset it wants and the app produces it on mount.
+Assets that don't exist yet are **declared as values** with the `generate` namespace from `@ad3-editing/jsx`. A declaration returns an **`AssetRef`** that is passed wherever a source is expected (`src`, `startFrame`, `endFrame`, `refs`). This makes generative content declarative: the project describes the asset it wants and the app produces it on mount.
 
 ```tsx
-import { generate } from "@diffusionstudio/jsx";
+import { generate } from "@ad3-editing/jsx";
 
 const hero = generate.image({
   prompt: "A neon city at night, cinematic",

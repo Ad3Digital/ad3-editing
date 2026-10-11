@@ -17,16 +17,16 @@ import { ControlRow } from "@/components/ui/control-group";
 import { AssetThumbnail } from "@/components/ui/asset-thumbnail";
 import { OpacitySwatch } from "@/components/ui/opacity-swatch";
 import { ColorOpacityPicker } from "@/components/ui/color-opacity-picker";
-import { assetName } from "@diffusionstudio/assets";
-import { useHas, useTrait, useWorld } from "@diffusionstudio/koota-solid";
-import { AssetId, Color, Computed, PaintType, colorToHex, getIntrinsicPaint, parseColor } from "@diffusionstudio/runtime";
+import { assetName } from "@ad3-editing/assets";
+import { useHas, useTrait, useWorld } from "@ad3-editing/koota-solid";
+import { AssetId, Color, Computed, PaintType, colorToHex, getIntrinsicPaint, parseColor } from "@ad3-editing/runtime";
 import { useDerived, useEditor } from "@/engine/hooks";
 import { syncKeyframe } from "@/engine/keyframes";
 import { useLibrary } from "@/engine/library";
 import { FitMenu } from "./fill-picker";
 import { AssetFillPicker } from "./asset-picker";
 
-import type { Asset } from "@diffusionstudio/assets";
+import type { Asset } from "@ad3-editing/assets";
 import type { Entity } from "koota";
 
 /** The row label, like a fill row's: which kind of media the node is. */

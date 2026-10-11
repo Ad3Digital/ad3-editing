@@ -26,7 +26,7 @@ import type { SourceContext } from "./edit";
 export const ENTRY_FILES = ["index.tsx", "index.ts", "index.jsx", "index.js"];
 
 /** The module compiled project code imports its JSX runtime from. */
-const RUNTIME_MODULE = "@diffusionstudio/jsx";
+const RUNTIME_MODULE = "@ad3-editing/jsx";
 
 /**
  * Imports left for the renderer to resolve against its own module instances
@@ -162,7 +162,7 @@ export const getProject = (dir: string): Promise<ProjectInfo | null> => describe
  * pick somewhere else — the caller falls back to `pickRoot`.
  */
 export async function defaultRoot(window: BrowserWindow | null): Promise<string | null> {
-  const dir = join(app.getPath("videos"), "Diffusion Studio");
+  const dir = join(app.getPath("videos"), "AD3 Editing");
   if (!(await confirmCloudLocation(window, dir, "Choose another folder"))) return null;
   await mkdir(dir, { recursive: true });
   return dir;
@@ -509,7 +509,7 @@ const packageJson = (name: string, displayName: string): PackageJson => ({
   main: "index.tsx",
   scripts: { ...SCRIPTS },
   devDependencies: {
-    "@diffusionstudio/jsx": JSX_VERSION(),
+    "@ad3-editing/jsx": JSX_VERSION(),
     "solid-js": SOLID_VERSION,
   },
 });
@@ -521,7 +521,7 @@ const TSCONFIG = `{
     "module": "ESNext",
     "moduleResolution": "bundler",
     "jsx": "preserve",
-    "jsxImportSource": "@diffusionstudio/jsx",
+    "jsxImportSource": "@ad3-editing/jsx",
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true
@@ -806,7 +806,7 @@ async function ensurePackage(dir: string, name: string, displayName: string, ent
 /**
  * Turns `dir` into a starter TypeScript project: files the project owns are
  * written once, so opening an up-to-date project writes nothing. Types come
- * from @diffusionstudio/jsx (jsxImportSource), installed by the project.
+ * from @ad3-editing/jsx (jsxImportSource), installed by the project.
  */
 export async function scaffold(dir: string, displayName = basename(dir)): Promise<void> {
   const name = basename(dir);

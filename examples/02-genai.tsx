@@ -1,4 +1,4 @@
-/* @jsxImportSource @diffusionstudio/jsx */
+/* @jsxImportSource @ad3-editing/jsx */
 /* Multi-stage generation: text-to-image keyframes, image-to-video motion,
  * a text-to-speech voiceover, generated ambience, and captions on top.
  *
@@ -15,7 +15,7 @@
  * omitted here, so each stage uses the default model.
  */
 
-import { generate } from "@diffusionstudio/jsx";
+import { generate } from "@ad3-editing/jsx";
 
 const SEED = 7;
 

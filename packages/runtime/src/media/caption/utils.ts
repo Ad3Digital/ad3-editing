@@ -9,7 +9,7 @@ import { getAssetFile } from '../../actions/assets';
 import { parseSubtitles } from './subtitles';
 
 import type { Entity, World } from 'koota';
-import type { Asset, Transcript, WordGroup } from '@diffusionstudio/assets';
+import type { Asset, Transcript, WordGroup } from '@ad3-editing/assets';
 
 export type TextRangeOverride = {
 	start: number;

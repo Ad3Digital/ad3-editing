@@ -13,16 +13,16 @@
 // trait.
 //
 // Each setting is a map keyed by the scene's `id` in the JSX (see ID_ATTR in
-// @diffusionstudio/jsx): stamped once by the compiler where the author wrote
+// @ad3-editing/jsx): stamped once by the compiler where the author wrote
 // none and never rewritten, so it is the one durable name every element has.
 // A scene with no entry has nothing set up.
 //
 //   { "export": { "intro": { "format": "mp4", ... } } }
 
 import { createSignal } from 'solid-js';
-import { Source } from '@diffusionstudio/runtime';
-import { parseSource } from '@diffusionstudio/jsx';
-import { useTrait, useWorld } from '@diffusionstudio/koota-solid';
+import { Source } from '@ad3-editing/runtime';
+import { parseSource } from '@ad3-editing/jsx';
+import { useTrait, useWorld } from '@ad3-editing/koota-solid';
 
 import { readProjectConfig, writeProjectConfig } from '@/projects/host';
 import { ProjectConfig as ProjectConfigTrait } from './traits';

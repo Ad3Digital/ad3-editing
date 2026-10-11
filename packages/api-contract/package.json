@@ -1,0 +1,23 @@
+{
+  "name": "@ad3-editing/api-contract",
+  "version": "0.1.0",
+  "description": "Local vendored copy of the cloud API contract (zod schemas and tRPC AppRouter types). Frozen: upstream online features are deprecated by AGENTS.md (local-only operation).",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./index.mjs",
+  "types": "./index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./index.d.mts",
+      "default": "./index.mjs"
+    }
+  },
+  "files": [
+    "index.mjs",
+    "index.d.mts"
+  ],
+  "dependencies": {
+    "zod": "^4.2.1"
+  }
+}

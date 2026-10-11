@@ -41,10 +41,11 @@ Release **0.203.0** supports Windows x64 and macOS on Apple silicon or Intel.
 The installer is currently **unsigned**. Windows may display a SmartScreen warning.
 Only install binaries from the repository's releases or build from source.
 
-For compatibility with existing local installations, the internal executable is
-still `Diffusion Studio.exe`. The Squirrel installation directory remains
-`%LOCALAPPDATA%\DiffusionStudio`, and the profile remains
-`%APPDATA%\Diffusion Studio`. Existing projects do not need a format migration.
+After the 2026-09-28 rebrand, everything is **AD3 Editing**: the executable
+is `AD3 Editing.exe`, the Squirrel directory is `%LOCALAPPDATA%\AD3Editing`,
+and the profile is `%APPDATA%\AD3 Editing`. Older Diffusion Studio installs,
+taskbar pins, and launchers stop working — reinstall from the new build.
+Existing projects do not need a format migration.
 The application does not download upstream application updates.
 
 ## Install on macOS
@@ -223,7 +224,7 @@ examples. `npm run lint` runs the repository's linters.
 | `reference` | CLI and composition documentation |
 | `examples` | Example compositions |
 
-Internal `@diffusionstudio/*` package names are preserved for composition and API
+Internal `@ad3-editing/*` package names are preserved for composition and API
 compatibility. They do not change the public product name or repository owner.
 
 ## Origin and license

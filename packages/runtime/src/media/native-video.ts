@@ -1,4 +1,4 @@
-import type { VideoAsset } from '@diffusionstudio/assets';
+import type { VideoAsset } from '@ad3-editing/assets';
 
 type NativeFrame = { time: number; width: number; height: number; pixels: Uint8Array };
 type NativeBridge = {

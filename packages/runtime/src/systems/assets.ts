@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-import { parseSource } from '@diffusionstudio/jsx';
+import { parseSource } from '@ad3-editing/jsx';
 
 import { Ai, Cache, Computed, Delay, FrameRate, FramePromises, Generating, GenerationRequest, Host, Library, LoadRequest, PendingSource, PendingSync, PlaybackRate, Source, SourceError, SyncRequest, TranscriptionRequest, Trim } from '../traits';
 import { bindAsset, getAssetFile, getModifiers } from '../actions/assets';
@@ -13,7 +13,7 @@ import { store } from '../world/store';
 import { assert } from '../utils/assert';
 
 import type { Entity, World } from 'koota';
-import type { Asset } from '@diffusionstudio/assets';
+import type { Asset } from '@ad3-editing/assets';
 
 export function assetSystem(world: World): void {
 	for (const entity of world.query(LoadRequest, Host)) {
@@ -152,7 +152,7 @@ function placeSynced(world: World, entity: Entity, target: Entity, id: string, o
 
 /**
  * The element whose authored id is `id`: ids ride into the runtime as the
- * locator of the source stamp (see SOURCE_ATTR in @diffusionstudio/jsx), so
+ * locator of the source stamp (see SOURCE_ATTR in @ad3-editing/jsx), so
  * only stamped elements can be found — and a positional locator, being a
  * number, never matches. `except` keeps an element from finding itself.
  * Iterations of a loop share one stamp; the first stands for them all.

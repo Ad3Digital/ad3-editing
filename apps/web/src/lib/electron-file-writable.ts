@@ -6,7 +6,7 @@ import { mainBridge } from "@/lib/ipc";
 import { MAIN_CHANNELS } from "@desktop/main-channels";
 
 import type { StreamTargetChunk } from "mediabunny";
-import type { WritableFileTarget } from "@diffusionstudio/encoder";
+import type { WritableFileTarget } from "@ad3-editing/encoder";
 
 // A write-only, FileSystemFileHandle-shaped target backed by the main process.
 // `createWritable()` returns a stream whose positioned chunks are forwarded to

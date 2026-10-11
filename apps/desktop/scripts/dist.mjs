@@ -14,10 +14,10 @@ const desktopDir = join(dirname(fileURLToPath(import.meta.url)), "..");
 const rootDir = join(desktopDir, "..", "..");
 const outDir = join(desktopDir, "out");
 // Keep the executable and Squirrel package name stable so existing installs,
-// taskbar pins, and the dapi launcher continue to work after the rebrand.
-const executableName = "Diffusion Studio";
+// taskbar pins, and older dapi launchers pointing at Diffusion Studio.exe stop working; reinstall from the new AD3 Editing build.
+const executableName = "AD3 Editing";
 const productName = "AD3 Editing";
-const makerName = "DiffusionStudio";
+const makerName = "AD3Editing";
 
 function runForge(mode, args) {
   const executable = join(rootDir, "node_modules", ".bin", "electron-forge");
